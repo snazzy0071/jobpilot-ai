@@ -6,8 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormMessage } from "@/components/settings/form-message";
-
-const today = new Date().toISOString().slice(0, 10);
+import { useTodayIsoDate } from "@/lib/hooks/use-today-iso-date";
 
 export function ProfileForm({
   defaultFullName,
@@ -20,6 +19,7 @@ export function ProfileForm({
     updateProfile,
     undefined,
   );
+  const today = useTodayIsoDate();
 
   return (
     <form action={formAction} className="flex max-w-md flex-col gap-4">

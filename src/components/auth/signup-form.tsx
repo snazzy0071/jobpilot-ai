@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-const today = new Date().toISOString().slice(0, 10);
+import { useTodayIsoDate } from "@/lib/hooks/use-today-iso-date";
 
 type SignupMode = "subscribe" | "access_code";
 
 export function SignupForm() {
   const [mode, setMode] = useState<SignupMode>("subscribe");
+  const today = useTodayIsoDate();
   const [state, formAction, pending] = useActionState<AuthResult, FormData>(
     signUpWithPassword,
     undefined,
