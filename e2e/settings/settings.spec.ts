@@ -1,0 +1,60 @@
+import { test, expect, completeOnboarding } from "../fixtures";
+
+test.describe("Settings", () => {
+  test("updating the profile form persists the new name across a reload", async ({ authenticatedPage }) => {
+    const { page } = authenticatedPage;
+    await completeOnboarding(page);
+
+    await page.goto("/dashboard/settings");
+    await page.getByLabel("Full name").fill("Updated E2E Name");
+    await page.getByRole("button", { name: "Save profile" }).click();
+
+    await expect(page.getByRole("status")).toContainText(/saved|updated/i);
+
+    await page.reload();
+    await expect(page.getByLabel("Full name")).toHaveValue("Updated E2E Name");
+  });
+
+  test("deleting the account requires typing the exact confirmation text", async ({ authenticatedPage }) => {
+    const { page } = authenticatedPage;
+    await completeOnboarding(page);
+
+    await page.goto("/dashboard/settings");
+    await page.getByLabel(/type.*delete.*to confirm/i).fill("delete"); // lowercase — must not satisfy an exact-match confirmation
+    await page.getByRole("button", { name: "Delete my account" }).click();
+
+    await expect(page.getByRole("alert")).toBeVisible();
+    // Still signed in — a rejected confirmation must not have deleted anything.
+    await expect(page).toHaveURL(/\/dashboard\/settings/);
+  });
+
+  test("deleting the account with the correct confirmation actually removes it — signed out, and the credentials no longer work", async ({
+    testUser,
+    page,
+  }) => {
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(testUser.email);
+    await page.getByLabel("Password", { exact: true }).fill(testUser.password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await completeOnboarding(page);
+
+    await page.goto("/dashboard/settings");
+    await page.getByLabel(/type.*delete.*to confirm/i).fill("DELETE");
+    await page.getByRole("button", { name: "Delete my account" }).click();
+
+    // eraseUserAccount + auth.signOut() + redirect("/") — real proof the
+    // session itself, not just the dashboard UI, is gone.
+    await page.waitForURL(/^https?:\/\/[^/]+\/?$/);
+
+    await page.goto("/login");
+    await page.getByLabel("Email").fill(testUser.email);
+    await page.getByLabel("Password", { exact: true }).fill(testUser.password);
+    await page.getByRole("button", { name: "Sign in" }).click();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page).toHaveURL(/\/login$/);
+    // The testUser fixture's own afterward cleanup will attempt to
+    // delete this same, already-deleted account next — harmless: see
+    // deleteIsolatedUser's own comment on why that's never fatal to a
+    // test run.
+  });
+});

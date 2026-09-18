@@ -1,0 +1,9 @@
+{
+  "crons": [
+    { "path": "/api/cron/jobs-sync-adzuna", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/jobs-sync-reed", "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/jobs-maintenance", "schedule": "30 3 * * *" },
+    { "path": "/api/cron/dispatch-reminders", "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/purge-expired-data", "schedule": "20 4 * * *" }
+  ]
+}

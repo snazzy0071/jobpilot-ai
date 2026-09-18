@@ -1,0 +1,63 @@
+import { AlertTriangleIcon, CheckCircle2Icon, CircleOffIcon, XCircleIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Card } from "@/components/ui/card";
+import { runAllHealthChecks } from "@/lib/health/checks";
+import type { HealthCheckResult, HealthStatus } from "@/lib/health/types";
+
+export const dynamic = "force-dynamic";
+
+const STATUS_META: Record<HealthStatus, { label: string; className: string; icon: typeof CheckCircle2Icon }> = {
+  operational: { label: "Operational", className: "border-success/30 bg-success/15 text-success", icon: CheckCircle2Icon },
+  degraded: { label: "Degraded", className: "border-warning/30 bg-warning/15 text-warning", icon: AlertTriangleIcon },
+  down: { label: "Down", className: "border-destructive/30 bg-destructive/15 text-destructive", icon: XCircleIcon },
+  not_configured: { label: "Not configured", className: "border-border text-muted-foreground", icon: CircleOffIcon },
+};
+
+function formatDateTime(iso: string): string {
+  return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function CheckCard({ check }: { check: HealthCheckResult }) {
+  const meta = STATUS_META[check.status];
+  const Icon = meta.icon;
+  return (
+    <Card className="gap-2 p-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm font-medium">{check.label}</p>
+        <Badge variant="outline" className={meta.className}>
+          <Icon className="size-3.5" /> {meta.label}
+        </Badge>
+      </div>
+      <p className="text-xs text-muted-foreground">{check.detail}</p>
+      <p className="text-xs text-muted-foreground">Checked {formatDateTime(check.checkedAt)}</p>
+    </Card>
+  );
+}
+
+/**
+ * The full-detail internal view — every field `runAllHealthChecks()`
+ * returns, including `detail` (real diagnostic text: a caught error's
+ * message, a per-source sync breakdown). The public `/status` page
+ * runs the exact same checks but only ever renders `status`, never
+ * this — that's the actual "safe summarized" boundary this task asked
+ * for, enforced by which page reads which field, not by two different
+ * implementations that could drift apart.
+ */
+export default async function AdminSystemHealthPage() {
+  const checks = await runAllHealthChecks();
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div>
+        <h1 className="font-heading text-2xl font-semibold tracking-tight">System health</h1>
+        <p className="mt-1 text-muted-foreground">Live checks, full detail — the public /status page shows a safe summary of the same data.</p>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
+        {checks.map((check) => (
+          <CheckCard key={check.key} check={check} />
+        ))}
+      </div>
+    </div>
+  );
+}

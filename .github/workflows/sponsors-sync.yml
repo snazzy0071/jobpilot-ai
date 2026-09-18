@@ -1,0 +1,60 @@
+# Daily sponsor register sync — runs scripts/import-sponsors.mjs on a
+# schedule. A GitHub Actions job, not a Vercel Cron -> Next.js route,
+# deliberately: a real run does hundreds of sequential batched upserts
+# against ~130k rows (see that script's own header comment for the real
+# numbers checked against the live register), which comfortably fits a
+# CI job's runtime but risks hitting a serverless function's execution
+# time limit for no real benefit. Already idempotent — running this
+# twice on the same day (the schedule firing, plus a manual retry, say)
+# finds "already completed for today's source date" and does nothing
+# further, never double-applies anything.
+#
+# Required repository secrets (Settings -> Secrets and variables ->
+# Actions), matching the same two the app itself already needs in
+# .env.local — no new credential, this job reuses the app's own
+# service-role access:
+#   NEXT_PUBLIC_SUPABASE_URL
+#   SUPABASE_SERVICE_ROLE_KEY
+
+name: Sponsor register sync
+
+on:
+  schedule:
+    # 03:00 UTC daily. Adjust if the register's own publish time (gov.uk
+    # doesn't document a fixed one) turns out to differ meaningfully.
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: "Re-import even if today's source date already completed"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # A full run parses/aggregates/upserts ~130k rows across hundreds of
+    # batched requests — generous but not unbounded, so a genuinely
+    # stuck run (a hung request, not just "the real thing is slow")
+    # still gets killed rather than burning Actions minutes forever.
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Run sponsor register import
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ "${{ inputs.force }}" = "true" ]; then
+            node scripts/import-sponsors.mjs --force
+          else
+            node scripts/import-sponsors.mjs
+          fi

@@ -1,0 +1,38 @@
+-- Recruiter-search keyword coverage for the LinkedIn Optimiser.
+--
+-- Same split of responsibility as ats_scans/ats_keywords (migrations
+-- 0031/0033): the AI's job is judgment (which terms recruiters actually
+-- search for this role/seniority, how important each is, which profile
+-- section it best belongs in) — src/lib/ai/prompts/linkedin-optimizer.ts
+-- v4.0.0 now returns this alongside the headline/About/Experience
+-- rewrite, one more field on the same combined call rather than a second
+-- AI call (which would double the ai_operations_per_month cost of every
+-- generation). Whether a given term actually *appears* in a given piece
+-- of text is deterministic, exact-substring arithmetic — a poor fit for
+-- an LLM to self-report — so that part is never asked of the model at
+-- all; src/lib/linkedin/keyword-coverage.ts computes it in application
+-- code, on demand, against whatever text is current at read time.
+--
+-- That's also why there's no "before score"/"after score" column here:
+-- a score is just this same deterministic match against two different
+-- texts (the original pasted profile vs. the current optimized one), so
+-- storing it would mean it goes stale the instant an Experience bullet
+-- or About rewrite is individually accepted — recomputing it live from
+-- the one thing that *is* stored (the keyword list itself) is what
+-- keeps "after" always current without a separate "rerun" action. "Rerun
+-- when target role changes" falls out of the existing regenerate flow
+-- for free: this column is only ever rewritten by createLinkedinDraft/
+-- regenerateLinkedinDraft, the same two places target_role can be set
+-- or changed at all.
+--
+-- A jsonb array on the existing table, not a new table — no per-term
+-- row ever needs its own id, status, or independent mutation (unlike
+-- linkedin_experience_bullets), so this is exactly suggested_skills/
+-- notes' existing shape, not a new pattern. Each element's `importance`
+-- ('high'/'medium'/'low') and `suggestedPlacement`
+-- ('headline'/'about'/'experience') are plain strings, not DB enums —
+-- same choice migration 0033 made for ats_keywords.suggested_section,
+-- validated at the Zod/app layer instead of duplicated here.
+
+alter table public.linkedin_profile_drafts
+  add column keyword_coverage_terms jsonb not null default '[]'::jsonb;
