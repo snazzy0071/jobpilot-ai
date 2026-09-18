@@ -3,6 +3,8 @@ import { syncReedJobs } from "@/lib/jobs/adapters/reed/sync";
 import { consumeSystemRateLimit } from "@/lib/rate-limit/ip-limit";
 
 export const dynamic = "force-dynamic";
+// Same sync-duration budget as /api/cron/jobs-sync-adzuna.
+export const maxDuration = 120;
 
 /**
  * Same shape and gating as /api/cron/jobs-sync-adzuna — see that

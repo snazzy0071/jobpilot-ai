@@ -3,6 +3,9 @@ import { syncAdzunaJobs } from "@/lib/jobs/adapters/adzuna/sync";
 import { consumeSystemRateLimit } from "@/lib/rate-limit/ip-limit";
 
 export const dynamic = "force-dynamic";
+// Paginated upstream fetch + upserts can run long on a big sync; well
+// under Vercel's 300s default budget.
+export const maxDuration = 120;
 
 /**
  * Triggers one Adzuna sync run — meant for a scheduled trigger (Vercel

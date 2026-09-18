@@ -4,6 +4,8 @@ import { parseDocument, MAX_FILE_SIZE_BYTES } from "@/lib/files/parse-document";
 import { isSameOriginRequest } from "@/lib/security/same-origin";
 
 export const dynamic = "force-dynamic";
+// Parsing a large PDF/DOCX can take a few seconds; 30s leaves margin.
+export const maxDuration = 30;
 
 const EXTENSION_MIME_FALLBACK: Record<string, string> = {
   ".pdf": "application/pdf",

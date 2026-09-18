@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { purgeExpiredData } from "@/lib/cleanup/purge-expired-data";
 
 export const dynamic = "force-dynamic";
+// Bulk delete sweep — bounded well under the 300s default.
+export const maxDuration = 60;
 
 /**
  * Daily sweep of expired anonymous ATS results, stale rate-limit

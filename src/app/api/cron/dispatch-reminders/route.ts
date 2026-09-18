@@ -2,6 +2,9 @@ import { NextResponse, type NextRequest } from "next/server";
 import { dispatchDueReminders } from "@/lib/applications/reminders/dispatch";
 
 export const dynamic = "force-dynamic";
+// Sends real email per due reminder — bounded well under the 300s
+// default even for a large due batch.
+export const maxDuration = 60;
 
 /**
  * Delivers every due application reminder (real email + in-app state)

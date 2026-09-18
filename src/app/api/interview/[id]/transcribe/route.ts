@@ -7,6 +7,9 @@ import { validateAudioUpload } from "@/lib/voice/validate-audio-upload";
 import { isSameOriginRequest } from "@/lib/security/same-origin";
 
 export const dynamic = "force-dynamic";
+// Room for a slow Whisper STT round-trip on a large-ish upload without
+// eating into the platform's 300s default budget.
+export const maxDuration = 30;
 
 const MAX_AUDIO_SIZE_BYTES = 25 * 1024 * 1024; // Whisper's own upload limit.
 

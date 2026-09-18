@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { runJobsMaintenance } from "@/lib/jobs/maintenance";
 
 export const dynamic = "force-dynamic";
+// Bulk sweep over every job row — bounded well under the 300s default.
+export const maxDuration = 60;
 
 /**
  * Cross-source expiry sweep + pruning (src/lib/jobs/maintenance.ts) —
