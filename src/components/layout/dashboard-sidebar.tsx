@@ -2,6 +2,7 @@ import { SidebarNav, type SidebarNavItem } from "@/components/layout/sidebar-nav
 import { SidebarShell } from "@/components/layout/sidebar-shell";
 import { PlanUpgradeCard } from "@/components/layout/plan-upgrade-card";
 import { SignOutButton } from "@/components/layout/sign-out-button";
+import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
 
 const MAIN_NAV_ITEMS: SidebarNavItem[] = [
   { href: "/dashboard", label: "Overview", icon: "layout-dashboard" },
@@ -36,6 +37,7 @@ export function DashboardSidebar({ plan }: { plan: string }) {
         </>
       }
     >
+      <ViewPublicSiteLink />
       <SidebarNav items={MAIN_NAV_ITEMS} title="Workspace" />
     </SidebarShell>
   );

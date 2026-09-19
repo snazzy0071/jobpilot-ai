@@ -15,7 +15,9 @@ export type ComparisonRow = {
 function ComparisonCell({ value }: { value: boolean | string }) {
   if (typeof value === "boolean") {
     return value ? (
-      <Check className="mx-auto size-4 text-primary" aria-label="Yes" />
+      <span className="mx-auto flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <Check className="size-3.5" aria-label="Yes" />
+      </span>
     ) : (
       <Minus className="mx-auto size-4 text-muted-foreground/40" aria-label="No" />
     );
@@ -31,10 +33,10 @@ export function ComparisonTable({
   rows: ComparisonRow[];
 }) {
   return (
-    <div className="overflow-x-auto rounded-xl border">
+    <div className="overflow-x-auto rounded-2xl border bg-card shadow-card">
       <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
         <thead>
-          <tr className="border-b">
+          <tr className="border-b bg-muted/40">
             <th scope="col" className="p-4 font-medium text-muted-foreground">
               &nbsp;
             </th>
@@ -54,7 +56,7 @@ export function ComparisonTable({
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.label} className="border-b last:border-0">
+            <tr key={row.label} className="border-b transition-colors last:border-0 hover:bg-muted/30">
               <th scope="row" className="p-4 font-normal text-foreground">
                 {row.label}
               </th>

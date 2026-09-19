@@ -30,7 +30,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         <Badge variant={user.role === "admin" ? "tinted" : "outline"}>{user.role}</Badge>
       </div>
 
-      <Card className="gap-3 p-6">
+      <Card variant="admin" className="gap-3 p-6">
         <h2 className="text-sm font-semibold">Profile</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           <div>
@@ -52,7 +52,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         </div>
       </Card>
 
-      <Card className="gap-3 p-6">
+      <Card variant="admin" className="gap-3 p-6">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-semibold">Subscription</h2>
           {user.subscription?.stripeCustomerId && (
@@ -96,7 +96,7 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         </p>
       </Card>
 
-      <Card className="gap-3 p-6">
+      <Card variant="admin" className="gap-3 p-6">
         <h2 className="text-sm font-semibold">Access code redemptions</h2>
         {user.accessCodeRedemptions.length === 0 ? (
           <p className="text-sm text-muted-foreground">No access codes redeemed.</p>
@@ -114,11 +114,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         )}
       </Card>
 
-      <Card className="gap-3 p-6">
+      <Card variant="action" className="gap-3 p-6">
         <h2 className="text-sm font-semibold">Actions</h2>
         <UserDangerActions
           userId={user.id}
           label={user.fullName ?? user.email ?? "this account"}
+          role={user.role}
           hasCancellableSubscription={!!user.subscription?.stripeSubscriptionId && !user.subscription.cancelAtPeriodEnd}
         />
       </Card>

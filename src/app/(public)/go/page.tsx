@@ -1,7 +1,10 @@
 import Link from "next/link";
-import { CheckCircle2 } from "lucide-react";
+import { BadgeCheckIcon, CheckCircle2, FileSearchIcon, MailXIcon, MessagesSquareIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { FloatingCardStack } from "@/components/marketing/floating-card-stack";
+import { Reveal } from "@/components/motion/reveal";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { CtaSection } from "@/components/marketing/cta-section";
@@ -37,29 +40,38 @@ const FAQ_ITEMS = [
 export default function GoPage() {
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Not sure where to start?</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Tell us what&apos;s going wrong
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            Rejections rarely come with a reason. Pick what sounds most like your situation and
-            we&apos;ll point you to the right tool.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        eyebrow="Not sure where to start?"
+        title={
+          <>
+            Tell us what&apos;s <GradientText>going wrong</GradientText>
+          </>
+        }
+        description="Rejections rarely come with a reason. Pick what sounds most like your situation and we'll point you to the right tool."
+        visual={
+          <FloatingCardStack
+            items={[
+              { icon: MailXIcon, title: "Hearing nothing back?", caption: "Start with the ATS Scanner", tone: "coral" },
+              { icon: MessagesSquareIcon, title: "Interviews, no offer?", caption: "Practise with the coach", tone: "primary" },
+              { icon: BadgeCheckIcon, title: "Visa worries?", caption: "Check the sponsor register", tone: "success" },
+              { icon: FileSearchIcon, title: "CV doubts?", caption: "Score it free, no account", tone: "accent" },
+            ]}
+          />
+        }
+      />
 
       <Section className="pt-0">
-        <SituationPicker />
+        <Reveal>
+          <SituationPicker />
+        </Reveal>
       </Section>
 
       <Section tone="muted">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
           <SectionHeading title="Why start here instead of guessing" />
-          <ul className="flex flex-wrap justify-center gap-x-6 gap-y-3">
+          <ul className="flex flex-wrap justify-center gap-3">
             {HIGHLIGHTS.map((highlight) => (
-              <li key={highlight} className="flex items-center gap-2 text-sm text-muted-foreground">
+              <li key={highlight} className="flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm shadow-card">
                 <CheckCircle2 className="size-4 text-primary" />
                 {highlight}
               </li>
@@ -71,7 +83,7 @@ export default function GoPage() {
 
       <Section>
         <SectionHeading eyebrow="FAQ" title="Quick questions" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
       </Section>

@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { MapPinIcon } from "lucide-react";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { AnimatedCounter } from "@/components/motion/animated-counter";
 import { Section } from "@/components/marketing/section";
 import { SponsorSearchFilters } from "@/components/marketing/sponsor-search-filters";
 import { SponsorSearchResults } from "@/components/marketing/sponsor-search-results";
@@ -90,33 +93,42 @@ export default async function SponsorCityPage({
 
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <div className="w-full self-start">
-            <Breadcrumbs
-              items={[
-                { label: "Home", href: "/" },
-                { label: "Visa Sponsors", href: "/visa-sponsors" },
-                { label: "Cities", href: "/visa-sponsors/cities" },
-                { label: city.name },
-              ]}
-            />
-          </div>
-          <Eyebrow>
-            <Link href="/visa-sponsors/cities" className="hover:underline">
-              Browse by city
-            </Link>
-          </Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Visa sponsors in {city.name}
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            {thisCityCount > 0
-              ? `${thisCityCount.toLocaleString()} licensed UK sponsor${thisCityCount === 1 ? "" : "s"} based in ${city.name}, from the Home Office's public register.`
-              : `Licensed UK sponsors based in ${city.name}, from the Home Office's public register.`}
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        breadcrumbs={
+          <Breadcrumbs
+            items={[
+              { label: "Home", href: "/" },
+              { label: "Visa Sponsors", href: "/visa-sponsors" },
+              { label: "Cities", href: "/visa-sponsors/cities" },
+              { label: city.name },
+            ]}
+          />
+        }
+        badge={
+          <span className="inline-flex items-center gap-2 rounded-full border bg-card/80 px-4 py-1.5 text-sm shadow-card">
+            <MapPinIcon className="size-4 text-primary" aria-hidden="true" />
+            {thisCityCount > 0 ? (
+              <span className="font-semibold">
+                <AnimatedCounter value={thisCityCount} /> sponsor{thisCityCount === 1 ? "" : "s"}
+              </span>
+            ) : (
+              <span className="font-semibold">{city.name}</span>
+            )}
+          </span>
+        }
+        eyebrow="Browse by city"
+        title={
+          <>
+            Visa sponsors in <GradientText>{city.name}</GradientText>
+          </>
+        }
+        description={
+          thisCityCount > 0
+            ? `${thisCityCount.toLocaleString()} licensed UK sponsor${thisCityCount === 1 ? "" : "s"} based in ${city.name}, from the Home Office's public register.`
+            : `Licensed UK sponsors based in ${city.name}, from the Home Office's public register.`
+        }
+        className="sm:pb-12"
+      />
 
       <Section tone="muted" className="pt-0">
         <div className="mx-auto flex max-w-5xl flex-col gap-8">
@@ -139,7 +151,7 @@ export default async function SponsorCityPage({
               <Link
                 key={otherCity.slug}
                 href={`/visa-sponsors/cities/${otherCity.slug}`}
-                className="rounded-full border px-4 py-1.5 text-sm text-muted-foreground hover:border-primary hover:text-foreground"
+                className="rounded-full border bg-card px-4 py-1.5 text-sm text-muted-foreground shadow-card transition-all hover:-translate-y-0.5 hover:border-primary hover:text-foreground hover:shadow-elevated"
               >
                 {otherCity.name}
                 {otherCity.count > 0 ? ` (${otherCity.count.toLocaleString()})` : ""}

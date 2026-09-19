@@ -53,29 +53,29 @@ export function FeaturePage({
       />
 
       <Section tone="muted">
-        <SectionHeading eyebrow="What it does" title="Capabilities" align="left" />
-        <div className="mt-8">
+        <SectionHeading eyebrow="What it does" title="Capabilities" />
+        <div className="mt-12">
           <Capabilities items={capabilities} />
         </div>
       </Section>
 
       <Section>
-        <SectionHeading eyebrow="See the difference" title="Before and after" align="left" />
-        <div className="mt-8">
+        <SectionHeading eyebrow="See the difference" title="Before and after" />
+        <div className="mt-12">
           <BeforeAfter {...beforeAfter} />
         </div>
       </Section>
 
       <Section tone="muted">
-        <SectionHeading eyebrow="Plan availability" title="Which plan includes this" align="left" />
-        <div className="mt-8">
+        <SectionHeading eyebrow="Plan availability" title="Which plan includes this" />
+        <div className="mt-12">
           <FeaturePlanAvailability plan={plan} />
         </div>
       </Section>
 
       <Section>
-        <SectionHeading eyebrow="Why it matters" title="Outcomes" align="left" />
-        <div className="mt-8">
+        <SectionHeading eyebrow="Why it matters" title="Outcomes" />
+        <div className="mt-12">
           <Outcomes items={outcomes} />
         </div>
       </Section>
@@ -86,7 +86,7 @@ export function FeaturePage({
 
       <Section>
         <SectionHeading eyebrow="Related tools" title="Works well with" />
-        <div className="mt-8">
+        <div className="mt-12">
           <RelatedTools tools={related} />
         </div>
       </Section>

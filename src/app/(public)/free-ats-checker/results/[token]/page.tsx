@@ -26,16 +26,28 @@ export default async function QuickScanResultPage({ params }: { params: Promise<
   if (!result) notFound();
 
   return (
-    <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-24 sm:pt-32">
-      <Card className="mx-auto w-full max-w-xl p-8">
+    <Section className="hero-glow pt-24 pb-24 sm:pt-32">
+      <Card className="mx-auto w-full max-w-xl p-8 shadow-floating">
         <div className="flex flex-col gap-4">
           {/* Real <h1> — this page previously had zero headings at any
               level; the score itself is still the same plain <span>
               right below, just now with a real heading above it. */}
           <h1 className="sr-only">Your ATS scan result</h1>
-          <div className="flex items-baseline gap-2">
-            <span className={`text-4xl font-semibold ${scoreTone(result.overallScore)}`}>{result.overallScore}</span>
-            <span className="text-sm text-muted-foreground">/ 100 match with this job description</span>
+          <div className="flex items-center gap-5">
+            <div
+              className="flex size-24 shrink-0 items-center justify-center rounded-full"
+              style={{
+                background: `conic-gradient(var(--primary) ${Math.max(0, Math.min(100, result.overallScore)) * 3.6}deg, var(--muted) 0)`,
+              }}
+              aria-hidden="true"
+            >
+              <div className="flex size-[4.75rem] items-center justify-center rounded-full bg-card">
+                <span className={`text-3xl font-semibold ${scoreTone(result.overallScore)}`}>{result.overallScore}</span>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              <span className="sr-only">{result.overallScore} </span>/ 100 match with this job description
+            </p>
           </div>
           <p className="text-sm">{result.summary}</p>
 

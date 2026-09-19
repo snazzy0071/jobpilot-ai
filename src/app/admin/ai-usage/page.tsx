@@ -30,7 +30,7 @@ function presetRange(days: number): { from: string; to: string } {
 
 function StatTile({ icon: Icon, label, value, caption }: { icon: typeof SparklesIcon; label: string; value: string; caption?: string }) {
   return (
-    <Card className="gap-1 p-4">
+    <Card variant="metric" className="gap-1 p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Icon className="size-4" /> {label}
       </div>

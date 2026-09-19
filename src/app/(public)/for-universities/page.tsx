@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { KeySquare, Users, BarChart3, Globe, Layers, FileText, ShieldCheck } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { KeySquare, Users, BarChart3, Globe, Layers, FileText, ShieldCheck, LockKeyholeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { MockWindow } from "@/components/marketing/mock-window";
+import { FloatingChip } from "@/components/marketing/floating-chip";
+import { AnimatedBar } from "@/components/dashboard/animated-bar";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FeatureCard } from "@/components/marketing/feature-card";
@@ -92,58 +95,98 @@ const FAQ_ITEMS = [
   },
 ];
 
+function CohortPreview() {
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <MockWindow title="Institution dashboard · illustrative">
+        <div className="flex flex-col gap-5">
+          <div className="flex items-center justify-between rounded-xl border bg-background p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <KeySquare className="size-4" />
+              </span>
+              <div>
+                <p className="text-xs text-muted-foreground">Cohort access code</p>
+                <p className="font-mono text-sm font-semibold tracking-widest">•••• ••••</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-success/10 px-2.5 py-1 text-[11px] font-medium text-success">Active</span>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Aggregate engagement</p>
+            {[
+              { label: "CV Builder", value: 82 },
+              { label: "ATS Scanner", value: 64 },
+              { label: "Interview Coach", value: 48 },
+            ].map((row) => (
+              <div key={row.label} className="flex flex-col gap-1">
+                <span className="text-xs">{row.label}</span>
+                <AnimatedBar value={row.value} />
+              </div>
+            ))}
+          </div>
+        </div>
+      </MockWindow>
+      <FloatingChip className="-right-3 -bottom-5 sm:-right-8" delay={0.5}>
+        <div className="flex items-center gap-2">
+          <span className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <LockKeyholeIcon className="size-3.5" />
+          </span>
+          <p className="text-xs font-medium">Never individual students</p>
+        </div>
+      </FloatingChip>
+    </div>
+  );
+}
+
 export default function ForUniversitiesPage() {
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>For Universities</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Career tools for your entire cohort
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            One UK-first toolkit for CVs, applications, interviews, and visa sponsorship —
-            licensed per institution, not per student.
-          </p>
-          <Button size="lg" render={<Link href="/demo">Request a demo</Link>} />
-        </div>
-      </Section>
+      <PageHero
+        eyebrow="For Universities"
+        title={
+          <>
+            Career tools for your <GradientText>entire cohort</GradientText>
+          </>
+        }
+        description="One UK-first toolkit for CVs, applications, interviews, and visa sponsorship — licensed per institution, not per student."
+        actions={
+          <>
+            <Button size="lg" variant="gradient" render={<Link href="/demo">Request a demo</Link>} />
+            <Button size="lg" variant="outline" render={<Link href="/partners">Other partners</Link>} />
+          </>
+        }
+        visual={<CohortPreview />}
+      />
 
       <Section className="pt-0">
-        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
-          {LICENSING_FACTS.map((fact) => (
-            <Card key={fact.title}>
-              <CardHeader>
-                <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <fact.icon className="size-5" />
-                </div>
-                <CardTitle className="text-sm">{fact.title}</CardTitle>
-                <CardDescription>{fact.description}</CardDescription>
-              </CardHeader>
-            </Card>
+        <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-3">
+          {LICENSING_FACTS.map((fact, index) => (
+            <FeatureCard key={fact.title} {...fact} index={index} />
           ))}
         </div>
       </Section>
 
       <Section tone="muted">
-        <SectionHeading eyebrow="What's included" title="Everything your students need, in one place" align="left" />
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {FEATURES.map((feature) => (
-            <FeatureCard key={feature.title} {...feature} />
+        <SectionHeading eyebrow="What's included" title="Everything your students need, in one place" />
+        <div className="mt-12 grid gap-6 sm:grid-cols-2">
+          {FEATURES.map((feature, index) => (
+            <FeatureCard key={feature.title} {...feature} index={index} />
           ))}
         </div>
       </Section>
 
       <Section>
-        <SectionHeading eyebrow="How it works" title="From first conversation to student access" align="left" />
-        <div className="mt-10">
+        <SectionHeading eyebrow="How it works" title="From first conversation to student access" />
+        <div className="mt-14">
           <JourneySteps steps={STEPS} />
         </div>
       </Section>
 
       <Section tone="muted">
         <SectionHeading eyebrow="FAQ" title="Questions from careers teams" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
       </Section>

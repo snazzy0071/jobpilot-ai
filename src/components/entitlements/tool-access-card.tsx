@@ -31,10 +31,10 @@ export function ToolAccessCard({
   const href = isOpenable ? tool.appHref! : tool.href;
 
   return (
-    <Link href={href} className="block rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-      <Card className="flex flex-row items-center justify-between gap-4 p-5 transition-shadow hover:shadow-elevated">
+    <Link href={href} className="block min-w-0 rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
+      <Card variant="tool" className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="font-heading text-3xl font-bold text-primary">{tool.title}</p>
+          <p className="font-heading text-2xl font-bold text-primary sm:text-3xl">{tool.title}</p>
           <p className="mt-1 truncate text-base text-muted-foreground">{tool.shortDescription}</p>
           {!isBuilt && (
             <span className="mt-2 inline-block text-xs text-muted-foreground">Not built yet</span>
@@ -46,14 +46,14 @@ export function ToolAccessCard({
           )}
         </div>
 
-        <div className="flex shrink-0 items-center gap-4">
+        <div className="flex shrink-0 items-center justify-between gap-4">
           {stat && (
             <p className="text-right leading-tight whitespace-nowrap">
-              <span className="text-4xl font-bold text-primary">{stat.value}</span>{" "}
+              <span className="text-3xl font-bold text-primary sm:text-4xl">{stat.value}</span>{" "}
               <span className="text-sm text-muted-foreground">{stat.unit}</span>
             </p>
           )}
-          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground transition-transform duration-300 group-hover/card:translate-x-1 group-hover/card:scale-105">
             <ArrowRightIcon className="size-5" />
           </span>
         </div>

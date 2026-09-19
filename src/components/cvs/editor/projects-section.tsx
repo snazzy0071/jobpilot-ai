@@ -13,7 +13,7 @@ import { useAutosave } from "@/components/cvs/editor/use-autosave";
 import { SectionList, type DragHandleProps } from "@/components/cvs/editor/section-list";
 import { DeleteRowButton } from "@/components/cvs/editor/delete-row-button";
 import { ToggleVisibilityButton } from "@/components/cvs/editor/toggle-visibility-button";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { useCvSaves } from "@/components/cvs/editor/save-coordinator";
 import type { CvProject } from "@/lib/cvs/types";
 import { PencilIcon, GripVerticalIcon } from "lucide-react";
 
@@ -110,11 +110,12 @@ function ProjectForm({ versionId, initial, onDone }: { versionId: string; initia
 }
 
 export function ProjectsSection({ versionId, items }: { versionId: string; items: CvProject[] }) {
+  const { track } = useCvSaves();
   async function handleReorder(orderedIds: string[]) {
     const formData = new FormData();
     formData.set("versionId", versionId);
     formData.set("orderedIds", JSON.stringify(orderedIds));
-    await callAction(() => reorderProjects(undefined, formData));
+    await track("reorder", () => reorderProjects(undefined, formData));
   }
 
   return (

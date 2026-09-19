@@ -9,7 +9,7 @@ import { Card } from "@/components/ui/card";
  */
 export function DailyAtsActionCard() {
   return (
-    <Card className="flex flex-col gap-3 p-6">
+    <Card variant="action" className="flex flex-col gap-3 p-6">
       <div className="flex items-center gap-2">
         <ScanSearchIcon className="size-4 text-primary" />
         <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Daily action</p>

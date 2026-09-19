@@ -1,6 +1,12 @@
+import Link from "next/link";
+import { BriefcaseIcon, InfinityIcon, ScanSearchIcon, ShieldCheckIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { StatStrip } from "@/components/marketing/stat-strip";
+import { CtaSection } from "@/components/marketing/cta-section";
 import { Badge } from "@/components/ui/badge";
 import { PricingTiers } from "@/components/marketing/pricing-tiers";
 import { ComparisonTable, type ComparisonColumn, type ComparisonRow } from "@/components/marketing/comparison-table";
@@ -65,22 +71,33 @@ const FAQ_ITEMS = [
 export default function PricingPage() {
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Pricing</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Plans for every stage of your search
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Start free. The plans below are a preview of what&apos;s coming — everyone is on
-            Free today.
-          </p>
-          <Badge variant="secondary">Paid plans launching soon</Badge>
-        </div>
-      </Section>
+      <PageHero
+        badge={<Badge variant="secondary">Paid plans launching soon</Badge>}
+        eyebrow="Pricing"
+        title={
+          <>
+            Plans for <GradientText>every stage</GradientText> of your search
+          </>
+        }
+        description="Start free. The plans below are a preview of what's coming — everyone is on Free today."
+        className="pb-4 sm:pb-8"
+      />
 
-      <Section tone="muted">
+      <Section className="pt-0 sm:pt-0">
         <PricingTiers />
+        <div className="mt-14">
+          <p className="mb-4 text-center text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            Every account includes
+          </p>
+          <StatStrip
+            items={[
+              { icon: ScanSearchIcon, title: "Unlimited ATS scans", caption: "Check any CV against any job" },
+              { icon: BriefcaseIcon, title: "Job Tracker", caption: "Every application in one board" },
+              { icon: ShieldCheckIcon, title: "Sponsor register search", caption: "UK Home Office data" },
+              { icon: InfinityIcon, title: "No card to start", caption: "Nothing is charged today" },
+            ]}
+          />
+        </div>
       </Section>
 
       <Section>
@@ -103,6 +120,10 @@ export default function PricingPage() {
           .
         </p>
       </Section>
+
+      <CtaSection title="Start free today" description="Create an account in a minute. Upgrade if and when paid plans launch.">
+        <Button size="lg" variant="secondary" render={<Link href="/signup">Create free account</Link>} />
+      </CtaSection>
     </>
   );
 }

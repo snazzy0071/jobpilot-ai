@@ -11,7 +11,7 @@ import { useAutosave } from "@/components/cvs/editor/use-autosave";
 import { SectionList, type DragHandleProps } from "@/components/cvs/editor/section-list";
 import { DeleteRowButton } from "@/components/cvs/editor/delete-row-button";
 import { ToggleVisibilityButton } from "@/components/cvs/editor/toggle-visibility-button";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { useCvSaves } from "@/components/cvs/editor/save-coordinator";
 import type { CvCertification } from "@/lib/cvs/types";
 import { PencilIcon, GripVerticalIcon } from "lucide-react";
 
@@ -100,11 +100,12 @@ function CertificationForm({
 }
 
 export function CertificationsSection({ versionId, items }: { versionId: string; items: CvCertification[] }) {
+  const { track } = useCvSaves();
   async function handleReorder(orderedIds: string[]) {
     const formData = new FormData();
     formData.set("versionId", versionId);
     formData.set("orderedIds", JSON.stringify(orderedIds));
-    await callAction(() => reorderCertifications(undefined, formData));
+    await track("reorder", () => reorderCertifications(undefined, formData));
   }
 
   return (

@@ -30,7 +30,7 @@ export default async function AdminJobsPage() {
         <h2 className="mb-3 text-lg font-semibold tracking-tight">Sources</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {health.sources.map((source) => (
-            <Card key={source.sourceId} className="gap-2 p-4">
+            <Card key={source.sourceId} variant="admin" className="gap-2 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-sm font-medium">
                   <BriefcaseIcon className="size-4" /> {source.sourceName}

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { LoginForm } from "@/components/auth/login-form";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
-import { toSafeRedirectPath } from "@/lib/auth/safe-redirect";
+import { parseRedirectParam } from "@/lib/auth/safe-redirect";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 // Was falling back to the root layout's generic default title/description
@@ -20,7 +20,13 @@ export const metadata = buildMetadata({
 export default async function LoginPage(props: PageProps<"/login">) {
   const searchParams = await props.searchParams;
   const redirectParam = searchParams.redirect;
-  const redirectTo = toSafeRedirectPath(
+  // No default substituted here (unlike toSafeRedirectPath) — an absent
+  // ?redirect= means "no explicit destination was requested", which
+  // must stay distinguishable from one, so the post-login action can
+  // fall back to the signed-in user's own role home instead of always
+  // /dashboard. LoginForm/OAuthButtons already treat a falsy redirectTo
+  // as "omit it" rather than "explicitly redirect to nothing".
+  const redirectTo = parseRedirectParam(
     Array.isArray(redirectParam) ? redirectParam[0] : redirectParam,
   );
   const errorParam = searchParams.error;
@@ -42,13 +48,13 @@ export default async function LoginPage(props: PageProps<"/login">) {
             {oauthError}
           </p>
         )}
-        <OAuthButtons redirectTo={redirectTo} />
+        <OAuthButtons redirectTo={redirectTo ?? undefined} />
         <div className="flex items-center gap-3">
           <Separator className="flex-1" />
           <span className="text-xs text-muted-foreground">or</span>
           <Separator className="flex-1" />
         </div>
-        <LoginForm redirectTo={redirectTo} />
+        <LoginForm redirectTo={redirectTo ?? undefined} />
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link href="/signup" className="text-primary hover:underline">

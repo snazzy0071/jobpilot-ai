@@ -244,7 +244,7 @@ export function GradSchemeResults({ schemes }: { schemes: GraduateScheme[] }) {
                           {isStale(scheme.verifiedAt) && (
                             <span
                               title={`Not rechecked in over ${STALE_AFTER_DAYS} days`}
-                              className="inline-flex items-center gap-1 text-amber-600 dark:text-amber-500"
+                              className="inline-flex items-center gap-1 text-warning"
                             >
                               <AlertTriangle className="size-3" />
                               Needs review

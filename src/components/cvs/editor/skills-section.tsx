@@ -11,7 +11,7 @@ import { useAutosave } from "@/components/cvs/editor/use-autosave";
 import { SectionList, type DragHandleProps } from "@/components/cvs/editor/section-list";
 import { DeleteRowButton } from "@/components/cvs/editor/delete-row-button";
 import { ToggleVisibilityButton } from "@/components/cvs/editor/toggle-visibility-button";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { useCvSaves } from "@/components/cvs/editor/save-coordinator";
 import type { CvSkill } from "@/lib/cvs/types";
 import { PencilIcon, GripVerticalIcon } from "lucide-react";
 
@@ -69,11 +69,12 @@ function SkillForm({ versionId, initial, onDone }: { versionId: string; initial:
 }
 
 export function SkillsSection({ versionId, items }: { versionId: string; items: CvSkill[] }) {
+  const { track } = useCvSaves();
   async function handleReorder(orderedIds: string[]) {
     const formData = new FormData();
     formData.set("versionId", versionId);
     formData.set("orderedIds", JSON.stringify(orderedIds));
-    await callAction(() => reorderSkills(undefined, formData));
+    await track("reorder", () => reorderSkills(undefined, formData));
   }
 
   return (

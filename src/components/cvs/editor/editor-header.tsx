@@ -2,7 +2,7 @@
 
 import { useActionState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeftIcon, DownloadIcon, ScanSearchIcon, CheckIcon } from "lucide-react";
+import { AlertCircleIcon, ArrowLeftIcon, CheckIcon, Loader2Icon, ScanSearchIcon } from "lucide-react";
 import { renameCv, type CvActionResult } from "@/lib/cvs/actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { CvFormMessage } from "@/components/cvs/form-message";
 import { TemplatePickerDialog } from "@/components/cvs/templates/template-picker-dialog";
 import { atsPanelAnchorId } from "@/components/cvs/editor/ats-preflight-panel";
+import { ExportPdfButton } from "@/components/cvs/editor/export-pdf-button";
+import { useCvSaves } from "@/components/cvs/editor/save-coordinator";
+import type { CvTemplateExtras } from "@/components/cvs/templates/types";
 import type { CvTemplate } from "@/lib/cvs/types";
 
 /**
@@ -29,14 +32,22 @@ export function EditorHeader({
   title,
   template,
   atsScore,
+  templateContent,
 }: {
   cvId: string;
   title: string;
   template: CvTemplate;
   atsScore: number | null;
+  /** Skills, projects etc., so the template chooser's Preview can render the whole CV. */
+  templateContent?: CvTemplateExtras;
 }) {
   const [renameState, renameAction, renamePending] = useActionState<CvActionResult, FormData>(renameCv, undefined);
   const formRef = useRef<HTMLFormElement>(null);
+  const { overall } = useCvSaves();
+  // The editor's real save state: every autosaving section, the template, and the rename below.
+  const renameError = renameState && "error" in renameState ? renameState.error : null;
+  const saveState = renamePending || overall.status === "saving" ? "saving" : renameError || overall.status === "error" ? "error" : "saved";
+  const saveMessage = renameError ?? overall.message;
 
   function scrollToAtsPanel() {
     document.getElementById(atsPanelAnchorId)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -73,12 +84,31 @@ export function EditorHeader({
           />
         </form>
 
-        <span className="hidden shrink-0 text-xs text-muted-foreground sm:inline">
-          {renamePending ? "Saving…" : "All changes saved"}
+        <span
+          className={`flex shrink-0 items-center gap-1 text-xs ${saveState === "error" ? "text-destructive" : "text-muted-foreground"}`}
+          role={saveState === "error" ? "alert" : "status"}
+          data-save-state={saveState}
+        >
+          {saveState === "saving" && (
+            <>
+              <Loader2Icon className="size-3.5 animate-spin" aria-hidden /> Saving…
+            </>
+          )}
+          {saveState === "saved" && (
+            <>
+              <CheckIcon className="size-3.5" aria-hidden /> <span className="hidden sm:inline">All changes saved</span>
+              <span className="sm:hidden">Saved</span>
+            </>
+          )}
+          {saveState === "error" && (
+            <>
+              <AlertCircleIcon className="size-3.5" aria-hidden /> {saveMessage ?? "Couldn't save your changes."}
+            </>
+          )}
         </span>
 
         <div className="flex w-full shrink-0 flex-wrap items-center gap-2 sm:w-auto">
-          <TemplatePickerDialog cvId={cvId} currentTemplate={template} triggerLabel="Templates" />
+          <TemplatePickerDialog currentTemplate={template} content={templateContent} triggerLabel="Templates" />
           <Button type="button" variant="outline" size="sm" onClick={scrollToAtsPanel}>
             <ScanSearchIcon /> ATS scan
             {atsScore !== null && (
@@ -90,13 +120,7 @@ export function EditorHeader({
           <Button size="sm" render={<Link href="/dashboard/cvs" />}>
             <CheckIcon /> Done
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            render={<a href={`/api/cvs/${cvId}/export`} target="_blank" rel="noopener noreferrer" />}
-          >
-            <DownloadIcon /> PDF
-          </Button>
+          <ExportPdfButton cvId={cvId} />
         </div>
       </div>
 

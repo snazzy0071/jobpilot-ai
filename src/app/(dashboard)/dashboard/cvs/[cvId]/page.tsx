@@ -4,7 +4,6 @@ import { LayoutTemplateIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { getCvEditorData, listCvVersions, getLatestAtsScan, listRecentJobOptions } from "@/lib/cvs/queries";
 import { restoreVersion } from "@/lib/cvs/actions";
-import { getCvTemplate } from "@/config/cv-templates";
 import { EditorHeader } from "@/components/cvs/editor/editor-header";
 import { PersonalForm } from "@/components/cvs/editor/personal-form";
 import { SummaryForm } from "@/components/cvs/editor/summary-form";
@@ -24,6 +23,7 @@ import { AtsPreflightPanel } from "@/components/cvs/editor/ats-preflight-panel";
 import { BuildProgress } from "@/components/cvs/editor/build-progress";
 import { SectionNav } from "@/components/cvs/editor/section-nav";
 import { TemplatePickerDialog } from "@/components/cvs/templates/template-picker-dialog";
+import { CurrentTemplateSummary } from "@/components/cvs/editor/current-template-summary";
 import { sectionAnchorId } from "@/components/cvs/editor/jump-to-section";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Card, CardContent } from "@/components/ui/card";
@@ -59,8 +59,6 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
     getLatestAtsScan(user.id, data.versionId),
     listRecentJobOptions(user.id),
   ]);
-
-  const template = getCvTemplate(data.template);
 
   const accordionItems: Partial<Record<SectionKey, (index: number) => ReactNode>> = {
     personal: (index) => (
@@ -155,9 +153,19 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
     ),
   };
 
+  const templateContent = {
+    skills: data.skills,
+    projects: data.projects,
+    certifications: data.certifications,
+    languages: data.languages,
+    customSections: data.customSections,
+    sectionOrder: data.sectionOrder,
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <CvPreviewProvider
+        cvId={data.cvId}
         initial={{
           template: data.template,
           personal: data.personal,
@@ -173,7 +181,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
             changing that input's semantics. */}
         <h1 className="sr-only">{data.cvTitle}</h1>
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <EditorHeader cvId={data.cvId} title={data.cvTitle} template={data.template} atsScore={data.atsScore} />
+          <EditorHeader cvId={data.cvId} title={data.cvTitle} template={data.template} atsScore={data.atsScore} templateContent={templateContent} />
           <VersionHistoryDialog
             versions={versions}
             restore={restoreVersion}
@@ -194,12 +202,8 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
             <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <LayoutTemplateIcon className="size-6" />
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">Template</p>
-              <p className="truncate font-heading text-base font-semibold">{template.name}</p>
-              <p className="line-clamp-1 text-sm text-muted-foreground">{template.description}</p>
-            </div>
-            <TemplatePickerDialog cvId={data.cvId} currentTemplate={data.template} triggerLabel="Swap template" />
+            <CurrentTemplateSummary />
+            <TemplatePickerDialog currentTemplate={data.template} content={templateContent} triggerLabel="Swap template" />
           </CardContent>
         </Card>
 

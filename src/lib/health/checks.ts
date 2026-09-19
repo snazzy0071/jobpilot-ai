@@ -102,7 +102,12 @@ export async function checkSponsorSync(): Promise<HealthCheckResult> {
  */
 export async function checkJobSync(): Promise<HealthCheckResult> {
   const supabase = await createClient();
-  const { data: sources, error: sourcesError } = await supabase.from("job_sources").select("id, name").eq("is_active", true);
+  // "manual" holds hand-entered listings and has no feed to sync — counting it made this check read "down: never synced" forever.
+  const { data: sources, error: sourcesError } = await supabase
+    .from("job_sources")
+    .select("id, name")
+    .eq("is_active", true)
+    .neq("slug", "manual");
   if (sourcesError) return result("job_sync", "Job feed sync", "down", `Query failed: ${sourcesError.message}`);
   if (!sources || sources.length === 0) {
     return result("job_sync", "Job feed sync", "not_configured", "No active job sources configured.");

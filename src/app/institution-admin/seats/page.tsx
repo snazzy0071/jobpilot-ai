@@ -41,7 +41,7 @@ export default async function InstitutionAdminSeatsPage() {
       </div>
 
       {licence && seatsTotal !== null ? (
-        <Card className="gap-4 p-6">
+        <Card variant="admin" className="gap-4 p-6">
           <SeatBar label="In use" count={seatsUsed} total={seatsTotal} />
           <div className="grid gap-4 pt-2 sm:grid-cols-3">
             <div>

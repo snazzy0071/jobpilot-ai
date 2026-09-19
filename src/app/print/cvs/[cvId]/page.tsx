@@ -33,31 +33,34 @@ export default async function CvPrintPage({ params }: { params: Promise<{ cvId: 
   return (
     <>
       {/*
-        Real print CSS, not a reuse of A4Page's on-screen JS pagination
-        (see TemplateRenderer's `mode="print"` doc comment) — Chromium's
-        own print engine paginates this for real, using `@page` for the
-        real A4 size/margins and the `break-inside`/`break-after`
-        utilities already on the content blocks (harmless on screen,
-        meaningful here) to avoid splitting an entry mid-way across a
-        page. `.pdf-export .font-*` overrides this project's on-screen
-        heading font choices (which include a custom loaded webfont,
-        Geist) with genuinely standard, universally-embeddable fonts —
-        this task's explicit "standard fonts" requirement is about the
-        exported document specifically, not a request to change the
-        live web preview's typography.
+        Real print CSS, not a reuse of A4Page's on-screen slicing (see
+        TemplateRenderer's `mode="print"` doc comment) — Chromium's own
+        print engine paginates this for real. `@page` has *no* margin on
+        purpose: each template draws its own page edge (full-bleed
+        banners, sidebar columns), and the document wrapper re-applies
+        its top/bottom padding to every page it flows onto via
+        `box-decoration-break: clone`. Content blocks are
+        `break-inside: avoid` (data-cv-atom in the markup), the same
+        rules the on-screen paginator (a4-page.tsx) uses to place its
+        page breaks. The fonts are the template's own — self-hosted by
+        next/font, so the preview and this document set text in the
+        same typefaces; Chromium embeds them as real, extractable text.
       */}
       <style>{`
-        @page { size: A4; margin: 14mm 16mm; }
+        @page { size: A4; margin: 0; }
         html, body { background: #fff; margin: 0; }
-        .pdf-export { font-family: Arial, Helvetica, sans-serif; }
-        .pdf-export .font-serif { font-family: Georgia, "Times New Roman", Times, serif; }
-        .pdf-export .font-sans { font-family: Arial, Helvetica, sans-serif; }
+        * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        [data-cv-atom] { break-inside: avoid; }
+        [data-cv-keep] { break-after: avoid; }
       `}</style>
       {/* sr-only real <h1> — this route had zero headings; harmless for
           Puppeteer's PDF capture (invisible, zero layout impact) and
           gives the rare human visitor and any AT a real page title. */}
       <h1 className="sr-only">{data.personal?.fullName ? `${data.personal.fullName} CV` : data.cvTitle}</h1>
-      <TemplateRenderer templateSlug={data.template} data={data} mode="print" />
+      {/* Read back by generateCvPdf so the export can report exactly which template and version it rendered. */}
+      <div data-cv-render data-template={data.template} data-version-id={data.versionId}>
+        <TemplateRenderer templateSlug={data.template} data={data} mode="print" />
+      </div>
     </>
   );
 }

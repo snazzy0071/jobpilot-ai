@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Sora } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import { CookieConsentBanner } from "@/components/consent/cookie-consent-banner";
+import { MotionProvider } from "@/components/motion/motion-provider";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -81,8 +82,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <script src="/theme-init.js" />
       </head>
       <body className="min-h-full flex flex-col">
-        {children}
-        <CookieConsentBanner />
+        <MotionProvider>
+          {children}
+          <CookieConsentBanner />
+        </MotionProvider>
       </body>
     </html>
   );

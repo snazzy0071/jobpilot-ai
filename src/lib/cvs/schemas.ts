@@ -8,21 +8,23 @@ import { LANGUAGE_PROFICIENCIES, SECTION_KEYS } from "@/lib/cvs/types";
 // CLAUDE.md's "validate all input server-side" rule.
 
 const uuid = z.string().uuid();
+// The autosave forms send a FormData snapshot on every change: a blank input arrives as "" and a field that
+// isn't rendered at all (End date while "I currently work here" is ticked) arrives as null. Both mean "no
+// value", and must come out as `undefined` so the action stores NULL. These used to be written as
+// `z.string()....optional().or(z.literal("").transform(...))`; a union returns its first matching branch, and ""
+// is already a valid string, so the transform never ran: a blank date reached Postgres as "" and failed with
+// `invalid input syntax for type date`, and null was rejected outright.
+const blankToUndefined = (value: string | null | undefined) => (value ? value : undefined);
+
 const optionalUrl = (maxLength: number) =>
   z
     .string()
     .trim()
     .max(maxLength)
-    .refine((value) => /^https?:\/\//i.test(value), "Must start with http:// or https://")
-    .optional()
-    .or(z.literal("").transform(() => undefined));
-const optionalText = (maxLength: number) =>
-  z
-    .string()
-    .trim()
-    .max(maxLength)
-    .optional()
-    .or(z.literal("").transform(() => undefined));
+    .nullish()
+    .transform(blankToUndefined)
+    .refine((value) => value === undefined || /^https?:\/\//i.test(value), "Must start with http:// or https://");
+const optionalText = (maxLength: number) => z.string().trim().max(maxLength).nullish().transform(blankToUndefined);
 
 export const createCvSchema = z.object({
   title: z.string().trim().min(1, "Give your CV a name.").max(200),
@@ -49,9 +51,9 @@ export const personalSchema = z.object({
     .string()
     .trim()
     .max(320)
-    .email("Enter a valid email address.")
-    .optional()
-    .or(z.literal("").transform(() => undefined)),
+    .nullish()
+    .transform(blankToUndefined)
+    .refine((value) => value === undefined || z.email().safeParse(value).success, "Enter a valid email address."),
   phone: optionalText(40),
   location: optionalText(200),
   websiteUrl: optionalUrl(500),
@@ -64,11 +66,7 @@ export const summarySchema = z.object({
   content: z.string().trim().max(2000),
 });
 
-const dateOrUndefined = z
-  .string()
-  .trim()
-  .optional()
-  .or(z.literal("").transform(() => undefined));
+const dateOrUndefined = z.string().trim().nullish().transform(blankToUndefined);
 
 export const experienceSchema = z
   .object({

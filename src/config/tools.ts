@@ -69,6 +69,7 @@ export const TOOLS: Tool[] = [
     title: "Job Tracker",
     shortDescription: "Every application from wishlist to offer, in one board.",
     plan: "free",
+    appHref: "/dashboard/applications",
   },
   {
     slug: "linkedin",
@@ -86,6 +87,7 @@ export const TOOLS: Tool[] = [
     title: "Job Match",
     shortDescription: "Live UK listings scored against your CV.",
     plan: "premium",
+    appHref: "/dashboard/jobs",
   },
   {
     slug: "gradprep",
@@ -94,6 +96,7 @@ export const TOOLS: Tool[] = [
     title: "Grad Scheme Prep",
     shortDescription: "Aptitude test practice in real formats.",
     plan: "premium",
+    appHref: "/dashboard/test-prep",
   },
 ];
 

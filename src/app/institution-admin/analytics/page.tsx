@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 function StatTile({ icon: Icon, label, value, caption }: { icon: typeof UsersIcon; label: string; value: string; caption?: string }) {
   return (
-    <Card className="gap-1 p-4">
+    <Card variant="metric" className="gap-1 p-4">
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Icon className="size-4" /> {label}
       </div>
@@ -38,7 +38,7 @@ export default async function InstitutionAdminAnalyticsPage() {
         <p className="mt-1 text-muted-foreground">Aggregate activity across your student cohort — never broken down by individual student.</p>
       </div>
 
-      <Card className="gap-3 p-6">
+      <Card variant="admin" className="gap-3 p-6">
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium">Activated students</span>
           <span className="text-muted-foreground">

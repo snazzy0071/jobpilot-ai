@@ -9,6 +9,7 @@ import {
   handleInvoicePaid,
   handleInvoicePaymentFailed,
 } from "@/lib/billing/sync";
+import { markStripeWebhookResolved, recordStripeWebhookFailure } from "@/lib/billing/webhook-failures";
 
 // Stripe requires the raw, unparsed request body to verify the
 // `stripe-signature` header — Next's default body parsing would break
@@ -64,6 +65,8 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error(`Failed to process Stripe event ${event.id} (${event.type}):`, err);
+    // Feeds the admin overview's failed-webhook count (see webhook-failures.ts).
+    await recordStripeWebhookFailure(event.id, event.type, err);
     // 500 tells Stripe to retry. Safe to retry: each handler claims its
     // event via a unique stripe_event_id before applying side effects,
     // and un-claims it if the side effect itself throws (see
@@ -72,6 +75,9 @@ export async function POST(req: NextRequest) {
     // never double-applies.
     return NextResponse.json({ error: "Processing failed" }, { status: 500 });
   }
+
+  // If an earlier delivery of this event failed and Stripe's retry just succeeded, close those failures out.
+  await markStripeWebhookResolved(event.id);
 
   return NextResponse.json({ received: true });
 }

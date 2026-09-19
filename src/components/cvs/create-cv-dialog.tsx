@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CvFormMessage } from "@/components/cvs/form-message";
-import { CV_TEMPLATES, CV_TEMPLATE_LAYOUTS, CV_TEMPLATE_LAYOUT_LABELS } from "@/config/cv-templates";
+import { CV_TEMPLATES, CV_TEMPLATE_STYLES, CV_TEMPLATE_STYLE_LABELS, CV_TEMPLATE_LAYOUT_LABELS, getCvTemplate } from "@/config/cv-templates";
 
 export function CreateCvDialog({ trigger }: { trigger?: ReactElement } = {}) {
   const [open, setOpen] = useState(false);
@@ -40,17 +40,17 @@ export function CreateCvDialog({ trigger }: { trigger?: ReactElement } = {}) {
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="template">Template</Label>
-            <Select name="template" defaultValue={CV_TEMPLATES[0].slug}>
+            <Select name="template" defaultValue={getCvTemplate("northlight").slug}>
               <SelectTrigger id="template" className="w-full">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {CV_TEMPLATE_LAYOUTS.map((layout) => (
-                  <SelectGroup key={layout}>
-                    <SelectLabel>{CV_TEMPLATE_LAYOUT_LABELS[layout]}</SelectLabel>
-                    {CV_TEMPLATES.filter((t) => t.layout === layout).map((t) => (
+                {CV_TEMPLATE_STYLES.map((style) => (
+                  <SelectGroup key={style}>
+                    <SelectLabel>{CV_TEMPLATE_STYLE_LABELS[style]}</SelectLabel>
+                    {CV_TEMPLATES.filter((t) => t.style === style).map((t) => (
                       <SelectItem key={t.slug} value={t.slug}>
-                        {t.name}
+                        {t.name} — {CV_TEMPLATE_LAYOUT_LABELS[t.layout].toLowerCase()}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -58,7 +58,7 @@ export function CreateCvDialog({ trigger }: { trigger?: ReactElement } = {}) {
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              You can browse all 24 templates with sector/experience filters from the editor.
+              You can preview all 24 templates on your own CV, with style, layout, sector and experience filters, from the editor.
             </p>
           </div>
 

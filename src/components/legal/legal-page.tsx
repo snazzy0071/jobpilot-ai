@@ -1,4 +1,5 @@
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { ClockIcon, ScaleIcon } from "lucide-react";
+import { PageHero } from "@/components/marketing/page-hero";
 import { Section } from "@/components/marketing/section";
 import { ArticleBody } from "@/components/content/article-body";
 import { TableOfContents } from "@/components/content/table-of-contents";
@@ -17,17 +18,25 @@ function formatLegalDate(iso: string): string {
 export function LegalPage({ document }: { document: LegalDocument }) {
   return (
     <>
-      <Section className="pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Legal</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">{document.title}</h1>
-          <p className="max-w-xl text-lg text-muted-foreground">{document.intro}</p>
-          <p className="text-sm text-muted-foreground">
-            Last updated{" "}
-            <time dateTime={document.lastUpdated}>{formatLegalDate(document.lastUpdated)}</time>
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        badge={
+          <span className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-card">
+            <ScaleIcon className="size-6" />
+          </span>
+        }
+        eyebrow="Legal"
+        title={document.title}
+        description={
+          <div className="flex flex-col items-center gap-4">
+            <p>{document.intro}</p>
+            <p className="inline-flex items-center gap-1.5 rounded-full border bg-card/70 px-3 py-1 text-sm">
+              <ClockIcon className="size-3.5 text-primary" aria-hidden="true" />
+              Last updated <time dateTime={document.lastUpdated}>{formatLegalDate(document.lastUpdated)}</time>
+            </p>
+          </div>
+        }
+        className="sm:pb-16"
+      />
 
       <Section className="pt-0 pb-24">
         <div className="mx-auto grid max-w-4xl gap-10 lg:grid-cols-[14rem_1fr]">

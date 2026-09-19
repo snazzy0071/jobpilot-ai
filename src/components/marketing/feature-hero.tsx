@@ -1,6 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Section } from "@/components/marketing/section";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
 import { FeatureBadge } from "@/components/marketing/feature-badge";
 import { QuickAnswer } from "@/components/marketing/quick-answer";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
@@ -24,27 +23,36 @@ export function FeatureHero({
   demo?: React.ReactNode;
 }) {
   return (
-    <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 sm:pt-32">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
-        {/* No real "/features" index page exists, so this stays a plain
-            two-level Home > Title trail rather than an unlinkable
-            middle crumb (see visa-sponsors' three-level version for the
-            pattern this follows). */}
-        <div className="w-full self-start">
-          <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: title }]} />
+    <PageHero
+      // No real "/features" index page exists, so this stays a plain
+      // two-level Home > Title trail rather than an unlinkable middle crumb.
+      breadcrumbs={<Breadcrumbs items={[{ label: "Home", href: "/" }, { label: title }]} />}
+      badge={
+        <span className="gradient-brand flex size-14 items-center justify-center rounded-2xl text-white shadow-elevated">
+          <Icon className="size-7" />
+        </span>
+      }
+      eyebrow={eyebrow}
+      title={title}
+      description={
+        <div className="flex flex-col items-center gap-4 lg:items-start">
+          <p>{description}</p>
+          <FeatureBadge plan={plan} />
         </div>
-        <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
-          <Icon className="size-6" />
-        </div>
-        <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">{title}</h1>
-        <p className="text-lg text-muted-foreground">{description}</p>
-        <FeatureBadge plan={plan} />
-      </div>
-      {demo && <div className="mt-12 flex justify-center">{demo}</div>}
-      <div className="mt-10">
-        <QuickAnswer>{quickAnswer}</QuickAnswer>
-      </div>
-    </Section>
+      }
+      visual={
+        demo ? (
+          <div className="relative">
+            <div
+              className="pointer-events-none absolute -inset-8 -z-10 rounded-[2.5rem] bg-gradient-to-br from-primary/15 via-transparent to-brand-secondary/15 blur-2xl"
+              aria-hidden="true"
+            />
+            {demo}
+          </div>
+        ) : undefined
+      }
+      footer={<QuickAnswer>{quickAnswer}</QuickAnswer>}
+      align={demo ? "left" : "center"}
+    />
   );
 }

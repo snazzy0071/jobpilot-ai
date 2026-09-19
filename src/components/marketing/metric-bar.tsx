@@ -1,4 +1,10 @@
-export function MetricBar({ label, value }: { label: string; value: number }) {
+"use client";
+
+import { motion, useReducedMotion } from "framer-motion";
+
+export function MetricBar({ label, value, delay = 0 }: { label: string; value: number; delay?: number }) {
+  const reducedMotion = useReducedMotion();
+
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between text-xs">
@@ -6,7 +12,13 @@ export function MetricBar({ label, value }: { label: string; value: number }) {
         <span className="font-medium">{value}%</span>
       </div>
       <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-        <div className="h-full rounded-full bg-primary" style={{ width: `${value}%` }} />
+        <motion.div
+          className="h-full rounded-full bg-primary"
+          initial={reducedMotion ? { width: `${value}%` } : { width: 0 }}
+          whileInView={{ width: `${value}%` }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8, delay, ease: "easeOut" }}
+        />
       </div>
     </div>
   );

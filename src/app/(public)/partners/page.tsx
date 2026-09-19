@@ -1,5 +1,11 @@
-import { Mail, Layers, BarChart3, Rocket, MessageSquare } from "lucide-react";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import Link from "next/link";
+import { Mail, Layers, BarChart3, Rocket, MessageSquare, GraduationCap, Users, Building2, Code2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { FloatingCardStack } from "@/components/marketing/floating-card-stack";
+import { SplitFormPage } from "@/components/marketing/split-form-page";
+import { CtaSection } from "@/components/marketing/cta-section";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FeatureCard } from "@/components/marketing/feature-card";
@@ -57,50 +63,70 @@ const FAQ_ITEMS = [
 export default function PartnersPage() {
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Partners</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Bring the toolkit to your community
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            For careers services, student societies, employers, and bootcamps supporting people
-            through the UK job market.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        eyebrow="Partners"
+        title={
+          <>
+            Bring the toolkit to <GradientText>your community</GradientText>
+          </>
+        }
+        description="For careers services, student societies, employers, and bootcamps supporting people through the UK job market."
+        actions={
+          <>
+            <Button size="lg" variant="gradient" render={<a href="#partner-form">Become a partner</a>} />
+            <Button size="lg" variant="outline" render={<Link href="/for-universities">For universities</Link>} />
+          </>
+        }
+        visual={
+          <FloatingCardStack
+            items={[
+              { icon: GraduationCap, title: "Careers services", caption: "Support a whole cohort", tone: "primary" },
+              { icon: Users, title: "Student societies", caption: "Ambassador programmes", tone: "coral" },
+              { icon: Building2, title: "Employers", caption: "Help candidates prepare", tone: "success" },
+              { icon: Code2, title: "Bootcamps", caption: "Accelerators and cohorts", tone: "accent" },
+            ]}
+          />
+        }
+      />
 
-      <Section className="pt-0">
-        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-2">
-          {REASONS.map((reason) => (
-            <FeatureCard key={reason.title} {...reason} />
+      <Section tone="muted">
+        <SectionHeading eyebrow="Why partner" title="Built around how communities actually work" />
+        <div className="mx-auto mt-12 grid max-w-4xl gap-6 sm:grid-cols-2">
+          {REASONS.map((reason, index) => (
+            <FeatureCard key={reason.title} {...reason} index={index} />
           ))}
         </div>
       </Section>
 
-      <Section tone="muted">
-        <SectionHeading eyebrow="Get in touch" title="Tell us about your organisation" />
-        <div className="mx-auto mt-8 max-w-xl">
-          <PartnerInquiryForm />
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            Prefer email?{" "}
-            <a
-              href={`mailto:${siteConfig.supportEmail}`}
-              className="inline-flex items-center gap-1 text-foreground underline"
-            >
-              <Mail className="size-3.5" />
-              {siteConfig.supportEmail}
-            </a>
-          </p>
-        </div>
-      </Section>
+      <div id="partner-form" className="scroll-mt-16">
+        <SplitFormPage
+          asSection
+          eyebrow="Get in touch"
+          title="Tell us about your organisation"
+          description="Within one business day of submitting the form, a real person will reply to talk through what makes sense for your numbers."
+          form={<PartnerInquiryForm />}
+          formNote={
+            <>
+              Prefer email?{" "}
+              <a href={`mailto:${siteConfig.supportEmail}`} className="inline-flex items-center gap-1 text-foreground underline">
+                <Mail className="size-3.5" />
+                {siteConfig.supportEmail}
+              </a>
+            </>
+          }
+        />
+      </div>
 
       <Section>
         <SectionHeading eyebrow="FAQ" title="Questions about partnering with us" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
       </Section>
+
+      <CtaSection title="Not sure it fits? Ask us." description="Tell us your numbers and we'll talk through options.">
+        <Button size="lg" variant="secondary" render={<Link href="/contact">Contact us</Link>} />
+      </CtaSection>
     </>
   );
 }

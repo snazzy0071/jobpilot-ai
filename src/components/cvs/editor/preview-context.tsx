@@ -1,6 +1,9 @@
 "use client";
 
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { updateCvTemplate } from "@/lib/cvs/actions";
+import { CvSaveProvider, useCvSaves } from "@/components/cvs/editor/save-coordinator";
+import { createTemplateSaver } from "@/components/cvs/editor/template-saver";
 import type { CvPersonal, CvSummary, CvExperience, CvEducation, CvTemplate } from "@/lib/cvs/types";
 
 export type CvPreviewData = {
@@ -21,8 +24,13 @@ type PreviewContextValue = {
   setLiveSummary: (content: string | null) => void;
   setLiveExperience: (key: string, data: Partial<CvExperience> | null) => void;
   setLiveEducation: (key: string, data: Partial<CvEducation> | null) => void;
-  /** Switches the preview's template instantly, before updateCvTemplate's own round trip completes — the "live" in live template switching. */
-  setLiveTemplate: (template: CvTemplate | null) => void;
+  /**
+   * The one way to change the template: the preview switches instantly, then it is saved to the database.
+   * Saves are serialised (the last choice always wins), and if the database rejects one the preview is
+   * reverted to the template that IS saved and the error is shown — the preview can never keep showing a
+   * template the database doesn't have.
+   */
+  selectTemplate: (template: CvTemplate) => void;
 };
 
 const PreviewContext = createContext<PreviewContextValue | null>(null);
@@ -37,7 +45,17 @@ const PreviewContext = createContext<PreviewContextValue | null>(null);
  * what's currently being typed, never a stale draft from a different
  * field.
  */
-export function CvPreviewProvider({ initial, children }: { initial: CvPreviewData; children: ReactNode }) {
+export function CvPreviewProvider({ cvId, initial, children }: { cvId: string; initial: CvPreviewData; children: ReactNode }) {
+  return (
+    <CvSaveProvider>
+      <PreviewState cvId={cvId} initial={initial}>
+        {children}
+      </PreviewState>
+    </CvSaveProvider>
+  );
+}
+
+function PreviewState({ cvId, initial, children }: { cvId: string; initial: CvPreviewData; children: ReactNode }) {
   // React's documented pattern for "reset state when a prop changes"
   // (react.dev/learn/you-might-not-need-an-effect) — adjusting state
   // directly during render, not inside an effect, so a fresh `initial`
@@ -56,6 +74,35 @@ export function CvPreviewProvider({ initial, children }: { initial: CvPreviewDat
   const [liveExperience, setLiveExperienceState] = useState<LiveRow<CvExperience> | null>(null);
   const [liveEducation, setLiveEducationState] = useState<LiveRow<CvEducation> | null>(null);
   const [liveTemplate, setLiveTemplateState] = useState<CvTemplate | null>(null);
+
+  // The database is the source of truth for the template. `liveTemplate` is only an optimistic overlay while a
+  // save is in flight; the saver reverts it on failure and adopts whatever the server renders after a refresh.
+  const { track, register: registerFlush } = useCvSaves(); // both are stable for the provider's lifetime
+  const [templateSaver] = useState(() =>
+    createTemplateSaver<CvTemplate>({
+      initial: initial.template,
+      persist: async (template) => {
+        const formData = new FormData();
+        formData.set("cvId", cvId);
+        formData.set("template", template);
+        const result = await track("template", () => updateCvTemplate(undefined, formData));
+        return result && typeof result === "object" && "error" in result ? { error: result.error } : null;
+      },
+      onOptimistic: (template) => setLiveTemplateState(template),
+      onRevert: (persisted) => setLiveTemplateState(persisted),
+    }),
+  );
+  useEffect(
+    () =>
+      registerFlush("template", async () => {
+        const failure = await templateSaver.whenIdle();
+        return failure ?? undefined;
+      }),
+    [registerFlush, templateSaver],
+  );
+  useEffect(() => {
+    templateSaver.adopt(saved.template);
+  }, [templateSaver, saved.template]);
 
   const preview = useMemo<CvPreviewData>(() => {
     const personal = livePersonal ? { ...(saved.personal ?? ({} as CvPersonal)), ...livePersonal } : saved.personal;
@@ -115,7 +162,7 @@ export function CvPreviewProvider({ initial, children }: { initial: CvPreviewDat
       setLiveEducationState((prev) =>
         data === null ? null : { key, data: prev && prev.key === key ? { ...prev.data, ...data } : data },
       ),
-    setLiveTemplate: setLiveTemplateState,
+    selectTemplate: (template) => templateSaver.select(template),
   };
 
   return <PreviewContext.Provider value={value}>{children}</PreviewContext.Provider>;

@@ -65,7 +65,11 @@ export async function savePersonal(_prevState: SectionActionResult, formData: Fo
     },
     { onConflict: "cv_version_id" },
   );
-  if (error) return { error: "Couldn't save personal details — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save personal details):", error);
+    return { error: "Couldn't save personal details — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved." };
@@ -89,7 +93,11 @@ export async function saveSummary(_prevState: SectionActionResult, formData: For
       { cv_version_id: parsed.data.versionId, user_id: user.id, content: parsed.data.content },
       { onConflict: "cv_version_id" },
     );
-  if (error) return { error: "Couldn't save the summary — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save the summary):", error);
+    return { error: "Couldn't save the summary — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved." };
@@ -129,14 +137,20 @@ export async function saveExperience(_prevState: SectionActionResult, formData: 
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_experience").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_experience").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_experience", parsed.data.versionId);
     const result = await supabase.from("cv_experience").insert({ ...row, display_order: displayOrder }).select("id").single();
     error = result.error;
     savedId = result.data?.id ?? null;
   }
-  if (error) return { error: "Couldn't save that role — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save that role):", error);
+    return { error: "Couldn't save that role — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved.", id: savedId ?? undefined };
@@ -188,14 +202,20 @@ export async function saveEducation(_prevState: SectionActionResult, formData: F
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_education").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_education").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_education", parsed.data.versionId);
     const result = await supabase.from("cv_education").insert({ ...row, display_order: displayOrder }).select("id").single();
     error = result.error;
     savedId = result.data?.id ?? null;
   }
-  if (error) return { error: "Couldn't save that qualification — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save that qualification):", error);
+    return { error: "Couldn't save that qualification — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved.", id: savedId ?? undefined };
@@ -233,7 +253,9 @@ export async function saveSkill(_prevState: SectionActionResult, formData: FormD
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_skills").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_skills").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_skills", parsed.data.versionId);
     const result = await supabase.from("cv_skills").insert({ ...row, display_order: displayOrder }).select("id").single();
@@ -296,14 +318,20 @@ export async function saveProject(_prevState: SectionActionResult, formData: For
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_projects").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_projects").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_projects", parsed.data.versionId);
     const result = await supabase.from("cv_projects").insert({ ...row, display_order: displayOrder }).select("id").single();
     error = result.error;
     savedId = result.data?.id ?? null;
   }
-  if (error) return { error: "Couldn't save that project — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save that project):", error);
+    return { error: "Couldn't save that project — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved.", id: savedId ?? undefined };
@@ -352,7 +380,9 @@ export async function saveCertification(
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_certifications").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_certifications").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_certifications", parsed.data.versionId);
     const result = await supabase
@@ -363,7 +393,11 @@ export async function saveCertification(
     error = result.error;
     savedId = result.data?.id ?? null;
   }
-  if (error) return { error: "Couldn't save that certification — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save that certification):", error);
+    return { error: "Couldn't save that certification — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved.", id: savedId ?? undefined };
@@ -407,7 +441,9 @@ export async function saveLanguage(_prevState: SectionActionResult, formData: Fo
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_languages").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_languages").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_languages", parsed.data.versionId);
     const result = await supabase.from("cv_languages").insert({ ...row, display_order: displayOrder }).select("id").single();
@@ -459,7 +495,9 @@ export async function saveCustomSection(
   let savedId = parsed.data.id ?? null;
   let error;
   if (parsed.data.id) {
-    ({ error } = await supabase.from("cv_custom_sections").update(row).eq("id", parsed.data.id).eq("user_id", user.id));
+    // `.select()` so an update that matched no row (deleted in another tab, wrong owner) is an error, not a silent "Saved".
+    const result = await supabase.from("cv_custom_sections").update(row).eq("id", parsed.data.id).eq("user_id", user.id).select("id");
+    error = result.error ?? (result.data && result.data.length > 0 ? null : { message: "row not found" });
   } else {
     const displayOrder = await nextDisplayOrder(supabase, "cv_custom_sections", parsed.data.versionId);
     const result = await supabase
@@ -470,7 +508,11 @@ export async function saveCustomSection(
     error = result.error;
     savedId = result.data?.id ?? null;
   }
-  if (error) return { error: "Couldn't save that section — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't save that section):", error);
+    return { error: "Couldn't save that section — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Saved.", id: savedId ?? undefined };
@@ -507,7 +549,11 @@ async function deleteSectionRow(table: string, formData: FormData): Promise<Sect
   if (!owned) return { error: "That CV couldn't be found." };
 
   const { error } = await supabase.from(table).delete().eq("id", parsedRow.data.id).eq("user_id", user.id);
-  if (error) return { error: "Couldn't delete that entry — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't delete that entry):", error);
+    return { error: "Couldn't delete that entry — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Deleted." };
@@ -538,7 +584,11 @@ async function toggleSectionRowVisibility(table: string, formData: FormData): Pr
     .update({ is_visible: parsed.data.isVisible })
     .eq("id", parsed.data.id)
     .eq("user_id", user.id);
-  if (error) return { error: "Couldn't update visibility — try again." };
+  if (error) {
+    // The user gets a short message; the real cause goes to the server log so a failed save is diagnosable.
+    console.error("CV section save failed (Couldn't update visibility):", error);
+    return { error: "Couldn't update visibility — try again." };
+  }
 
   revalidatePath(editorPath(owned.cvId));
   return { success: parsed.data.isVisible ? "Shown on CV." : "Hidden from CV." };

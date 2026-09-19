@@ -20,6 +20,7 @@ import type {
   SectionKey,
   LanguageProficiency,
 } from "@/lib/cvs/types";
+import { normalizeCvTemplate } from "@/config/cv-templates";
 import { SECTION_KEYS } from "@/lib/cvs/types";
 import type { CvTemplateContentData } from "@/components/cvs/templates/types";
 
@@ -59,7 +60,7 @@ export async function listCvs(userId: string): Promise<CvListItem[]> {
     return {
       id: row.id,
       title: row.title,
-      template: row.template,
+      template: normalizeCvTemplate(row.template),
       isArchived: row.is_archived,
       updatedAt: row.updated_at,
       currentVersionId: current?.id ?? null,
@@ -640,7 +641,7 @@ export async function getCvEditorData(userId: string, cvId: string): Promise<CvE
   return {
     cvId: cv.id,
     cvTitle: cv.title,
-    template: cv.template,
+    template: normalizeCvTemplate(cv.template),
     versionId: version.id,
     versionNumber: version.version_number,
     atsScore: version.ats_score,

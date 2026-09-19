@@ -5,7 +5,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/env";
-import { toSafeRedirectPath } from "@/lib/auth/safe-redirect";
+import { parseRedirectParam } from "@/lib/auth/safe-redirect";
+import { getRoleHomePath } from "@/lib/auth/role-redirect";
 import { getAppSettings } from "@/lib/admin/settings/queries";
 import {
   consumePasswordResetRateLimit,
@@ -35,7 +36,11 @@ export async function signInWithPassword(
   const parsed = signInSchema.safeParse({
     email: formData.get("email"),
     password: formData.get("password"),
-    redirectTo: formData.get("redirectTo"),
+    // formData.get() returns null when the hidden field was omitted
+    // (LoginForm only renders it when there's a real redirectTo) —
+    // coerced to undefined here since signInSchema's redirectTo is
+    // `.optional()`, which zod treats as "must be undefined, not null".
+    redirectTo: formData.get("redirectTo") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -45,14 +50,29 @@ export async function signInWithPassword(
   const { email, password, redirectTo } = parsed.data;
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return { error: error.message };
   }
 
+  // An explicit redirect (bounced here from a protected page) wins;
+  // otherwise this is the signed-in user's OWN role home — admin ->
+  // /admin, institution_admin -> /institution-admin, user -> /dashboard
+  // — never a hardcoded /dashboard regardless of role.
+  const explicitRedirect = parseRedirectParam(redirectTo);
+  let target = explicitRedirect;
+  if (!target) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", signInData.user.id)
+      .single();
+    target = getRoleHomePath(profile?.role);
+  }
+
   revalidatePath("/", "layout");
-  redirect(toSafeRedirectPath(redirectTo));
+  redirect(target);
 }
 
 export async function signUpWithPassword(
@@ -191,14 +211,19 @@ export async function updatePassword(
   // Requires the temporary session established by verifying the recovery
   // link in /auth/confirm — not a standalone "change my password" form.
   const supabase = await createClient();
-  const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
+  const { data, error } = await supabase.auth.updateUser({ password: parsed.data.password });
 
   if (error) {
     return { error: error.message };
   }
 
+  // Role-aware, not a hardcoded /dashboard — any role can go through
+  // password recovery, and an admin/institution_admin finishing it
+  // belongs on their own home, same as a fresh sign-in.
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(getRoleHomePath(profile?.role));
 }
 
 export type ResendResult = { error: string } | { sent: true };

@@ -1,6 +1,7 @@
 import { SidebarNav, type SidebarNavItem } from "@/components/layout/sidebar-nav";
 import { SidebarShell } from "@/components/layout/sidebar-shell";
 import { SignOutButton } from "@/components/layout/sign-out-button";
+import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
 
 export const INSTITUTION_ADMIN_NAV_ITEMS: SidebarNavItem[] = [
   { href: "/institution-admin", label: "Overview", icon: "layout-dashboard" },
@@ -15,6 +16,7 @@ export const INSTITUTION_ADMIN_NAV_ITEMS: SidebarNavItem[] = [
 export function InstitutionAdminSidebar() {
   return (
     <SidebarShell footer={<SignOutButton />}>
+      <ViewPublicSiteLink />
       <SidebarNav items={INSTITUTION_ADMIN_NAV_ITEMS} title="Institution" />
     </SidebarShell>
   );

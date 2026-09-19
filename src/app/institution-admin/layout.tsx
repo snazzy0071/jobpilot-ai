@@ -10,6 +10,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { MobileNavTrigger } from "@/components/layout/mobile-nav-trigger";
 import { CurrentPageTitle } from "@/components/layout/current-page-title";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
 import { Logo } from "@/components/layout/logo";
 
 // See src/app/(dashboard)/layout.tsx's own comment on why this is set
@@ -29,7 +30,7 @@ export default async function InstitutionAdminLayout({
       <div className="hidden md:flex">
         <InstitutionAdminSidebar />
       </div>
-      <div className="flex flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-16 items-center justify-between gap-4 border-b px-4 md:px-6">
           <div className="flex items-center gap-3">
             <MobileNavTrigger>
@@ -42,9 +43,10 @@ export default async function InstitutionAdminLayout({
               <CurrentPageTitle items={INSTITUTION_ADMIN_NAV_ITEMS} fallback="Institution admin" />
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <Badge variant="secondary">Institution admin</Badge>
-            <ThemeToggle />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Badge variant="secondary" className="hidden sm:inline-flex">Institution admin</Badge>
+            <ViewPublicSiteLink variant="header" />
+<ThemeToggle />
             <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
           </div>
         </header>

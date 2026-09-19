@@ -146,7 +146,7 @@ export function CvCard({ cv }: { cv: CvListItemWithPreview }) {
     null;
 
   return (
-    <Card className="gap-3 overflow-hidden p-0" size="sm">
+    <Card variant="feature" className="gap-3 overflow-hidden p-0" size="sm">
       <div className="flex items-center justify-between gap-2 px-3 pt-3">
         {cv.isArchived ? (
           <Badge variant="outline" className="text-[10px]">

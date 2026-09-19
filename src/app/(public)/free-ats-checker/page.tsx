@@ -1,7 +1,11 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { AtsScorePreview } from "@/components/marketing/ats-score-preview";
+import { CtaSection } from "@/components/marketing/cta-section";
+import { Reveal } from "@/components/motion/reveal";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { Capabilities } from "@/components/marketing/bullet-list";
@@ -91,31 +95,35 @@ export default function FreeAtsCheckerPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(APPLICATION_JSON_LD).replace(/</g, "\\u003c") }}
       />
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Free tool</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Score your CV in seconds
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            Upload your CV and paste a job description to see exactly what&apos;s missing before
-            you apply — no account, no card required.
-          </p>
-          <Badge variant="secondary">No signup needed</Badge>
-        </div>
-      </Section>
+      <PageHero
+        badge={<Badge variant="secondary">No signup needed</Badge>}
+        eyebrow="Free tool"
+        title={
+          <>
+            Score your CV <GradientText>in seconds</GradientText>
+          </>
+        }
+        description="Upload your CV and paste a job description to see exactly what's missing before you apply — no account, no card required."
+        actions={<Button size="lg" variant="gradient" render={<a href="#checker">Score my CV</a>} />}
+        visual={<AtsScorePreview />}
+      />
 
       <Section className="pt-0">
-        <FreeAtsCheckerForm />
+        <div id="checker" className="scroll-mt-20"><Reveal className="relative">
+          <div
+            className="pointer-events-none absolute -inset-4 -z-10 rounded-[2rem] bg-gradient-to-br from-primary/10 via-transparent to-brand-secondary/10 blur-2xl"
+            aria-hidden="true"
+          />
+          <FreeAtsCheckerForm />
+        </Reveal></div>
       </Section>
 
       <Section tone="muted">
         <SectionHeading
           eyebrow="What you get"
           title="Free means free — here's what's included"
-          align="left"
         />
-        <div className="mt-8">
+        <div className="mt-12">
           <Capabilities
             items={[
               "2 free scans a month, with no account required",
@@ -133,32 +141,25 @@ export default function FreeAtsCheckerPage() {
           eyebrow="Free vs. full account"
           title="What a free account adds"
           lead="The scan itself is the same either way — an account adds saving, editing, and the rest of the toolkit."
-          align="left"
         />
-        <div className="mt-8">
+        <div className="mt-12">
           <ComparisonTable columns={COLUMNS} rows={ROWS} />
-        </div>
-      </Section>
-
-      <Section tone="muted">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-            Want to fix what it finds?
-          </h2>
-          <p className="text-muted-foreground">
-            Create a free account to save your scans and apply the suggested fixes straight in
-            the CV Builder.
-          </p>
-          <Button size="lg" render={<Link href="/signup">Create a free account</Link>} />
         </div>
       </Section>
 
       <Section>
         <SectionHeading eyebrow="FAQ" title="Questions about the free checker" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
       </Section>
+
+      <CtaSection
+        title="Want to fix what it finds?"
+        description="Create a free account to save your scans and apply the suggested fixes straight in the CV Builder."
+      >
+        <Button size="lg" variant="secondary" render={<Link href="/signup">Create a free account</Link>} />
+      </CtaSection>
     </>
   );
 }

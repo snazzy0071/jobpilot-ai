@@ -34,5 +34,9 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  return { supabaseResponse, user };
+  // Returned alongside user/supabaseResponse so callers that need one
+  // more read (proxy.ts's role-aware guest-only-page bounce) can reuse
+  // this already-authenticated instance instead of constructing a
+  // second one.
+  return { supabaseResponse, user, supabase };
 }

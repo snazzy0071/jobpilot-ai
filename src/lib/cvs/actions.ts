@@ -87,14 +87,17 @@ export async function renameCv(_prevState: CvActionResult, formData: FormData): 
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data: renamed, error } = await supabase
     .from("cvs")
     .update({ title: parsed.data.title })
     .eq("id", parsed.data.cvId)
-    .eq("user_id", user.id);
+    .eq("user_id", user.id)
+    .select("id");
   if (error) return { error: "Couldn't rename that CV — try again." };
+  if (!renamed || renamed.length === 0) return { error: "That CV couldn't be found." };
 
   revalidatePath(CVS_LIST_PATH);
+  revalidatePath(`${CVS_LIST_PATH}/${parsed.data.cvId}`);
   return { success: "Renamed." };
 }
 
@@ -107,14 +110,26 @@ export async function updateCvTemplate(_prevState: CvActionResult, formData: For
   if (!parsed.success) return { error: "Invalid request." };
 
   const supabase = await createClient();
-  const { error } = await supabase
+  // `.select()` so a zero-row update (wrong id, not the owner, RLS) is an error instead of a silent "success".
+  const { data: updated, error } = await supabase
     .from("cvs")
     .update({ template: parsed.data.template })
     .eq("id", parsed.data.cvId)
-    .eq("user_id", user.id);
-  if (error) return { error: "Couldn't update the template — try again." };
+    .eq("user_id", user.id)
+    .select("id");
+  if (error) {
+    console.error(`Couldn't save template "${parsed.data.template}" for cv ${parsed.data.cvId}:`, error);
+    // 22P02 = invalid enum input: the code knows this template but the database's cv_template type doesn't yet.
+    if (error.code === "22P02") {
+      return { error: "That template isn't available on the server yet — the template library update hasn't been applied to the database." };
+    }
+    return { error: "Couldn't save the template — try again." };
+  }
+  if (!updated || updated.length === 0) return { error: "That CV couldn't be found." };
 
+  // The editor page too, not just the list: its server-rendered data (template name, preview) must not stay stale.
   revalidatePath(CVS_LIST_PATH);
+  revalidatePath(`${CVS_LIST_PATH}/${parsed.data.cvId}`);
   return { success: "Template updated." };
 }
 

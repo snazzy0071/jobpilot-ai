@@ -1,7 +1,11 @@
 import Link from "next/link";
-import { FileText, ScanSearch, MessagesSquare, Handshake, Puzzle } from "lucide-react";
+import { Check, FileText, Handshake, MessagesSquare, Minus, Puzzle, ScanSearch } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { MockWindow } from "@/components/marketing/mock-window";
+import { FloatingChip } from "@/components/marketing/floating-chip";
+import { Reveal } from "@/components/motion/reveal";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { FeatureCard } from "@/components/marketing/feature-card";
@@ -81,38 +85,77 @@ const FAQ_ITEMS = [
   },
 ];
 
+function VersusPreview() {
+  const rows = ROWS.slice(0, 4);
+  return (
+    <div className="relative mx-auto w-full max-w-md">
+      <MockWindow title="At a glance">
+        <div className="grid grid-cols-[1fr_auto_auto] items-center gap-x-4 gap-y-3 text-sm">
+          <span />
+          <span className="text-center text-xs font-medium text-muted-foreground">Typical</span>
+          <span className="gradient-brand rounded-full px-3 py-1 text-center text-xs font-medium text-white">
+            JobPilot AI
+          </span>
+          {rows.map((row) => (
+            <div key={row.label} className="contents">
+              <span className="text-xs">{row.label}</span>
+              <span className="flex justify-center">
+                <Minus className="size-4 text-muted-foreground/50" aria-label="Not typically included" />
+              </span>
+              <span className="flex justify-center">
+                <span className="flex size-6 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Check className="size-3.5" aria-label="Included" />
+                </span>
+              </span>
+            </div>
+          ))}
+        </div>
+      </MockWindow>
+      <FloatingChip className="-right-3 -bottom-5 sm:-right-8" delay={0.5}>
+        <p className="text-xs font-medium">Categories, not named rivals</p>
+      </FloatingChip>
+    </div>
+  );
+}
+
 export default function ComparePage() {
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Compare</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            How JobPilot AI stacks up
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            Honest comparisons against the kinds of tools people usually try first — not
-            invented weaknesses, just what&apos;s actually included.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        eyebrow="Compare"
+        title={
+          <>
+            How JobPilot AI <GradientText>stacks up</GradientText>
+          </>
+        }
+        description="Honest comparisons against the kinds of tools people usually try first — not invented weaknesses, just what's actually included."
+        actions={
+          <>
+            <Button size="lg" variant="gradient" render={<Link href="/signup">Get started free</Link>} />
+            <Button size="lg" variant="outline" render={<Link href="/pricing">See pricing</Link>} />
+          </>
+        }
+        visual={<VersusPreview />}
+      />
 
       <Section className="pt-0">
-        <ComparisonTable columns={COLUMNS} rows={ROWS} />
+        <Reveal>
+          <ComparisonTable columns={COLUMNS} rows={ROWS} />
+        </Reveal>
       </Section>
 
       <Section tone="muted">
-        <SectionHeading eyebrow="By alternative" title="Where JobPilot AI fits" align="left" />
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {ALTERNATIVES.map((alt) => (
-            <FeatureCard key={alt.title} {...alt} />
+        <SectionHeading eyebrow="By alternative" title="Where JobPilot AI fits" />
+        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {ALTERNATIVES.map((alt, index) => (
+            <FeatureCard key={alt.title} {...alt} index={index} />
           ))}
         </div>
       </Section>
 
       <Section>
         <SectionHeading eyebrow="FAQ" title="Questions about this comparison" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
       </Section>

@@ -1,3 +1,5 @@
+import { isValidElement } from "react"
+import Link from "next/link"
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
 
@@ -54,12 +56,21 @@ function Button({
   size = "default",
   ...props
 }: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+  // Base UI stamps `role="button"` on any non-native render target. For the
+  // ~120 places that render a Button *as a link* (`render={<a>}` /
+  // `render={<Link>}`) that would announce a navigation link as a button
+  // (WCAG 4.1.2), so an anchor keeps its real link role. Callers can still
+  // override `role` via props.
+  const renderType = isValidElement(props.render) ? props.render.type : undefined;
+  const isAnchor = renderType === "a" || renderType === Link;
+
   return (
     <ButtonPrimitive
       data-slot="button"
       // Rendering as e.g. <Link> isn't a native <button> — Base UI warns
       // otherwise. Callers can still override this explicitly via props.
       nativeButton={!props.render}
+      {...(isAnchor ? { role: "link" } : null)}
       className={cn(buttonVariants({ variant, size, className }))}
       {...props}
     />

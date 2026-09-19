@@ -182,6 +182,12 @@
   --sidebar-border: oklch(0.922 0.004 293);
   --sidebar-ring: oklch(0.708 0 0);
 
+  /* Card hover wash (ui/card.tsx's feature/tool/pricing variants) — a
+     faint diagonal primary tint that fades in behind a card's content on
+     hover, never a fill; a token so light/dark can tune it separately
+     without touching the component. */
+  --gradient-card-wash: linear-gradient(160deg, color-mix(in oklch, var(--primary), transparent 91%), transparent 62%);
+
   /* Ambient glow behind dashboard content (docs/SCREENSHOT_MAP.md's
      dashboard.png) — a soft radial wash of --primary, not a flat fill. */
   --dashboard-glow: radial-gradient(
@@ -249,6 +255,8 @@
   --sidebar-border: oklch(1 0 0 / 8%);
   --sidebar-ring: var(--primary);
 
+  --gradient-card-wash: linear-gradient(160deg, color-mix(in oklch, var(--primary), transparent 86%), transparent 62%);
+
   --dashboard-glow: radial-gradient(
     ellipse 900px 520px at 50% -8%,
     color-mix(in oklch, var(--primary), transparent 85%),
@@ -263,10 +271,117 @@
   background-image: var(--gradient-brand);
 }
 
-/* Soft ambient wash behind dashboard-area content — see --dashboard-glow. */
+/* Soft ambient wash behind dashboard-area content — see --dashboard-glow.
+   Applied to dashboard/admin/institution-admin's shared <main> shell
+   (one utility, three layouts — not duplicated per section), so "very
+   subtle premium background movement" for all of them comes from
+   editing this one place. A `::before` layer, not a background-image
+   directly on <main>: animating *this* layer's opacity can never dim
+   the real page content sitting in <main>'s normal flow, which
+   animating opacity on <main> itself would. `z-index: -1` needs
+   `position: relative` on <main> to stay contained behind its own
+   content rather than escaping to some unrelated stacking context —
+   position:relative with no offset changes no layout. The animation
+   itself is a slow, low-amplitude opacity breathe (pure opacity, so
+   GPU-composited, no repaint) — intentionally not a moving/panning
+   gradient: dashboard/admin pages are full of forms and tables, and
+   *any* positional drift reads as distracting there in a way it
+   wouldn't on a marketing page. */
 @utility dashboard-glow {
-  background-image: var(--dashboard-glow);
+  position: relative;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: var(--dashboard-glow);
+    background-repeat: no-repeat;
+    animation: dashboard-glow-breathe 14s ease-in-out infinite;
+  }
+}
+@keyframes dashboard-glow-breathe {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Same idea as --dashboard-glow, sized for the marketing homepage's
+   hero instead — wider and taller, since the hero section itself is
+   much bigger than a dashboard panel. Kept as its own token rather
+   than reusing --dashboard-glow so the two can be tuned independently
+   without one accidentally affecting the other. */
+@utility hero-glow {
+  background-image: radial-gradient(
+    ellipse 1100px 640px at 50% -10%,
+    color-mix(in oklch, var(--primary), transparent 90%),
+    transparent
+  );
   background-repeat: no-repeat;
+}
+
+/* Backs components/motion/animated-gradient.tsx — a pure CSS animation
+   (background-position on an oversized gradient), not Framer Motion:
+   animating a gradient/color value every frame is a main-thread
+   paint on every tick if driven by JS, where a compositor-driven CSS
+   `background-position` animation costs nothing once running. This is
+   also why that component needs no "use client" at all — the global
+   prefers-reduced-motion rule below already collapses this animation's
+   duration to ~0, so there's no separate JS reduced-motion branch to
+   maintain for it. */
+@keyframes gradient-pan {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+@utility animate-gradient-pan {
+  background-size: 200% 200%;
+  animation: gradient-pan 8s ease-in-out infinite;
+}
+
+/* Backs components/motion/floating-element.tsx — same pure-CSS,
+   no-client-component reasoning as animate-gradient-pan above: a
+   continuous, non-essential ambient float is exactly the class of
+   motion prefers-reduced-motion exists to remove, and the existing
+   global rule below already does that for any CSS animation, this one
+   included, with no per-component JS check needed. */
+@keyframes float-y {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+@utility animate-float {
+  animation: float-y 4s ease-in-out infinite;
+}
+
+/* Backs components/backgrounds/section-background.tsx's grid layer —
+   public marketing sections only (see that component's own comment on
+   why dashboard/admin never get this). Static, no animation of its own
+   — the "richer" feel on public pages comes from pairing this with
+   AnimatedGradient/FloatingElement, not from the grid itself moving.
+   Line color is a theme-relative tint of --foreground (via color-mix,
+   not a fixed gray), so it stays faint and correctly-toned in both
+   light and dark mode automatically. The radial mask fades it out
+   toward the edges so it reads as an ambient texture, never a
+   hard-edged tiled pattern. */
+@utility bg-grid-fade {
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--foreground), transparent 94%) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--foreground), transparent 94%) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse 70% 70% at 50% 0%, black, transparent 90%);
 }
 
 @layer base {
@@ -295,6 +410,17 @@
    reordering) are JS-driven spring physics, not CSS — untouched by a
    media query — and get their own `useReducedMotion()` fix at the
    component level instead. */
+/* Decorative glows, blurred blobs and scroll-reveal slides deliberately
+   extend past their container (a -inset-6 glow, a 24px slide-in). Without
+   this they widen the page by a few pixels and give phones a sideways
+   wobble. `clip` (unlike `hidden`) creates no scroll container, so
+   position: sticky keeps working. Real layout overflow is still caught by
+   e2e/audit/platform-audit.spec.ts, which inspects element boxes rather
+   than trusting scrollWidth. */
+body {
+  overflow-x: clip;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

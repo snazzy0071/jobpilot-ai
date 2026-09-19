@@ -27,7 +27,7 @@ export default async function InstitutionAdminLicencePage() {
       </div>
 
       {licence ? (
-        <Card className="gap-4 p-6">
+        <Card variant="admin" className="gap-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-heading text-xl font-semibold">{licence.planName}</p>
             <Badge variant={licence.isActive ? "tinted" : "secondary"}>{licence.isActive ? "Active" : "Inactive"}</Badge>

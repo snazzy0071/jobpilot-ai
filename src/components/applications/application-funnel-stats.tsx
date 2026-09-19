@@ -12,7 +12,7 @@ const SPONSOR_SPLIT_LABELS: Record<string, string> = {
 
 function StatTile({ label, value, caption }: { label: string; value: string; caption?: string }) {
   return (
-    <Card className="gap-1 p-4">
+    <Card variant="metric" className="gap-1 p-4">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="font-heading text-2xl font-semibold tracking-tight">{value}</p>
       {caption && <p className="text-xs text-muted-foreground">{caption}</p>}

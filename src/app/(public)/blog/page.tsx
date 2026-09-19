@@ -1,4 +1,8 @@
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { CtaSection } from "@/components/marketing/cta-section";
 import { Section } from "@/components/marketing/section";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { Card } from "@/components/ui/card";
@@ -33,21 +37,17 @@ export default async function BlogPage({
 
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <div className="w-full self-start">
-            <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Blog" }]} />
-          </div>
-          <Eyebrow>Blog</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            CV, interview, and visa advice
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            Practical guidance on CVs, applications, interviews, and UK visa sponsorship —
-            written for the job search you&apos;re actually running.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        breadcrumbs={<Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Blog" }]} />}
+        eyebrow="Blog"
+        title={
+          <>
+            CV, interview, and <GradientText>visa advice</GradientText>
+          </>
+        }
+        description="Practical guidance on CVs, applications, interviews, and UK visa sponsorship — written for the job search you're actually running."
+        className="sm:pb-12"
+      />
 
       <Section className="pt-0">
         <div className="mx-auto flex max-w-5xl flex-col gap-8">
@@ -62,13 +62,17 @@ export default async function BlogPage({
             </Card>
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {posts.map((post) => (
-                <PostCard key={post.id} post={post} />
+              {posts.map((post, index) => (
+                <PostCard key={post.id} post={post} index={index} />
               ))}
             </div>
           )}
         </div>
       </Section>
+
+      <CtaSection title="Get new posts in your inbox" description="Occasional career tips and feature updates. No account needed.">
+        <Button size="lg" variant="secondary" render={<Link href="/newsletter">Subscribe</Link>} />
+      </CtaSection>
     </>
   );
 }

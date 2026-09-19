@@ -56,3 +56,23 @@ export async function listAuditEntityTypes(): Promise<string[]> {
   if (error || !data) return [];
   return Array.from(new Set(data.map((row) => row.entity_type))).sort();
 }
+
+/** The newest few entries, for the admin overview — same RLS-gated regular client as the full list above. */
+export async function listRecentAdminActivity(limit = 8): Promise<AdminAuditLogEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("admin_audit_logs")
+    .select("id, actor_email, action, entity_type, entity_id, metadata, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id,
+    actorEmail: row.actor_email,
+    action: row.action,
+    entityType: row.entity_type,
+    entityId: row.entity_id,
+    metadata: (row.metadata ?? {}) as Record<string, unknown>,
+    createdAt: row.created_at,
+  }));
+}

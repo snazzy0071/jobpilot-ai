@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Section } from "@/components/marketing/section";
+import { CheckCircle2Icon, LinkIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { PageHero } from "@/components/marketing/page-hero";
 import { unsubscribeByToken } from "@/lib/newsletter/unsubscribe";
 
 export const dynamic = "force-dynamic";
@@ -15,20 +17,31 @@ export default async function NewsletterUnsubscribePage({ params }: { params: Pr
   const success = await unsubscribeByToken(token);
 
   return (
-    <Section className="pt-24 pb-24 sm:pt-32">
-      <div className="mx-auto flex max-w-xl flex-col items-center gap-4 text-center">
-        <h1 className="font-heading text-3xl font-semibold tracking-tight">
-          {success ? "You're unsubscribed" : "That link isn't valid"}
-        </h1>
-        <p className="text-muted-foreground">
-          {success
-            ? "You won't receive any more newsletter emails from us. You can resubscribe any time."
-            : "This unsubscribe link has expired or doesn't match a subscription."}
-        </p>
-        <Link href="/" className="text-sm underline">
-          Back to the homepage
-        </Link>
-      </div>
-    </Section>
+    <PageHero
+      badge={
+        <span
+          className={
+            success
+              ? "flex size-14 items-center justify-center rounded-2xl bg-success/10 text-success shadow-card"
+              : "flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground shadow-card"
+          }
+        >
+          {success ? <CheckCircle2Icon className="size-7" /> : <LinkIcon className="size-7" />}
+        </span>
+      }
+      title={success ? "You're unsubscribed" : "That link isn't valid"}
+      description={
+        success
+          ? "You won't receive any more newsletter emails from us. You can resubscribe any time."
+          : "This unsubscribe link has expired or doesn't match a subscription."
+      }
+      actions={
+        <>
+          <Button variant="outline" size="lg" render={<Link href="/">Back to the homepage</Link>} />
+          {success && <Button size="lg" variant="gradient" render={<Link href="/newsletter">Resubscribe</Link>} />}
+        </>
+      }
+      className="pb-24 [&_h1]:text-3xl [&_h1]:sm:text-4xl [&_h1]:lg:text-5xl"
+    />
   );
 }

@@ -33,10 +33,14 @@ export function Faq({ items }: { items: FaqItem[] }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <Accordion className="mx-auto max-w-2xl">
+      <Accordion className="mx-auto flex max-w-3xl flex-col gap-3">
         {items.map((item, index) => (
-          <AccordionItem key={item.question} value={String(index)}>
-            <AccordionTrigger>{item.question}</AccordionTrigger>
+          <AccordionItem
+            key={item.question}
+            value={String(index)}
+            className="rounded-2xl border bg-card px-5 shadow-card transition-all not-last:border-b hover:border-primary/30 hover:shadow-elevated data-[open]:border-primary/40 data-[open]:shadow-elevated"
+          >
+            <AccordionTrigger className="py-4 text-base">{item.question}</AccordionTrigger>
             <AccordionContent>
               <p className="text-muted-foreground">{item.answer}</p>
             </AccordionContent>

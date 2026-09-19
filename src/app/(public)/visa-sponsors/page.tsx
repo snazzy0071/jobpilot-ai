@@ -1,8 +1,12 @@
 import Link from "next/link";
 import { Building2, MapPinned, RefreshCw } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { FeatureCard } from "@/components/marketing/feature-card";
+import { SponsorSearchPreview } from "@/components/marketing/sponsor-search-preview";
+import { Reveal } from "@/components/motion/reveal";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { Faq } from "@/components/marketing/faq";
@@ -118,40 +122,33 @@ export default async function VisaSponsorsPage({ searchParams }: { searchParams:
 
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <div className="w-full max-w-none self-start">
-            <Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Visa Sponsors" }]} />
+      <PageHero
+        breadcrumbs={<Breadcrumbs items={[{ label: "Home", href: "/" }, { label: "Visa Sponsors" }]} />}
+        eyebrow="UK Visa Sponsors"
+        title={
+          <>
+            Search the <GradientText>UK sponsor register</GradientText>
+          </>
+        }
+        description="Check whether an employer holds a UK sponsor licence before you spend time on an application."
+        actions={
+          <>
+            <Button size="lg" variant="gradient" render={<a href="#search">Search sponsors</a>} />
+            <Button size="lg" variant="outline" render={<Link href="/visa-sponsors/cities">Browse by city</Link>} />
+          </>
+        }
+        visual={<SponsorSearchPreview total={totalActive} />}
+        footer={
+          <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-3">
+            {facts.map((fact, index) => (
+              <FeatureCard key={fact.title} {...fact} index={index} />
+            ))}
           </div>
-          <Eyebrow>UK Visa Sponsors</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Search the UK sponsor register
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            Check whether an employer holds a UK sponsor licence before you spend time on an
-            application.
-          </p>
-        </div>
-      </Section>
+        }
+      />
 
-      <Section className="pt-0">
-        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
-          {facts.map((fact) => (
-            <Card key={fact.title}>
-              <CardHeader>
-                <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <fact.icon className="size-5" />
-                </div>
-                <CardTitle className="text-sm">{fact.title}</CardTitle>
-                <CardDescription>{fact.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      <Section tone="muted">
-        <div className="mx-auto flex max-w-5xl flex-col gap-8">
+      <Section tone="muted" decorative>
+        <div id="search" className="mx-auto flex max-w-5xl scroll-mt-20 flex-col gap-8">
           {withinRateLimit ? (
             <>
               <SponsorSyncDisclaimer status={syncStatus} />
@@ -174,20 +171,23 @@ export default async function VisaSponsorsPage({ searchParams }: { searchParams:
       </Section>
 
       <Section>
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        <Reveal className="relative mx-auto flex max-w-3xl flex-col items-center gap-4 overflow-hidden rounded-3xl border bg-card p-10 text-center shadow-elevated">
+          <div className="pointer-events-none absolute -top-16 -right-16 size-48 rounded-full bg-primary/10 blur-3xl" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-16 -left-16 size-48 rounded-full bg-brand-secondary/10 blur-3xl" aria-hidden="true" />
+          <MapPinned className="relative size-8 text-primary" />
+          <h2 className="relative font-heading text-2xl font-semibold tracking-tight sm:text-3xl">
             Prefer to browse by city?
           </h2>
-          <p className="text-muted-foreground">
+          <p className="relative text-muted-foreground">
             See sponsors grouped by the UK&apos;s major towns and cities.
           </p>
-          <Button variant="outline" render={<Link href="/visa-sponsors/cities">Browse by city</Link>} />
-        </div>
+          <Button className="relative" variant="gradient" size="lg" render={<Link href="/visa-sponsors/cities">Browse by city</Link>} />
+        </Reveal>
       </Section>
 
       <Section tone="muted">
         <SectionHeading eyebrow="FAQ" title="Questions about the sponsor register" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-muted-foreground">

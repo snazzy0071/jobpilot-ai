@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Reorder, useDragControls, useReducedMotion } from "framer-motion";
 import { GripVerticalIcon } from "lucide-react";
 import { reorderSections } from "@/lib/cvs/actions";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { useCvSaves } from "@/components/cvs/editor/save-coordinator";
 import { SECTION_LABELS, type SectionKey } from "@/lib/cvs/types";
 
 function DraggableChip({ sectionKey }: { sectionKey: SectionKey }) {
@@ -55,12 +55,13 @@ export function SectionOrderList({ versionId, order }: { versionId: string; orde
     setLocalOrder(order);
   }
 
+  const { track } = useCvSaves();
   async function handleReorder(newOrder: SectionKey[]) {
     setLocalOrder(newOrder);
     const formData = new FormData();
     formData.set("versionId", versionId);
     formData.set("order", JSON.stringify(newOrder));
-    await callAction(() => reorderSections(undefined, formData));
+    await track("reorder", () => reorderSections(undefined, formData));
   }
 
   return (

@@ -1,4 +1,4 @@
-import { getVisibleContent } from "@/components/cvs/templates/blocks";
+import { getVisibleContent } from "@/components/cvs/templates/content";
 import type { CvTemplateContentData } from "@/components/cvs/templates/types";
 import type { CvAtsFormatIssue } from "@/lib/cvs/types";
 

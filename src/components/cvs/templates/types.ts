@@ -31,3 +31,9 @@ export type CvTemplateContentData = {
   customSections: CvCustomSection[];
   sectionOrder: SectionKey[];
 };
+
+/** The parts of a CV that don't change while typing in the live-preview forms — passed alongside the live context to build a full preview. */
+export type CvTemplateExtras = Pick<
+  CvTemplateContentData,
+  "skills" | "projects" | "certifications" | "languages" | "customSections" | "sectionOrder"
+>;

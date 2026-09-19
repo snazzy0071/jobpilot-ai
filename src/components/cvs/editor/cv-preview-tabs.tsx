@@ -2,7 +2,7 @@
 
 import { DownloadIcon } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
+import { ExportPdfButton } from "@/components/cvs/editor/export-pdf-button";
 import { CvPreview } from "@/components/cvs/editor/cv-preview";
 import { CvAtsTextPreview } from "@/components/cvs/editor/cv-ats-text-preview";
 import type { CvSkill, CvProject, CvCertification, CvLanguage, CvCustomSection, SectionKey } from "@/lib/cvs/types";
@@ -50,12 +50,7 @@ export function CvPreviewTabs({ cvId, ...previewProps }: { cvId: string } & Shar
           <p className="text-sm text-muted-foreground">
             Export renders your CV as a real, ATS-safe PDF — the exact file you&apos;ll download.
           </p>
-          <Button
-            size="sm"
-            render={<a href={`/api/cvs/${cvId}/export`} target="_blank" rel="noopener noreferrer" />}
-          >
-            <DownloadIcon /> Export PDF
-          </Button>
+          <ExportPdfButton cvId={cvId} variant="default" label="Export PDF" />
         </div>
       </TabsContent>
     </Tabs>

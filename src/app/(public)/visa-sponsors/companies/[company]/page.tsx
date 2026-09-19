@@ -78,7 +78,7 @@ export default async function SponsorCompanyPage({ params }: { params: Promise<{
   };
 
   return (
-    <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-24 sm:pt-32">
+    <Section className="hero-glow pt-24 pb-24 sm:pt-32">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c") }}
@@ -97,16 +97,16 @@ export default async function SponsorCompanyPage({ params }: { params: Promise<{
               Visa Sponsors
             </Link>
           </Eyebrow>
-          <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Building2 className="size-6" />
+          <div className="gradient-brand flex size-16 items-center justify-center rounded-2xl text-white shadow-floating">
+            <Building2 className="size-8" />
           </div>
-          <h1 className="font-heading text-3xl font-semibold tracking-tight">{sponsor.companyName}</h1>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{sponsor.companyName}</h1>
           <p className="max-w-md text-muted-foreground">
             {[sponsor.townCity, sponsor.county].filter(Boolean).join(", ") || "Location not given"}
           </p>
         </div>
 
-        <Card>
+        <Card className="shadow-floating">
           <CardHeader>
             <CardTitle className="text-sm text-muted-foreground">Sponsor details</CardTitle>
           </CardHeader>

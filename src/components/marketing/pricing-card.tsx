@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check } from "lucide-react";
+import { ArrowRightIcon, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -26,21 +26,21 @@ export function PricingCard({
 }) {
   return (
     <Card
-      className={cn(
-        "relative flex h-full flex-col",
-        popular && "border-primary shadow-pop",
-      )}
+      variant="pricing"
+      animatedAccent={popular}
+      className={cn("h-full", popular && "border-primary shadow-pop")}
     >
       {popular && (
-        <Badge className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2">
-          Popular
-        </Badge>
+        // Inside the card's top-right corner, not straddling its top
+        // edge: Card clips overflow (needed for its rounded corners and
+        // the animated accent), which cut a half-outside badge in two.
+        <Badge className="absolute top-4 right-4 z-20">Popular</Badge>
       )}
       <CardHeader>
-        <CardTitle>{name}</CardTitle>
+        <CardTitle className="text-lg">{name}</CardTitle>
         <CardDescription>{description}</CardDescription>
-        <div className="mt-2 flex items-baseline gap-1">
-          <span className="text-3xl font-semibold tracking-tight">{price}</span>
+        <div className="mt-3 flex items-baseline gap-1">
+          <span className="font-heading text-4xl font-semibold tracking-tight">{price}</span>
           <span className="text-sm text-muted-foreground">{period}</span>
         </div>
       </CardHeader>
@@ -55,7 +55,12 @@ export function PricingCard({
         </ul>
         <Button
           variant={popular ? "default" : "outline"}
-          render={<Link href={ctaHref}>{ctaLabel}</Link>}
+          render={
+            <Link href={ctaHref}>
+              {ctaLabel}
+              <ArrowRightIcon className="transition-transform duration-300 group-hover/card:translate-x-1" />
+            </Link>
+          }
         />
       </CardContent>
     </Card>

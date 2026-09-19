@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { Building2, RefreshCw, ShieldCheck } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Eyebrow } from "@/components/marketing/eyebrow";
+import { Button } from "@/components/ui/button";
+import { PageHero } from "@/components/marketing/page-hero";
+import { GradientText } from "@/components/marketing/gradient-text";
+import { MockWindow } from "@/components/marketing/mock-window";
+import { FeatureCard } from "@/components/marketing/feature-card";
+import { CtaSection } from "@/components/marketing/cta-section";
+import { cn } from "@/lib/utils";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { Capabilities } from "@/components/marketing/bullet-list";
@@ -65,49 +70,67 @@ const FAQ_ITEMS = [
   },
 ];
 
+const STATUS_EXAMPLES = [
+  { sector: "Consulting", label: "Sponsors", tone: "bg-success/10 text-success" },
+  { sector: "Banking & finance", label: "Some tracks", tone: "bg-brand-accent/25 text-foreground" },
+  { sector: "Law", label: "Sponsors", tone: "bg-success/10 text-success" },
+  { sector: "Public sector", label: "Not published", tone: "bg-muted text-muted-foreground" },
+];
+
+function SchemeStatusPreview() {
+  return (
+    <MockWindow title="Graduate schemes · illustrative">
+      <div className="flex flex-col gap-2.5">
+        {STATUS_EXAMPLES.map((row) => (
+          <div key={row.sector} className="flex items-center justify-between gap-3 rounded-xl border bg-background p-3">
+            <div className="flex items-center gap-3">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Building2 className="size-4" />
+              </span>
+              <span className="text-sm font-medium">{row.sector}</span>
+            </div>
+            <span className={cn("rounded-full px-2.5 py-1 text-[11px] font-medium", row.tone)}>{row.label}</span>
+          </div>
+        ))}
+        <p className="pt-1 text-center text-[11px] text-muted-foreground">Every real entry links to its source</p>
+      </div>
+    </MockWindow>
+  );
+}
+
 export default async function GraduateVisaSponsorshipPage() {
   const schemes = await getGraduateSchemes();
 
   return (
     <>
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <Eyebrow>Graduate Schemes</Eyebrow>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl">
-            Which graduate schemes sponsor visas?
-          </h1>
-          <p className="max-w-xl text-lg text-muted-foreground">
-            A sourced breakdown of major UK graduate schemes, so you can focus on programmes
-            that can actually sponsor you.
-          </p>
-        </div>
-      </Section>
+      <PageHero
+        eyebrow="Graduate Schemes"
+        title={
+          <>
+            Which graduate schemes <GradientText>sponsor visas?</GradientText>
+          </>
+        }
+        description="A sourced breakdown of major UK graduate schemes, so you can focus on programmes that can actually sponsor you."
+        actions={<Button size="lg" variant="gradient" render={<a href="#schemes">See the schemes</a>} />}
+        visual={<SchemeStatusPreview />}
+        footer={
+          <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-3">
+            {FACTS.map((fact, index) => (
+              <FeatureCard key={fact.title} {...fact} index={index} />
+            ))}
+          </div>
+        }
+      />
 
-      <Section className="pt-0">
-        <div className="mx-auto grid max-w-4xl gap-4 sm:grid-cols-3">
-          {FACTS.map((fact) => (
-            <Card key={fact.title}>
-              <CardHeader>
-                <div className="mb-2 flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <fact.icon className="size-5" />
-                </div>
-                <CardTitle className="text-sm">{fact.title}</CardTitle>
-                <CardDescription>{fact.description}</CardDescription>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
-      </Section>
-
-      <Section tone="muted">
-        <div className="mx-auto max-w-5xl">
+      <Section tone="muted" decorative>
+        <div id="schemes" className="mx-auto max-w-5xl scroll-mt-20">
           <GradSchemeResults schemes={schemes} />
         </div>
       </Section>
 
       <Section>
-        <SectionHeading eyebrow="Methodology" title="Evidence and sources" align="left" />
-        <div className="mt-8">
+        <SectionHeading eyebrow="Methodology" title="Evidence and sources" />
+        <div className="mt-12">
           <Capabilities
             items={[
               "Checked against the employer's own graduate recruitment or visa guidance page",
@@ -121,7 +144,7 @@ export default async function GraduateVisaSponsorshipPage() {
 
       <Section tone="muted">
         <SectionHeading eyebrow="FAQ" title="Questions about this list" />
-        <div className="mt-8">
+        <div className="mt-12">
           <Faq items={FAQ_ITEMS} />
         </div>
         <p className="mx-auto mt-8 max-w-2xl text-center text-xs text-muted-foreground">
@@ -136,6 +159,10 @@ export default async function GraduateVisaSponsorshipPage() {
           .
         </p>
       </Section>
+
+      <CtaSection title="Prepare for the application itself" description="Practise the tests and interviews these schemes use.">
+        <Button size="lg" variant="secondary" render={<Link href="/features/gradprep">Grad Scheme Prep</Link>} />
+      </CtaSection>
     </>
   );
 }

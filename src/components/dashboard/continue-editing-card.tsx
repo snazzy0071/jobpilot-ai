@@ -19,7 +19,7 @@ export function ContinueEditingCard({ cv }: { cv: CvListItem | null }) {
   if (!cv) return null;
 
   return (
-    <Card className="flex flex-row items-center gap-5 p-6">
+    <Card variant="action" className="flex flex-row items-center gap-5 p-6">
       <div className="flex size-20 shrink-0 items-center justify-center rounded-lg border border-border bg-muted/40">
         <FileTextIcon className="size-7 text-muted-foreground" />
       </div>

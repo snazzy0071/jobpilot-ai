@@ -80,7 +80,7 @@ export default async function AdminLeadsPage() {
             <p className="text-sm text-muted-foreground">No messages yet.</p>
           ) : (
             messages.map((message) => (
-              <Card key={message.id} className="gap-2 p-4">
+              <Card key={message.id} variant="admin" className="gap-2 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">{message.subject}</p>
@@ -101,7 +101,7 @@ export default async function AdminLeadsPage() {
             <p className="text-sm text-muted-foreground">No demo requests yet.</p>
           ) : (
             demoRequests.map((request) => (
-              <Card key={request.id} className="gap-2 p-4">
+              <Card key={request.id} variant="admin" className="gap-2 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">{request.institutionName}</p>
@@ -123,7 +123,7 @@ export default async function AdminLeadsPage() {
             <p className="text-sm text-muted-foreground">No partner inquiries yet.</p>
           ) : (
             partnerInquiries.map((inquiry) => (
-              <Card key={inquiry.id} className="gap-2 p-4">
+              <Card key={inquiry.id} variant="admin" className="gap-2 p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">

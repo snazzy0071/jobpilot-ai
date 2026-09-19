@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Section } from "@/components/marketing/section";
+import { PageHero } from "@/components/marketing/page-hero";
 import { SectionHeading } from "@/components/marketing/section-heading";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { ArticleBody } from "@/components/content/article-body";
@@ -71,19 +72,21 @@ export default async function BlogPostPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
 
-      <Section className="bg-gradient-to-b from-primary/5 via-background to-background pt-24 pb-12 sm:pt-32">
-        <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-          <div className="w-full self-start">
-            <Breadcrumbs
-              items={[{ label: "Home", href: "/" }, { label: "Blog", href: "/blog" }, { label: post.title }]}
-            />
-          </div>
+      <PageHero
+        breadcrumbs={
+          <Breadcrumbs
+            items={[{ label: "Home", href: "/" }, { label: "Blog", href: "/blog" }, { label: post.title }]}
+          />
+        }
+        badge={
           <Badge
             variant="secondary"
             render={<Link href={`/blog?category=${post.category.slug}`}>{post.category.name}</Link>}
           />
-          <h1 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">{post.title}</h1>
-          <div className="flex flex-wrap items-center justify-center gap-2 text-sm text-muted-foreground">
+        }
+        title={post.title}
+        description={
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sm">
             <Avatar size="sm">
               <AvatarFallback>{getInitials(post.author.name)}</AvatarFallback>
             </Avatar>
@@ -93,8 +96,9 @@ export default async function BlogPostPage({
             <span aria-hidden="true">·</span>
             <span>{post.readingTimeMinutes} min read</span>
           </div>
-        </div>
-      </Section>
+        }
+        className="sm:pb-12 [&_h1]:text-3xl [&_h1]:sm:text-4xl [&_h1]:lg:text-5xl"
+      />
 
       <Section className="pt-0">
         <div className="mx-auto grid max-w-4xl gap-10 lg:grid-cols-[14rem_1fr]">
@@ -104,7 +108,7 @@ export default async function BlogPostPage({
           <article>
             <ArticleBody content={post.content} />
             {post.author.bio && (
-              <div className="mt-10 flex items-start gap-3 rounded-lg border p-4">
+              <div className="mt-10 flex items-start gap-3 rounded-2xl border bg-card p-5 shadow-card">
                 <Avatar>
                   <AvatarFallback>{getInitials(post.author.name)}</AvatarFallback>
                 </Avatar>
@@ -120,10 +124,10 @@ export default async function BlogPostPage({
 
       {related.length > 0 && (
         <Section tone="muted">
-          <SectionHeading eyebrow="Related" title="More like this" align="left" />
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {related.map((relatedPost) => (
-              <PostCard key={relatedPost.id} post={relatedPost} />
+          <SectionHeading eyebrow="Related" title="More like this" />
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {related.map((relatedPost, index) => (
+              <PostCard key={relatedPost.id} post={relatedPost} index={index} />
             ))}
           </div>
         </Section>

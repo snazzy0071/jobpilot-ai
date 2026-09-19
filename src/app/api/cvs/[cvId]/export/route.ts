@@ -22,16 +22,19 @@ export const maxDuration = 60;
  * new capability beyond that - there's no existing entitlement key this
  * naturally extends, and inventing one wasn't part of what was asked.
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ cvId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ cvId: string }> }) {
   const { cvId } = await params;
   const user = await requireUser();
+  // The template the editor is showing. If the database doesn't have it yet, the PDF would silently be a
+  // different template from the preview — refuse that instead of exporting the wrong thing.
+  const expectedTemplate = new URL(request.url).searchParams.get("template");
 
   const cookieStore = await cookies();
   const forwardedCookies = cookieStore.getAll().map((cookie) => ({ name: cookie.name, value: cookie.value }));
 
   let result;
   try {
-    result = await generateCvPdf(user.id, cvId, forwardedCookies);
+    result = await generateCvPdf(user.id, cvId, forwardedCookies, request.url);
   } catch (err) {
     console.error(`CV PDF export failed for cv ${cvId}:`, err);
     return NextResponse.json({ error: "Couldn't generate that PDF - try again." }, { status: 500 });
@@ -41,6 +44,13 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cvI
     return NextResponse.json({ error: "That CV couldn't be found." }, { status: 404 });
   }
 
+  if (expectedTemplate && expectedTemplate !== result.template) {
+    return NextResponse.json(
+      { error: "The template you're previewing hasn't finished saving, so the PDF would use a different one. Wait a moment and try again." },
+      { status: 409 },
+    );
+  }
+
   const filename = sanitizeFilename(result.title);
 
   return new NextResponse(new Uint8Array(result.buffer), {
@@ -48,6 +58,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ cvI
       "Content-Type": "application/pdf",
       "Content-Disposition": `attachment; filename="${filename}.pdf"`,
       "Content-Length": String(result.buffer.length),
+      // What this PDF was actually drawn from — checked by the client against the live preview, and by the tests.
+      "X-Cv-Template": result.template,
+      "X-Cv-Version": result.versionId,
+      "Access-Control-Expose-Headers": "X-Cv-Template, X-Cv-Version, Content-Disposition",
+      "Cache-Control": "no-store",
     },
   });
 }

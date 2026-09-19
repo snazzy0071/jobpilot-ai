@@ -27,19 +27,19 @@ export default async function AdminSponsorsPage() {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        <Card className="gap-1 p-4">
+        <Card variant="metric" className="gap-1 p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <BuildingIcon className="size-4" /> Active sponsors
           </div>
           <p className="font-heading text-2xl font-semibold tracking-tight">{overview.activeSponsorCount.toLocaleString()}</p>
         </Card>
-        <Card className="gap-1 p-4">
+        <Card variant="metric" className="gap-1 p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <BuildingIcon className="size-4" /> Total sponsor records
           </div>
           <p className="font-heading text-2xl font-semibold tracking-tight">{overview.totalSponsorCount.toLocaleString()}</p>
         </Card>
-        <Card className="gap-1 p-4">
+        <Card variant="metric" className="gap-1 p-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ClockIcon className="size-4" /> Last completed sync
           </div>
