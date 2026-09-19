@@ -36,18 +36,22 @@ export default async function DashboardLayout({
   // whether to show at all.
   const impersonation = await getImpersonationStatus();
 
+  // Desktop (md+): the shell is exactly one viewport tall and never scrolls itself. The sidebar fills that height and
+  // stays put; only <main> below scrolls, with the header pinned above it — so there is a single scrollbar, at the
+  // right-hand edge of the content, and nothing scrolls the sidebar away. Below md the page scrolls normally and the
+  // sidebar is the drawer, exactly as before.
   return (
-    <div className="flex min-h-screen flex-1 flex-col">
+    <div className="flex min-h-screen flex-1 flex-col md:h-dvh md:min-h-0 md:flex-none md:overflow-hidden">
       {impersonation && (
         <ImpersonationBanner targetLabel={profile?.full_name ?? user.email ?? "this user"} />
       )}
-      <div className="flex flex-1">
+      <div className="flex flex-1 md:min-h-0">
         <SkipLink />
-        <div className="hidden md:flex">
+        <div className="hidden md:flex md:h-full md:shrink-0">
           <DashboardSidebar plan={plan} />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex h-16 items-center justify-between gap-4 border-b px-4 md:px-6">
+        <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
+          <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
             <div className="flex items-center gap-3">
               <MobileNavTrigger>
                 <DashboardSidebar plan={plan} />
@@ -73,9 +77,9 @@ export default async function DashboardLayout({
             </div>
           </header>
           {announcementActive && announcementMessage && (
-            <div className="bg-primary/10 px-4 py-2 text-center text-sm text-primary md:px-6">{announcementMessage}</div>
+            <div className="shrink-0 bg-primary/10 px-4 py-2 text-center text-sm text-primary md:px-6">{announcementMessage}</div>
           )}
-          <main id="main-content" className="dashboard-glow flex-1 p-6">
+          <main id="main-content" className="dashboard-glow flex-1 p-6 md:min-h-0 md:scroll-pt-6 md:overflow-y-auto">
             {children}
           </main>
         </div>

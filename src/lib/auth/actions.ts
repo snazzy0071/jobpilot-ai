@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { publicEnv } from "@/lib/env";
 import { parseRedirectParam } from "@/lib/auth/safe-redirect";
-import { getRoleHomePath } from "@/lib/auth/role-redirect";
+import { getRoleHomePath, resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import { getAppSettings } from "@/lib/admin/settings/queries";
 import {
   consumePasswordResetRateLimit,
@@ -56,20 +56,16 @@ export async function signInWithPassword(
     return { error: error.message };
   }
 
-  // An explicit redirect (bounced here from a protected page) wins;
-  // otherwise this is the signed-in user's OWN role home — admin ->
-  // /admin, institution_admin -> /institution-admin, user -> /dashboard
-  // — never a hardcoded /dashboard regardless of role.
-  const explicitRedirect = parseRedirectParam(redirectTo);
-  let target = explicitRedirect;
-  if (!target) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", signInData.user.id)
-      .single();
-    target = getRoleHomePath(profile?.role);
-  }
+  // An explicit redirect (bounced here from a protected page) is kept only
+  // if it is valid for this account's role; otherwise the user lands on
+  // their OWN role home — admin -> /admin, institution_admin ->
+  // /institution-admin, user -> /dashboard.
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", signInData.user.id)
+    .single();
+  const target = resolvePostAuthPath(profile?.role, parseRedirectParam(redirectTo));
 
   revalidatePath("/", "layout");
   redirect(target);

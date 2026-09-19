@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 import { parseRedirectParam } from "@/lib/auth/safe-redirect";
-import { getRoleHomePath } from "@/lib/auth/role-redirect";
+import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { IMPERSONATION_COOKIE } from "@/lib/auth/impersonation";
 
@@ -72,16 +72,13 @@ export async function proxy(request: NextRequest) {
 
   if (GUEST_ONLY_PATHS.includes(pathname) && user) {
     // An explicit ?redirect= (e.g. bounced here from a protected page
-    // before signing in, then navigating straight back to /login) wins.
-    // Otherwise this is each role's own home, not a hardcoded /dashboard
-    // — an admin or institution-admin landing on /login while already
+    // before signing in, then navigating straight back to /login) is kept
+    // only if it is valid for this role. Otherwise this is the role's own
+    // home — an admin or institution-admin landing on /login while already
     // signed in must not get swept into the user dashboard.
     const explicitRedirect = parseRedirectParam(request.nextUrl.searchParams.get("redirect"));
-    let target = explicitRedirect;
-    if (!target) {
-      const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
-      target = getRoleHomePath(profile?.role);
-    }
+    const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+    const target = resolvePostAuthPath(profile?.role, explicitRedirect);
     return NextResponse.redirect(new URL(target, request.url));
   }
 

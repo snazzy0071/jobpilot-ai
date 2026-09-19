@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { parseRedirectParam } from "@/lib/auth/safe-redirect";
-import { getRoleHomePath } from "@/lib/auth/role-redirect";
+import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import { sendWelcomeEmailOnce } from "@/lib/auth/welcome-email";
 
 export async function GET(request: NextRequest) {
@@ -25,12 +25,10 @@ export async function GET(request: NextRequest) {
       if (type === "signup" && data.user?.email) {
         await sendWelcomeEmailOnce(data.user.id, data.user.email, (data.user.user_metadata?.full_name as string | undefined) ?? null);
       }
-      let next = explicitNext;
-      if (!next && data.user) {
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
-        next = getRoleHomePath(profile?.role);
-      }
-      return NextResponse.redirect(`${origin}${next ?? "/dashboard"}`);
+      const { data: profile } = data.user
+        ? await supabase.from("profiles").select("role").eq("id", data.user.id).single()
+        : { data: null };
+      return NextResponse.redirect(`${origin}${resolvePostAuthPath(profile?.role, explicitNext)}`);
     }
     return redirectWithError(origin, error.message);
   }

@@ -37,34 +37,45 @@ export function AppSettingsForm({ settings }: { settings: AppSettings }) {
 
   return (
     <Card className="p-6">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <Checkbox id="maintenance-mode" name="maintenanceMode" value="on" checked={maintenanceMode} onCheckedChange={(checked) => setMaintenanceMode(checked === true)} />
-          <div>
-            <Label htmlFor="maintenance-mode" className="font-normal">
-              Maintenance mode
-            </Label>
-            <p className="text-xs text-muted-foreground">Pauses new signups with a friendly message. Existing sessions are unaffected.</p>
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        {/* One form, two labelled sections: the left-hand nav jumps between them, and a single Save covers both. */}
+        <section id="settings-signups" aria-labelledby="settings-signups-heading" className="flex scroll-mt-6 flex-col gap-4">
+          <h2 id="settings-signups-heading" className="font-heading text-base font-semibold">
+            Sign-ups
+          </h2>
+          <div className="flex items-center gap-2">
+            <Checkbox id="maintenance-mode" name="maintenanceMode" value="on" checked={maintenanceMode} onCheckedChange={(checked) => setMaintenanceMode(checked === true)} />
+            <div>
+              <Label htmlFor="maintenance-mode" className="font-normal">
+                Maintenance mode
+              </Label>
+              <p className="text-xs text-muted-foreground">Pauses new signups with a friendly message. Existing sessions are unaffected.</p>
+            </div>
           </div>
-        </div>
+        </section>
 
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="announcement-active"
-            name="announcementActive"
-            value="on"
-            checked={announcementActive}
-            onCheckedChange={(checked) => setAnnouncementActive(checked === true)}
-          />
-          <Label htmlFor="announcement-active" className="font-normal">
-            Show announcement banner
-          </Label>
-        </div>
+        <section id="settings-announcement" aria-labelledby="settings-announcement-heading" className="flex scroll-mt-6 flex-col gap-4 border-t pt-6">
+          <h2 id="settings-announcement-heading" className="font-heading text-base font-semibold">
+            Announcement
+          </h2>
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="announcement-active"
+              name="announcementActive"
+              value="on"
+              checked={announcementActive}
+              onCheckedChange={(checked) => setAnnouncementActive(checked === true)}
+            />
+            <Label htmlFor="announcement-active" className="font-normal">
+              Show announcement banner
+            </Label>
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="announcement-message">Announcement message</Label>
-          <Textarea id="announcement-message" name="announcementMessage" defaultValue={settings.announcementMessage ?? ""} maxLength={500} rows={2} placeholder="Shown to every signed-in user when active." />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="announcement-message">Announcement message</Label>
+            <Textarea id="announcement-message" name="announcementMessage" defaultValue={settings.announcementMessage ?? ""} maxLength={500} rows={2} placeholder="Shown to every signed-in user when active." />
+          </div>
+        </section>
 
         {error && (
           <p className="flex items-center gap-1.5 text-sm text-destructive" role="alert">

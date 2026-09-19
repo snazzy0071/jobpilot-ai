@@ -68,6 +68,12 @@ const test = base.extend<{ openAs: OpenAs }, { accounts: Accounts }>({
   },
 });
 
+/** The fixed cookie banner covers the bottom of the page (where "View as user" is); dismiss it as a user would. */
+async function dismissCookieBanner(page: Page) {
+  // The banner mounts after hydration, so wait for it (a no-op if consent was already recorded).
+  await page.getByRole("button", { name: "Reject non-essential" }).click({ timeout: 5_000 }).catch(() => undefined);
+}
+
 async function horizontalOverflow(page: Page): Promise<{ px: number; offenders: string[] }> {
   return page.evaluate(() => {
     const width = window.innerWidth;
@@ -127,19 +133,21 @@ test.describe("1-2. role-aware login", () => {
 });
 
 test.describe("3-4. admin sidebar and public-site link", () => {
-  test("the admin sidebar holds both the user workspace and the admin tools, plus View Public Website", async ({ openAs }) => {
+  test("the admin sidebar holds only admin navigation, plus View Public Website", async ({ openAs }) => {
     const page = await openAs("admin", { viewport: { width: 1360, height: 900 } });
     await page.goto("/admin");
 
-    const sidebar = page.locator("aside, nav").filter({ hasText: "User Workspace" }).first();
-    await expect(sidebar.getByText("User Workspace")).toBeVisible();
-    await expect(sidebar.getByText("Admin Dashboard")).toBeVisible();
-    for (const label of ["CV Builder", "ATS Scanner", "Interview Coach", "Job Tracker"]) {
-      await expect(sidebar.getByRole("link", { name: label })).toBeVisible();
+    const sidebar = page.locator("aside, nav").filter({ hasText: "Administration" }).first();
+    await expect(sidebar.getByText("Administration")).toBeVisible();
+    await expect(sidebar.getByText("User Workspace")).toHaveCount(0);
+    for (const label of ["CV Builder", "ATS Scanner", "Interview Coach", "Job Tracker", "Cover Letters", "LinkedIn Optimiser"]) {
+      await expect(sidebar.getByRole("link", { name: label })).toHaveCount(0);
     }
-    for (const label of ["Users", "AI Usage", "Audit Log", "System Health"]) {
+    await expect(sidebar.locator('a[href^="/dashboard"]')).toHaveCount(0);
+    for (const label of ["Admin Dashboard", "Users", "Institutions", "AI Usage", "Sponsor Sync", "Job Feed", "Test Prep", "Blog", "Leads", "Settings", "Admin Roles", "Audit Log", "System Health"]) {
       await expect(sidebar.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
+    await expect(sidebar.getByRole("button", { name: /sign out|log out/i })).toBeVisible();
 
     const publicLinks = page.getByRole("link", { name: /View Public Website/ });
     expect(await publicLinks.count(), "sidebar + header links").toBeGreaterThanOrEqual(2);
@@ -174,6 +182,7 @@ test.describe("5. secure View as user + audit trail", () => {
 
     // Start.
     await page.goto(`/admin/users/${member.id}`);
+    await dismissCookieBanner(page);
     await page.getByRole("button", { name: "View as user" }).click();
     await page.waitForURL(/\/dashboard$/);
     await expect(page.getByText("read-only")).toBeVisible();
@@ -230,6 +239,7 @@ test.describe("5. secure View as user + audit trail", () => {
     page.on("dialog", (dialog) => void dialog.accept());
 
     await page.goto(`/admin/users/${member.id}`);
+    await dismissCookieBanner(page);
     await page.getByRole("button", { name: "View as user" }).click();
     await page.waitForURL(/\/dashboard$/);
 
@@ -272,6 +282,7 @@ test.describe("5. secure View as user + audit trail", () => {
       page.on("dialog", (dialog) => void dialog.accept());
 
       await page.goto(`/admin/users/${member.id}`);
+      await dismissCookieBanner(page);
       await page.getByRole("button", { name: "View as user" }).click();
       await page.waitForURL(/\/dashboard$/);
       await page.getByRole("button", { name: "Exit impersonation" }).click();
@@ -284,6 +295,7 @@ test.describe("5. secure View as user + audit trail", () => {
         .select("id")
         .single();
       await page.goto(`/admin/users/${second.id}`);
+      await dismissCookieBanner(page);
       await page.getByRole("button", { name: "View as user" }).click();
       await page.waitForURL(/\/dashboard$/);
 
@@ -502,7 +514,7 @@ test.describe("14. mobile", () => {
     });
   }
 
-  test("the admin area is usable at 375px, with a menu that holds both workspaces", async ({ openAs }) => {
+  test("the admin area is usable at 375px, with a menu that holds only admin navigation", async ({ openAs }) => {
     const page = await openAs("admin", phone);
     await page.goto("/admin");
     await page.waitForLoadState("networkidle");
@@ -511,8 +523,8 @@ test.describe("14. mobile", () => {
 
     await page.getByRole("button", { name: /open .*menu|menu|navigation/i }).first().click();
     const menu = page.getByRole("dialog");
-    await expect(menu.getByText("User Workspace")).toBeVisible();
-    await expect(menu.getByText("Admin Dashboard")).toBeVisible();
+    await expect(menu.getByText("Administration")).toBeVisible();
+    await expect(menu.getByText("User Workspace")).toHaveCount(0);
     await expect(menu.getByRole("link", { name: /View Public Website/ })).toBeVisible();
   });
 

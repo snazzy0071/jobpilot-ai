@@ -13,6 +13,9 @@ function Tabs({
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
+      // Forwarded to Base UI too (it was only used for the data attribute below): without it the tab list stayed
+      // horizontal for keyboard navigation and ARIA no matter what was asked for.
+      orientation={orientation}
       data-orientation={orientation}
       className={cn(
         "group/tabs flex gap-2 data-horizontal:flex-col",

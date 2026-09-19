@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { parseRedirectParam } from "@/lib/auth/safe-redirect";
-import { getRoleHomePath } from "@/lib/auth/role-redirect";
+import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import { sendWelcomeEmailOnce } from "@/lib/auth/welcome-email";
 
 export async function GET(request: NextRequest) {
@@ -24,15 +24,10 @@ export async function GET(request: NextRequest) {
       if (data.user?.email) {
         await sendWelcomeEmailOnce(data.user.id, data.user.email, (data.user.user_metadata?.full_name as string | undefined) ?? null);
       }
-      // Same role-aware fallback as the password sign-in path — an
-      // explicit ?next= (from a protected-page bounce) wins, otherwise
-      // this is the signed-in user's own role home, not always /dashboard.
-      let next = explicitNext;
-      if (!next && data.user) {
-        const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
-        next = getRoleHomePath(profile?.role);
-      }
-      return NextResponse.redirect(`${origin}${next ?? "/dashboard"}`);
+      // Same rule as the password sign-in path: an explicit ?next= is kept
+      // only if valid for this role, otherwise the role's own home.
+      const { data: profile } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+      return NextResponse.redirect(`${origin}${resolvePostAuthPath(profile?.role, explicitNext)}`);
     }
     return redirectWithError(origin, error.message);
   }

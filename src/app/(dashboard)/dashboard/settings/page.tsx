@@ -1,6 +1,6 @@
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SettingsPanel, SettingsTab, SettingsTabs, SettingsTabsList } from "@/components/settings/settings-tabs";
 import { ProfileForm } from "@/components/settings/profile-form";
 import { CareerPreferencesForm } from "@/components/settings/career-preferences-form";
 import { AccountEmailForm } from "@/components/settings/account-email-form";
@@ -65,25 +65,25 @@ export default async function SettingsPage({
     <div>
       <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
 
-      <Tabs defaultValue={initialTab} className="mt-6">
-        <TabsList>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="career">Career Preferences</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="institution">Institution</TabsTrigger>
-        </TabsList>
+      <SettingsTabs defaultValue={initialTab} className="mt-6">
+        <SettingsTabsList>
+          <SettingsTab value="profile">Profile</SettingsTab>
+          <SettingsTab value="career">Career Preferences</SettingsTab>
+          <SettingsTab value="account">Account</SettingsTab>
+          <SettingsTab value="notifications">Notifications</SettingsTab>
+          <SettingsTab value="privacy">Privacy</SettingsTab>
+          <SettingsTab value="billing">Billing</SettingsTab>
+          <SettingsTab value="institution">Institution</SettingsTab>
+        </SettingsTabsList>
 
-        <TabsContent value="profile" className="pt-6">
+        <SettingsPanel value="profile" className="pt-6">
           <ProfileForm
             defaultFullName={profile?.full_name ?? null}
             defaultDateOfBirth={profile?.date_of_birth ?? null}
           />
-        </TabsContent>
+        </SettingsPanel>
 
-        <TabsContent value="career" className="pt-6">
+        <SettingsPanel value="career" className="pt-6">
           <CareerPreferencesForm
             defaultCareerStage={preferences?.career_stage ?? null}
             defaultPrimaryGoal={preferences?.primary_goal ?? null}
@@ -93,22 +93,22 @@ export default async function SettingsPage({
             defaultGraduationYear={preferences?.graduation_year ?? null}
             defaultVisaPreference={preferences?.visa_sponsorship_preference ?? null}
           />
-        </TabsContent>
+        </SettingsPanel>
 
-        <TabsContent value="account" className="flex flex-col gap-8 pt-6">
+        <SettingsPanel value="account" className="flex flex-col gap-8 pt-6">
           <AccountEmailForm currentEmail={user.email ?? null} />
           <AccountPasswordForm />
           <ConnectedProvidersPanel
             identities={oauthIdentities}
             totalIdentityCount={allIdentities.length}
           />
-        </TabsContent>
+        </SettingsPanel>
 
-        <TabsContent value="notifications" className="pt-6">
+        <SettingsPanel value="notifications" className="pt-6">
           <NotificationsForm defaultOptIn={profile?.newsletter_opt_in ?? false} />
-        </TabsContent>
+        </SettingsPanel>
 
-        <TabsContent value="privacy" className="flex flex-col gap-8 pt-6">
+        <SettingsPanel value="privacy" className="flex flex-col gap-8 pt-6">
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium">Export your data</p>
             <p className="text-sm text-muted-foreground">
@@ -131,9 +131,9 @@ export default async function SettingsPage({
             </div>
           </div>
           <DeleteAccountForm />
-        </TabsContent>
+        </SettingsPanel>
 
-        <TabsContent value="billing" className="flex flex-col gap-4 pt-6">
+        <SettingsPanel value="billing" className="flex flex-col gap-4 pt-6">
           {billingNotice && (
             <p className="rounded-lg border bg-muted/50 p-3 text-sm">{billingNotice}</p>
           )}
@@ -143,12 +143,12 @@ export default async function SettingsPage({
             voiceUsage={voiceUsage}
             voiceTopupsAllowed={voiceTopupsAllowed}
           />
-        </TabsContent>
+        </SettingsPanel>
 
-        <TabsContent value="institution" className="pt-6">
+        <SettingsPanel value="institution" className="pt-6">
           <InstitutionEnrollmentPanel membership={institutionMembership} />
-        </TabsContent>
-      </Tabs>
+        </SettingsPanel>
+      </SettingsTabs>
     </div>
   );
 }
