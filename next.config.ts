@@ -76,6 +76,8 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
 ];
 
+const CHROMIUM_BIN = "./node_modules/@sparticuz/chromium/bin/**/*";
+
 const nextConfig: NextConfig = {
   // pdf-parse (via pdfjs-dist) dynamically imports its own worker file at
   // a path relative to itself at runtime — bundling it breaks that
@@ -88,6 +90,22 @@ const nextConfig: NextConfig = {
   // external," since it locates its binary via a path relative to
   // itself, which breaks once bundled.
   serverExternalPackages: ["pdf-parse", "pdfjs-dist", "puppeteer", "puppeteer-core", "@sparticuz/chromium"],
+  // The Chromium binary @sparticuz/chromium unpacks at runtime lives in its
+  // `bin/` folder (four Brotli archives), which the package finds with
+  // `import.meta.url` + "../bin" — a path Next's file tracing can't follow,
+  // so without this the deployed function ships the package's JS but not the
+  // binary and every PDF export fails on Vercel with 'The input directory
+  // ".../@sparticuz/chromium/bin" does not exist' (locally it works, because
+  // node_modules is right there). Only the routes that launch a browser
+  // (src/lib/pdf/launch-browser.ts) get it: the CV, cover-letter and Quick
+  // Scan export endpoints, and the free ATS checker page, whose server action
+  // emails the report PDF. Keys are route paths, so brackets are escaped.
+  outputFileTracingIncludes: {
+    "/api/cvs/\\[cvId\\]/export": [CHROMIUM_BIN],
+    "/api/cover-letters/\\[id\\]/export": [CHROMIUM_BIN],
+    "/api/quick-scan/\\[token\\]/pdf": [CHROMIUM_BIN],
+    "/free-ats-checker": [CHROMIUM_BIN],
+  },
   // Don't advertise the framework/version in every response.
   poweredByHeader: false,
   async headers() {

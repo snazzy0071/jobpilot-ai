@@ -26,11 +26,12 @@ import type { Browser } from "puppeteer-core";
  * explicit that it relies on relative path resolution to find its
  * binary files, which breaks under webpack/Turbopack bundling.
  *
- * NOT verified against a real Vercel deployment — this sandbox has no
- * Vercel access. The shape here matches @sparticuz/chromium's own
- * documented usage exactly (including `headless: "shell"`, since that
- * package's FAQ says it doesn't support the newer headless mode), but
- * treat the first real deploy as the actual verification, not this.
+ * The package finds its binary (`bin/*.br`) with `import.meta.url`, which
+ * Next's file tracing can't follow — every route that launches a browser
+ * must list that folder in next.config.ts's `outputFileTracingIncludes`
+ * or the deployed function has no Chromium at all (guarded by
+ * chromium-tracing.test.ts). It also needs Node >= 22.17 (its `engines`),
+ * so the Vercel project's Node version must be 22.x or 24.x.
  */
 export async function launchBrowser(): Promise<Browser> {
   if (process.env.VERCEL) {

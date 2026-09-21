@@ -128,6 +128,14 @@
   --chart-5: oklch(0.269 0 0);
   --radius: 0.75rem;
 
+  /* Scrollbars. The thumb has to clear the 3:1 non-text bar (WCAG 1.4.11)
+     against the surface it sits on, so it is a solid grey rather than the
+     translucent --border used for hairlines; the track stays transparent so
+     it takes whatever surface (page, card, sidebar, dialog) it is on. */
+  --scrollbar-thumb: oklch(0.64 0 0);
+  --scrollbar-thumb-hover: oklch(0.48 0 0);
+  color-scheme: light;
+
   /* Brand secondary/accent — opt-in chips, gradients, decorative use;
      see the block comment above for why these aren't --secondary/--accent. */
   --brand-secondary: #ff6b6b;
@@ -198,6 +206,9 @@
 }
 
 .dark {
+  color-scheme: dark;
+  --scrollbar-thumb: oklch(0.56 0.02 293);
+  --scrollbar-thumb-hover: oklch(0.72 0.02 293);
   /* Deep violet-black, not neutral gray — docs/SCREENSHOT_MAP.md's
      dashboard.png/cv-builder.png etc. show every dark surface carrying a
      faint purple tint, with sidebar < background < card/popover in
@@ -416,9 +427,57 @@
    wobble. `clip` (unlike `hidden`) creates no scroll container, so
    position: sticky keeps working. Real layout overflow is still caught by
    e2e/audit/platform-audit.spec.ts, which inspects element boxes rather
-   than trusting scrollWidth. */
+   than trusting scrollWidth. Set on <html> as well as <body>: an absolutely
+   positioned decoration whose containing block is above <body> escapes a
+   body-only clip and still widened the page (the /compare hero badge). */
+html,
 body {
   overflow-x: clip;
+}
+
+/* Scrollbars, site-wide: slim, themed for light and dark, and quiet until
+   pointed at. The standard properties are used (Chrome 121+, Firefox,
+   Safari 18.2+) rather than ::-webkit-scrollbar, which would switch off the
+   browser's own overlay/auto-hide behaviour and its keyboard and touch
+   handling. Where they are unsupported the native scrollbar is left as it is.
+   The page-level scrollbar stays at full width — it is the one people grab
+   to drag through a long page — while nested scrollers (menus, dialogs,
+   tables, the dashboard content pane, the sidebar) are thin. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+html {
+  scrollbar-width: auto;
+}
+
+@media (hover: hover) {
+  /* Not the root: it is always "hovered", which would keep the page scrollbar permanently dark. */
+  :not(html):hover {
+    scrollbar-color: var(--scrollbar-thumb-hover) transparent;
+  }
+}
+
+/* Keep a wheel or trackpad gesture inside the scroller it started in, so
+   reaching the end of a dialog, menu, sidebar, table or content pane doesn't
+   suddenly scroll the page behind it, and a sideways swipe on a wide table
+   doesn't trigger browser back/forward. Where a scroller has nothing to
+   scroll in an axis, the gesture still passes through as before. */
+:where(.overflow-y-auto, .overflow-auto) {
+  overscroll-behavior-y: contain;
+}
+:where(.overflow-x-auto, .overflow-auto) {
+  overscroll-behavior-x: contain;
+}
+
+/* Browsers make scrollable regions keyboard-focusable (so arrow keys can
+   scroll them); make that focus visible, inset so the parent's own
+   overflow/rounded corners don't clip it. The dashboard content pane is left
+   out: it only takes focus from the skip link, which already announces itself. */
+:where(.overflow-y-auto, .overflow-x-auto, .overflow-auto):focus-visible:not(#main-content) {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
