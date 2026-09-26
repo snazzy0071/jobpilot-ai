@@ -7,6 +7,7 @@ import { generateStructuredGated } from "@/lib/ai/gateway";
 import { AIServiceError } from "@/lib/ai/errors";
 import { EntitlementError } from "@/lib/entitlements/service";
 import { toPromptCallOptions, linkedinOptimizerPrompt, linkedinOptimizerSchema } from "@/lib/ai/prompts";
+import { saveLinkedinDraftVersion } from "@/lib/linkedin/internal";
 import { createLinkedinDraftSchema, regenerateLinkedinDraftSchema, deleteLinkedinDraftSchema } from "@/lib/linkedin/schemas";
 
 export type LinkedinDraftActionResult = { error: string } | { draftId: string };
@@ -166,9 +167,19 @@ export async function regenerateLinkedinDraft(
     return { error: safeErrorMessage(err) };
   }
 
+  // Regenerating replaces everything, so keep the previous state first — and don't go on if it can't be kept.
+  const backedUp = await saveLinkedinDraftVersion(
+    supabase,
+    user.id,
+    parsed.data.draftId,
+    `Before regenerating — ${new Date().toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}`,
+  );
+  if (!backedUp) return { error: "Couldn't back up your current draft first, so nothing was changed — try again." };
+
   const { error } = await supabase
     .from("linkedin_profile_drafts")
     .update({
+      selected_headline: null, // the old choice belonged to the old variants (it stays in the backup)
       title: parsed.data.title,
       target_role: parsed.data.targetRole,
       target_seniority: parsed.data.targetSeniority,

@@ -125,7 +125,12 @@ export function InterviewSetupForm({
 
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="interview-cv">CV</Label>
-          <Select name="cvId" value={cvId} onValueChange={(value) => setCvId(value ?? "")}>
+          <Select
+            name="cvId"
+            value={cvId}
+            items={Object.fromEntries(eligibleCvs.map((cv) => [cv.id, cv.title]))}
+            onValueChange={(value) => setCvId(value ?? "")}
+          >
             <SelectTrigger id="interview-cv" className="w-full">
               <SelectValue placeholder="Choose a CV" />
             </SelectTrigger>
@@ -183,7 +188,7 @@ export function InterviewSetupForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="interview-mode">Interview type</Label>
-            <Select name="mode" value={mode} onValueChange={(value) => value && setMode(value as InterviewMode)}>
+            <Select name="mode" value={mode} items={INTERVIEW_MODE_LABELS} onValueChange={(value) => value && setMode(value as InterviewMode)}>
               <SelectTrigger id="interview-mode" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -226,6 +231,7 @@ export function InterviewSetupForm({
             <Select
               name="difficulty"
               value={difficulty}
+              items={INTERVIEW_DIFFICULTY_LABELS}
               onValueChange={(value) => value && setDifficulty(value as InterviewDifficulty)}
             >
               <SelectTrigger id="interview-difficulty" className="w-full">

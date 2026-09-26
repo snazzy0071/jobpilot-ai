@@ -1,6 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import type { Application } from "@/lib/applications/types";
+import type { Application, ApplicationStatusHistoryEntry } from "@/lib/applications/types";
 
 export const APPLICATION_SELECT_FIELDS =
   "id, job_id, cv_id, cover_letter_id, company_name, job_title, location, salary, url, deadline, status, notes, applied_at, sponsor_status, match_score, submitted_cv_version_id, frozen_at, created_at, updated_at";
@@ -59,7 +59,11 @@ export async function listApplications(userId: string): Promise<Application[]> {
     .select(APPLICATION_SELECT_FIELDS)
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
-  if (error || !data) return [];
+  if (error || !data) {
+    // An outage must not read as "you have no applications".
+    console.error("listApplications failed:", error?.message);
+    throw new Error("Couldn't load your applications.");
+  }
   return data.map(toApplication);
 }
 
@@ -74,4 +78,31 @@ export async function getApplicationById(userId: string, id: string): Promise<Ap
     .maybeSingle();
   if (error || !data) return null;
   return toApplication(data);
+}
+
+/** One application's status history, oldest first: the timeline on its edit page. Written by migration 0063's trigger, never by app code. */
+export async function listApplicationHistory(userId: string, applicationId: string): Promise<ApplicationStatusHistoryEntry[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("application_status_history")
+    .select("id, application_id, from_status, to_status, note, changed_at")
+    .eq("application_id", applicationId)
+    .eq("user_id", userId)
+    .order("changed_at", { ascending: true });
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id,
+    applicationId: row.application_id,
+    fromStatus: row.from_status,
+    toStatus: row.to_status,
+    note: row.note,
+    changedAt: row.changed_at,
+  }));
+}
+
+/** The CV copy frozen when the application first reached Applied: its label and when it was made. Null if there is none (no CV was linked) or it has since been deleted. */
+export async function getSubmittedCvVersion(userId: string, versionId: string): Promise<{ id: string; cvId: string; label: string | null; createdAt: string } | null> {
+  const supabase = await createClient();
+  const { data } = await supabase.from("cv_versions").select("id, cv_id, label, created_at").eq("id", versionId).eq("user_id", userId).maybeSingle();
+  return data ? { id: data.id, cvId: data.cv_id, label: data.label, createdAt: data.created_at } : null;
 }

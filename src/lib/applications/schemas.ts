@@ -26,7 +26,7 @@ const applicationInputFields = {
     .max(2000)
     .optional()
     .transform((value) => (value ? value : null))
-    .refine((value) => value === null || z.url().safeParse(value).success, "Enter a valid URL."),
+    .refine((value) => value === null || z.url({ protocol: /^https?$/ }).safeParse(value).success, "Enter a valid URL starting with http:// or https://."),
   deadline: z
     .string()
     .trim()

@@ -144,7 +144,7 @@ test.describe("3-4. admin sidebar and public-site link", () => {
       await expect(sidebar.getByRole("link", { name: label })).toHaveCount(0);
     }
     await expect(sidebar.locator('a[href^="/dashboard"]')).toHaveCount(0);
-    for (const label of ["Admin Dashboard", "Users", "Institutions", "AI Usage", "Sponsor Sync", "Job Feed", "Test Prep", "Blog", "Leads", "Settings", "Admin Roles", "Audit Log", "System Health"]) {
+    for (const label of ["Dashboard", "Users", "Institutions", "Plans/Subscriptions", "Access Codes", "AI Usage", "Sponsors", "Graduate Schemes", "Deadlines", "Jobs", "Test Prep", "Advice Hub", "Blog", "Comparisons", "Auto-Apply", "Leads", "Roles", "Audit Log", "Settings", "System Health"]) {
       await expect(sidebar.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
     await expect(sidebar.getByRole("button", { name: /sign out|log out/i })).toBeVisible();

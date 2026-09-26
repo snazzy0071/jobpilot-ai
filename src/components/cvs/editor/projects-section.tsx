@@ -10,6 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { AutosaveStatus } from "@/components/cvs/editor/autosave-status";
 import { useAutosave } from "@/components/cvs/editor/use-autosave";
+import { dropEndDateWhenOngoing } from "@/lib/cvs/save-status";
 import { SectionList, type DragHandleProps } from "@/components/cvs/editor/section-list";
 import { DeleteRowButton } from "@/components/cvs/editor/delete-row-button";
 import { ToggleVisibilityButton } from "@/components/cvs/editor/toggle-visibility-button";
@@ -31,7 +32,7 @@ function ProjectForm({ versionId, initial, onDone }: { versionId: string; initia
     if (!formRef.current) return null;
     const formData = new FormData(formRef.current);
     if (rowId) formData.set("id", rowId);
-    return formData;
+    return dropEndDateWhenOngoing(formData, "isOngoing");
   }
 
   function handleChange() {

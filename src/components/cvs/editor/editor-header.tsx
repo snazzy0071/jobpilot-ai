@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { AlertCircleIcon, ArrowLeftIcon, CheckIcon, Loader2Icon, ScanSearchIcon } from "lucide-react";
 import { renameCv, type CvActionResult } from "@/lib/cvs/actions";
@@ -41,13 +41,62 @@ export function EditorHeader({
   /** Skills, projects etc., so the template chooser's Preview can render the whole CV. */
   templateContent?: CvTemplateExtras;
 }) {
-  const [renameState, renameAction, renamePending] = useActionState<CvActionResult, FormData>(renameCv, undefined);
-  const formRef = useRef<HTMLFormElement>(null);
-  const { overall } = useCvSaves();
-  // The editor's real save state: every autosaving section, the template, and the rename below.
-  const renameError = renameState && "error" in renameState ? renameState.error : null;
-  const saveState = renamePending || overall.status === "saving" ? "saving" : renameError || overall.status === "error" ? "error" : "saved";
-  const saveMessage = renameError ?? overall.message;
+  const [renameState, setRenameState] = useState<CvActionResult>(undefined);
+  const { overall, report, register, track } = useCvSaves();
+  // The editor's real save state: every autosaving section, the template, and the title below.
+  const saveState = overall.status === "saving" ? "saving" : overall.status === "error" ? "error" : "saved";
+  const saveMessage = overall.message;
+
+  // The title autosaves like every other field: a short pause after typing, and immediately on blur/Enter. It reports
+  // to the same coordinator as the section forms, so the header shows Saving/Saved/Error for it, an export waits for it,
+  // and leaving the page saves it instead of dropping it.
+  const typedTitle = useRef(title);
+  const savedTitle = useRef(title);
+  const lastFailed = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const saveTitle = useCallback(async (): Promise<CvActionResult> => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+    const value = typedTitle.current;
+    if (value === savedTitle.current && !lastFailed.current) {
+      report("title", "saved");
+      return undefined;
+    }
+    const formData = new FormData();
+    formData.set("cvId", cvId);
+    formData.set("title", value);
+    const result = await track("title", () => renameCv(undefined, formData));
+    if (result && "error" in result) {
+      lastFailed.current = true;
+    } else {
+      lastFailed.current = false;
+      savedTitle.current = value;
+    }
+    setRenameState(result);
+    return result;
+  }, [cvId, report, track]);
+
+  function handleTitleChange(value: string) {
+    typedTitle.current = value;
+    report("title", "saving");
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      void saveTitle();
+    }, 800);
+  }
+
+  useEffect(() => register("title", () => (timer.current || lastFailed.current ? saveTitle() : Promise.resolve(undefined))), [register, saveTitle]);
+
+  // Leaving the page inside the pause must not drop the edit.
+  useEffect(() => {
+    return () => {
+      if (timer.current) void saveTitle();
+    };
+  }, [saveTitle]);
 
   function scrollToAtsPanel() {
     document.getElementById(atsPanelAnchorId)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -63,8 +112,13 @@ export function EditorHeader({
           <ArrowLeftIcon className="size-4" /> All CVs
         </Link>
 
-        <form ref={formRef} action={renameAction} className="min-w-0 flex-1">
-          <input type="hidden" name="cvId" value={cvId} />
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            void saveTitle();
+          }}
+          className="min-w-0 flex-1"
+        >
           <label htmlFor="title" className="sr-only">
             CV title
           </label>
@@ -74,11 +128,12 @@ export function EditorHeader({
             defaultValue={title}
             maxLength={200}
             className="max-w-xs border-transparent bg-transparent font-heading text-lg font-semibold hover:border-input focus-visible:border-ring"
-            onBlur={() => formRef.current?.requestSubmit()}
+            onChange={(event) => handleTitleChange(event.target.value)}
+            onBlur={() => void saveTitle()}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
-                formRef.current?.requestSubmit();
+                void saveTitle();
               }
             }}
           />

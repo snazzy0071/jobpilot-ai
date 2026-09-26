@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 import { saveTargetsStep } from "@/lib/onboarding/actions";
 import type { OnboardingResult } from "@/lib/onboarding/actions";
-import { INDUSTRY_OPTIONS } from "@/lib/onboarding/schemas";
+import { INDUSTRY_OPTIONS, industryFieldId } from "@/lib/onboarding/schemas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,12 +42,12 @@ export function TargetsForm({
           {INDUSTRY_OPTIONS.map((industry) => (
             <div key={industry} className="flex items-center gap-2">
               <Checkbox
-                id={`industry-${industry}`}
+                id={industryFieldId(industry)}
                 name="industries"
                 value={industry}
                 defaultChecked={defaultIndustries.includes(industry)}
               />
-              <Label htmlFor={`industry-${industry}`} className="text-sm font-normal">
+              <Label htmlFor={industryFieldId(industry)} className="text-sm font-normal">
                 {industry}
               </Label>
             </div>

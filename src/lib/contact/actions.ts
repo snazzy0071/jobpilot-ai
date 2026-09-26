@@ -1,11 +1,14 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { contactMessageSchema } from "@/lib/contact/schemas";
 import { sendContactAcknowledgementEmail } from "@/lib/contact/send-acknowledgement-email";
 import { consumeIpRateLimit } from "@/lib/rate-limit/ip-limit";
+import { echoFields, type EchoedValues } from "@/lib/forms/echo";
 
-export type ContactResult = { error: string } | { success: string } | void;
+const CONTACT_FIELDS = ["name", "email", "subject", "message"] as const;
+
+export type ContactResult = { error: string; values?: EchoedValues } | { success: string } | void;
 
 const RATE_LIMIT_MESSAGE = "Too many messages sent — try again in a bit.";
 
@@ -14,7 +17,7 @@ export async function submitContactMessage(
   formData: FormData,
 ): Promise<ContactResult> {
   if (!(await consumeIpRateLimit("lead_contact", { windowSeconds: 60 * 60, maxRequests: 5 }))) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { error: RATE_LIMIT_MESSAGE, values: echoFields(formData, CONTACT_FIELDS) };
   }
 
   const parsed = contactMessageSchema.safeParse({
@@ -25,14 +28,16 @@ export async function submitContactMessage(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { error: parsed.error.issues[0].message, values: echoFields(formData, CONTACT_FIELDS) };
   }
 
-  const supabase = await createClient();
+  // Service role, after the rate limit and validation above: the tables no longer accept anonymous inserts (migration 0124), so the
+  // only way in is through this action and its checks.
+  const supabase = createAdminClient();
   const { error } = await supabase.from("contact_messages").insert(parsed.data);
 
   if (error) {
-    return { error: "Something went wrong — try again in a moment." };
+    return { error: "Something went wrong — try again in a moment.", values: echoFields(formData, CONTACT_FIELDS) };
   }
 
   await sendContactAcknowledgementEmail(parsed.data.email, parsed.data.name);

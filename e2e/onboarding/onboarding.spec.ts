@@ -16,7 +16,7 @@ test.describe("Onboarding", () => {
 
     await expect(page).toHaveURL(/\/onboarding\/targets/);
     await page.getByLabel("Target roles").fill("Software Engineer, Data Analyst");
-    await page.getByLabel("Technology").check();
+    await page.getByRole("checkbox", { name: "Technology" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
 
     await expect(page).toHaveURL(/\/onboarding\/logistics/);
@@ -51,6 +51,7 @@ test.describe("Onboarding", () => {
     await page.getByRole("button", { name: "Continue" }).click();
 
     await page.getByLabel("Target roles").fill("Software Engineer");
+    await page.getByRole("checkbox", { name: "Technology" }).click();
     await page.getByRole("button", { name: "Continue" }).click();
 
     await page.getByLabel("Location").fill("London");

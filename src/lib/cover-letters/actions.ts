@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { getCvEditorData } from "@/lib/cvs/queries";
@@ -16,7 +17,18 @@ import {
   updateCoverLetterTemplateSchema,
 } from "@/lib/cover-letters/schemas";
 
-export type GenerateCoverLetterResult = { error: string } | { coverLetterId: string };
+// Never actually resolves with a coverLetterId on success — see the redirect() at the end of
+// generateCoverLetter below. The type stays `{ error: string }` only; a successful call never returns because
+// redirect() throws its own control-flow signal that Next's Server Action runtime intercepts and turns into a real
+// navigation, same as createCv (src/lib/cvs/actions.ts). This isn't just style: doing the redirect server-side,
+// inside the same action call that just wrote the row, is what makes it race-free. The previous version returned
+// { coverLetterId } for the client to `router.push` itself — a *second*, separate client-side navigation after the
+// server action's response had already landed — and that gap was enough for Next's App Router to occasionally miss
+// re-establishing CoverLetterPreviewProvider before CoverLetterPreview's first render on the new route, crashing
+// the whole page with "useCoverLetterPreview must be used within a CoverLetterPreviewProvider" (a genuine bug,
+// reliably reproducible, found while adding this feature's first e2e coverage — not present in CVs' own equivalent
+// create flow because it already redirected server-side).
+export type GenerateCoverLetterResult = { error: string };
 export type CoverLetterActionResult = { error: string } | { success: string } | void;
 
 /** The model writes blank-line-separated paragraphs (coverLetterPrompt's own "opening/body paragraphs/closing" structure instruction) — this is what turns that plain-text draft into the editor's individually-editable rows. */
@@ -140,7 +152,7 @@ export async function generateCoverLetter(formData: FormData): Promise<GenerateC
   }
 
   revalidatePath("/dashboard/cover-letters");
-  return { coverLetterId: letterRow.id };
+  redirect(`/dashboard/cover-letters/${letterRow.id}`);
 }
 
 /**

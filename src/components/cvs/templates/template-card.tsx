@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckIcon, EyeIcon, ShieldCheckIcon } from "lucide-react";
+import { CheckIcon, EyeIcon, LockIcon, ShieldCheckIcon } from "lucide-react";
 import { TemplateRenderer } from "@/components/cvs/templates/template-renderer";
 import { CV_TEMPLATE_SAMPLE_DATA } from "@/components/cvs/templates/sample-data";
 import { Badge } from "@/components/ui/badge";
@@ -35,11 +35,14 @@ export function AtsSafeBadge({ className }: { className?: string }) {
 export function TemplateCard({
   template,
   current,
+  locked = false,
   onPreview,
   onUse,
 }: {
   template: CvTemplateDefinition;
   current: boolean;
+  /** Not included in the person's plan: it can be previewed but not chosen. */
+  locked?: boolean;
   onPreview: () => void;
   onUse: () => void;
 }) {
@@ -104,12 +107,16 @@ export function TemplateCard({
             type="button"
             size="sm"
             onClick={onUse}
-            disabled={current}
-            aria-label={current ? `${template.name} is your current template` : `Use the ${template.name} template`}
+            disabled={current || locked}
+            aria-label={current ? `${template.name} is your current template` : locked ? `${template.name} needs a paid plan` : `Use the ${template.name} template`}
           >
             {current ? (
               <>
                 <CheckIcon /> In use
+              </>
+            ) : locked ? (
+              <>
+                <LockIcon /> Paid plan
               </>
             ) : (
               "Use template"

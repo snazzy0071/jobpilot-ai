@@ -57,6 +57,13 @@ function isRecordingSupported(): boolean {
 
 type RecordingState = "idle" | "recording" | "transcribing" | "review";
 
+// A spoken answer becomes the reply text, which submitInterviewAnswerSchema caps at 4000 characters (~700 words,
+// roughly 4-5 minutes of speech). Without a recording ceiling, a long take transcribes to more than the server will
+// accept and the candidate only finds out after the whole recording is done and transcribed.
+const MAX_RECORDING_SECONDS = 180;
+const MAX_ANSWER_CHARS = 4000;
+const NETWORK_ERROR_MESSAGE = "Couldn't reach the server — check your connection and try again.";
+
 /**
  * The live interview — Claude acts as the interviewer, one question at a
  * time, with contextual follow-ups, until 5-8 questions have been
@@ -103,8 +110,15 @@ export function InterviewChat({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [draftText, setDraftText] = useState("");
   const [audioNotice, setAudioNotice] = useState<string | null>(null);
+  // Whether an interviewer turn's audio is loaded and can be (re)played by a tap. Autoplay after an async fetch is
+  // refused by iOS Safari (and by Chrome for a page with no prior interaction), so a working tap target is the only
+  // way to hear the question there — the earlier "Tap play to hear the question" notice had nothing to tap.
+  const [audioReady, setAudioReady] = useState(false);
+  const [audioFailed, setAudioFailed] = useState(false);
+  const [recordingLimitReached, setRecordingLimitReached] = useState(false);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const recordingStartRef = useRef<number>(0);
   const recordedDurationSecondsRef = useRef<number>(0);
@@ -116,14 +130,26 @@ export function InterviewChat({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (objectUrlRef.current) URL.revokeObjectURL(objectUrlRef.current);
+      // Navigating away mid-recording must release the microphone — stopping the timer alone left the stream (and
+      // the browser's "recording" indicator) live after leaving the page.
+      const recorder = mediaRecorderRef.current;
+      if (recorder) {
+        recorder.ondataavailable = null;
+        recorder.onstop = null;
+        if (recorder.state !== "inactive") recorder.stop();
+      }
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     };
   }, []);
+
 
   async function playInterviewerTurn(turns: InterviewTranscriptTurn[]) {
     const turn = [...turns].reverse().find((t) => t.speaker === "interviewer");
     if (!turn) return;
 
     setAudioNotice(null);
+    setAudioFailed(false);
     try {
       const response = await fetch(`/api/interview/${sessionId}/speak`, {
         method: "POST",
@@ -131,7 +157,8 @@ export function InterviewChat({
         body: JSON.stringify({ turnId: turn.id }),
       });
       if (!response.ok) {
-        setAudioNotice("Couldn't play that aloud — read the question below instead.");
+        setAudioFailed(true);
+        setAudioNotice("Couldn't play that aloud — read the question above, or try the audio again.");
         return;
       }
       const blob = await response.blob();
@@ -140,20 +167,43 @@ export function InterviewChat({
       objectUrlRef.current = url;
       if (audioRef.current) {
         audioRef.current.src = url;
+        setAudioReady(true);
         await audioRef.current.play().catch(() => {
-          setAudioNotice("Tap play to hear the question.");
+          setAudioNotice("Your browser blocked autoplay — tap “Replay question” to hear it.");
         });
       }
     } catch {
-      setAudioNotice("Couldn't play that aloud — read the question below instead.");
+      setAudioFailed(true);
+      setAudioNotice("Couldn't play that aloud — read the question above, or try the audio again.");
     }
+  }
+
+  function handleReplay() {
+    setAudioNotice(null);
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.currentTime = 0;
+    void audio.play().catch(() => setAudioNotice("Couldn't play that aloud — read the question above instead."));
+  }
+
+  function handleRetryAudio() {
+    void playInterviewerTurn(messages);
   }
 
   async function handleBegin() {
     setError(null);
     setQuotaExceeded(false);
     setLoading(true);
-    const result = await startInterview(sessionId);
+    let result: Awaited<ReturnType<typeof startInterview>>;
+    try {
+      result = await startInterview(sessionId);
+    } catch {
+      // A dropped connection rejects the Server Action call itself — without this the button stayed on "Starting…"
+      // forever, with no message and no way to retry short of reloading.
+      setLoading(false);
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
     setLoading(false);
     if ("error" in result) {
       setError(result.error);
@@ -170,7 +220,16 @@ export function InterviewChat({
     setQuotaExceeded(false);
     setLoading(true);
     const previousInterviewerTurn = [...messages].reverse().find((m) => m.speaker === "interviewer");
-    const result = await submitInterviewAnswer(sessionId, text, durationSeconds);
+    let result: Awaited<ReturnType<typeof submitInterviewAnswer>>;
+    try {
+      result = await submitInterviewAnswer(sessionId, text, durationSeconds);
+    } catch {
+      // Same as handleBegin: keep the typed/transcribed answer in place and let the candidate simply send it again.
+      // Retrying is safe whenever the turn failed on the server (nothing is saved for a failed turn — see submitInterviewAnswer).
+      setLoading(false);
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
     setLoading(false);
 
     if ("error" in result) {
@@ -206,6 +265,7 @@ export function InterviewChat({
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      streamRef.current = stream;
       const mimeType = pickRecordingMimeType();
       const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
       chunksRef.current = [];
@@ -215,6 +275,7 @@ export function InterviewChat({
       };
       recorder.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
+        streamRef.current = null;
         void handleRecordingStopped(recorder.mimeType || mimeType || "audio/webm");
       };
 
@@ -222,8 +283,15 @@ export function InterviewChat({
       recordingStartRef.current = now();
       recorder.start();
       setElapsedSeconds(0);
+      setRecordingLimitReached(false);
       setRecordingState("recording");
-      timerRef.current = setInterval(() => setElapsedSeconds((s) => s + 1), 1000);
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds((s) => s + 1);
+        if (now() - recordingStartRef.current >= MAX_RECORDING_SECONDS * 1000) {
+          setRecordingLimitReached(true);
+          handleStopRecording();
+        }
+      }, 1000);
     } catch {
       setError("Couldn't access your microphone — check your browser's permission for this site.");
     }
@@ -262,7 +330,7 @@ export function InterviewChat({
         setRecordingState("idle");
         return;
       }
-      setDraftText(data.text);
+      setDraftText(data.text.slice(0, MAX_ANSWER_CHARS));
       recordedDurationSecondsRef.current = durationSeconds;
       setRecordingState("review");
     } catch {
@@ -297,8 +365,14 @@ export function InterviewChat({
         ))}
       </div>
 
+      {mode === "voice" && (audioReady || audioFailed) && (
+        <Button type="button" variant="outline" size="sm" className="self-start" onClick={audioReady ? handleReplay : handleRetryAudio}>
+          <Volume2Icon /> {audioReady ? "Replay question" : "Retry audio"}
+        </Button>
+      )}
+
       {audioNotice && (
-        <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <p role="status" className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <Volume2Icon className="size-3.5 shrink-0" /> {audioNotice}
         </p>
       )}
@@ -360,7 +434,10 @@ export function InterviewChat({
           <p role="status" aria-live="polite" className="text-xs text-muted-foreground">
             {recordingState === "recording" && `Recording… ${formatElapsed(elapsedSeconds)}`}
             {recordingState === "transcribing" && "Transcribing your answer…"}
-            {recordingState === "review" && "Review your answer before sending — edit anything the transcript got wrong."}
+            {recordingState === "review" &&
+              (recordingLimitReached
+                ? "That reached the 3-minute limit for one take — review it, then send, or re-record a shorter answer."
+                : "Review your answer before sending — edit anything the transcript got wrong.")}
           </p>
 
           {recordingState === "idle" && (

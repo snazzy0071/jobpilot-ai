@@ -1,5 +1,8 @@
 import "server-only";
+import { createHash } from "node:crypto";
 import { consumeIpRateLimit } from "@/lib/rate-limit/ip-limit";
+import { consumeAnonymousRateLimit } from "@/lib/rate-limit/store";
+import { getFixedWindowStart } from "@/lib/rate-limit/windows";
 
 const FIVE_MINUTES_SECONDS = 5 * 60;
 const ONE_HOUR_SECONDS = 60 * 60;
@@ -25,6 +28,17 @@ const RATE_LIMIT_MESSAGE = "Too many attempts — wait a few minutes and try aga
  */
 export async function consumeSignInRateLimit(): Promise<boolean> {
   return consumeIpRateLimit("auth_sign_in", { windowSeconds: FIVE_MINUTES_SECONDS, maxRequests: 10 });
+}
+
+/**
+ * Sign-in attempts per ACCOUNT, on top of the per-IP limit above: a botnet (many IPs, one target) is invisible to an IP counter, so
+ * without this an account could be guessed at indefinitely. The email is stored only as a SHA-256 hash. 20 attempts per 15 minutes
+ * leaves a person who forgot their password plenty of room while making online guessing pointless.
+ */
+export async function consumeSignInAccountRateLimit(email: string): Promise<boolean> {
+  const key = createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
+  const outcome = await consumeAnonymousRateLimit("auth_sign_in_account", key, getFixedWindowStart(15 * 60), 20);
+  return outcome.allowed;
 }
 
 export async function consumeSignUpRateLimit(): Promise<boolean> {

@@ -741,6 +741,23 @@ export async function getLatestAtsScan(userId: string, versionId: string): Promi
   return mapAtsScanRow(data as unknown as AtsScanRow);
 }
 
+const ATS_SCAN_HISTORY_LIMIT = 10;
+
+/** The last `limit` scans for a CV version, most recent first — the dedicated ATS Scanner's "Past scans" list. Full rows (not summaries): picking one just swaps what's displayed, with no second round trip. */
+export async function listAtsScanHistory(userId: string, versionId: string, limit = ATS_SCAN_HISTORY_LIMIT): Promise<CvAtsScan[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("ats_scans")
+    .select(ATS_SCAN_SELECT)
+    .eq("cv_version_id", versionId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return (data as unknown as AtsScanRow[]).map(mapAtsScanRow);
+}
+
 const RECENT_JOB_OPTIONS_LOOKBACK = 30;
 const RECENT_JOB_OPTIONS_LIMIT = 8;
 

@@ -1,4 +1,5 @@
 import { requireUser } from "@/lib/auth/session";
+import { hasPasswordSignIn } from "@/lib/auth/reauth";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsPanel, SettingsTab, SettingsTabs, SettingsTabsList } from "@/components/settings/settings-tabs";
 import { ProfileForm } from "@/components/settings/profile-form";
@@ -11,23 +12,12 @@ import { DeleteAccountForm } from "@/components/settings/delete-account-form";
 import { BillingPanel } from "@/components/settings/billing-panel";
 import { InstitutionEnrollmentPanel } from "@/components/settings/institution-enrollment-panel";
 import { getCurrentSubscription } from "@/lib/billing/queries";
-import { checkUsageAllowed, hasFeature } from "@/lib/entitlements/service";
+import { checkUsageAllowed, getEntitlements, getVoiceTopupCredits, hasFeature } from "@/lib/entitlements/service";
+import { hasLiveStripeSubscription } from "@/lib/billing/subscription-state";
+import { billingNotice } from "@/lib/billing/notices";
 import { getCurrentInstitutionMembership } from "@/lib/institutions/queries";
 
 const TABS = ["profile", "career", "account", "notifications", "privacy", "billing", "institution"] as const;
-
-const BILLING_NOTICES: Record<string, string> = {
-  success: "You're subscribed — thanks!",
-  canceled: "Checkout was canceled — no charge was made.",
-  updated: "Your plan has been updated.",
-  canceling: "Your subscription will end at the end of the current period.",
-  reactivated: "Your subscription has been reactivated.",
-};
-
-const TOPUP_NOTICES: Record<string, string> = {
-  success: "Thanks! Your extra voice interviews have been added to this month's allowance.",
-  canceled: "Checkout was canceled — no charge was made.",
-};
 
 export default async function SettingsPage({
   searchParams,
@@ -37,8 +27,6 @@ export default async function SettingsPage({
   const user = await requireUser();
   const { tab, checkout, plan: planNotice, topup } = await searchParams;
   const initialTab = TABS.includes(tab as (typeof TABS)[number]) ? tab! : "profile";
-  const billingNotice =
-    BILLING_NOTICES[checkout ?? ""] ?? BILLING_NOTICES[planNotice ?? ""] ?? TOPUP_NOTICES[topup ?? ""] ?? null;
 
   const supabase = await createClient();
   const [
@@ -49,6 +37,8 @@ export default async function SettingsPage({
     voiceUsage,
     voiceTopupsAllowed,
     institutionMembership,
+    effective,
+    topupCredits,
   ] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).single(),
     supabase.from("user_preferences").select("*").eq("id", user.id).single(),
@@ -57,7 +47,21 @@ export default async function SettingsPage({
     checkUsageAllowed(user.id, "voice_interviews_per_month"),
     hasFeature(user.id, "voice_topups_allowed"),
     getCurrentInstitutionMembership(user.id),
+    getEntitlements(user.id),
+    getVoiceTopupCredits(user.id),
   ]);
+
+  // The banner is chosen from the database, not from the query string (see src/lib/billing/notices.ts).
+  const notice = billingNotice(
+    { checkout, plan: planNotice, topup },
+    {
+      planName: effective.planName,
+      planSlug: effective.planSlug,
+      hasLiveSubscription: hasLiveStripeSubscription(currentSubscription ? { status: currentSubscription.status, stripe_subscription_id: currentSubscription.hasStripeSubscription ? "x" : null } : null),
+      cancelAtPeriodEnd: currentSubscription?.cancelAtPeriodEnd ?? false,
+      topupCreditsThisMonth: topupCredits,
+    },
+  );
   const allIdentities = identitiesData?.identities ?? [];
   const oauthIdentities = allIdentities.filter((identity) => identity.provider !== "email");
 
@@ -96,8 +100,8 @@ export default async function SettingsPage({
         </SettingsPanel>
 
         <SettingsPanel value="account" className="flex flex-col gap-8 pt-6">
-          <AccountEmailForm currentEmail={user.email ?? null} />
-          <AccountPasswordForm />
+          <AccountEmailForm currentEmail={user.email ?? null} requiresPassword={hasPasswordSignIn(user)} />
+          <AccountPasswordForm requiresPassword={hasPasswordSignIn(user)} />
           <ConnectedProvidersPanel
             identities={oauthIdentities}
             totalIdentityCount={allIdentities.length}
@@ -112,8 +116,9 @@ export default async function SettingsPage({
           <div className="flex flex-col gap-2">
             <p className="text-sm font-medium">Export your data</p>
             <p className="text-sm text-muted-foreground">
-              Download a copy of your profile and tracked applications — every application, status
-              change, and reminder you&apos;ve added.
+              Download a copy of everything we hold about you: your profile and preferences, CVs, cover letters, interviews and
+              transcripts, ATS scans, applications, saved jobs, test practice, Auto-Apply, LinkedIn drafts, subscription and billing
+              history, and records kept against your email address.
             </p>
             <div className="flex gap-4">
               <a
@@ -130,16 +135,18 @@ export default async function SettingsPage({
               </a>
             </div>
           </div>
-          <DeleteAccountForm />
+          <DeleteAccountForm requiresPassword={hasPasswordSignIn(user)} />
         </SettingsPanel>
 
         <SettingsPanel value="billing" className="flex flex-col gap-4 pt-6">
-          {billingNotice && (
-            <p className="rounded-lg border bg-muted/50 p-3 text-sm">{billingNotice}</p>
+          {notice && (
+            <p className="rounded-lg border bg-muted/50 p-3 text-sm" role="status" data-testid="billing-notice">
+              {notice}
+            </p>
           )}
           <BillingPanel
-            currentSubscription={currentSubscription}
-            fallbackPlan={profile?.plan ?? "free"}
+            subscription={currentSubscription}
+            effective={{ planSlug: effective.planSlug, planName: effective.planName, source: effective.source, entitlements: effective.entitlements }}
             voiceUsage={voiceUsage}
             voiceTopupsAllowed={voiceTopupsAllowed}
           />

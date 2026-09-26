@@ -17,9 +17,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CvFormMessage } from "@/components/cvs/form-message";
+import { isTemplateAllowed } from "@/lib/cvs/template-access";
 import { CV_TEMPLATES, CV_TEMPLATE_STYLES, CV_TEMPLATE_STYLE_LABELS, CV_TEMPLATE_LAYOUT_LABELS, getCvTemplate } from "@/config/cv-templates";
 
-export function CreateCvDialog({ trigger }: { trigger?: ReactElement } = {}) {
+export function CreateCvDialog({ trigger, templateLimit = null }: { trigger?: ReactElement; /** The plan's template allowance (display only; the server enforces it). */ templateLimit?: number | null } = {}) {
   const [open, setOpen] = useState(false);
   const [state, formAction, pending] = useActionState<CvActionResult, FormData>(createCv, undefined);
 
@@ -49,8 +50,8 @@ export function CreateCvDialog({ trigger }: { trigger?: ReactElement } = {}) {
                   <SelectGroup key={style}>
                     <SelectLabel>{CV_TEMPLATE_STYLE_LABELS[style]}</SelectLabel>
                     {CV_TEMPLATES.filter((t) => t.style === style).map((t) => (
-                      <SelectItem key={t.slug} value={t.slug}>
-                        {t.name} — {CV_TEMPLATE_LAYOUT_LABELS[t.layout].toLowerCase()}
+                      <SelectItem key={t.slug} value={t.slug} disabled={!isTemplateAllowed(t.slug, templateLimit)}>
+                        {t.name} — {CV_TEMPLATE_LAYOUT_LABELS[t.layout].toLowerCase()}{isTemplateAllowed(t.slug, templateLimit) ? "" : " (paid plan)"}
                       </SelectItem>
                     ))}
                   </SelectGroup>

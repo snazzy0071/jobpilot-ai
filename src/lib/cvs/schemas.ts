@@ -24,7 +24,12 @@ const optionalUrl = (maxLength: number) =>
     .nullish()
     .transform(blankToUndefined)
     .refine((value) => value === undefined || /^https?:\/\//i.test(value), "Must start with http:// or https://");
-const optionalText = (maxLength: number) => z.string().trim().max(maxLength).nullish().transform(blankToUndefined);
+// A browser submits a textarea's line breaks as CRLF (the HTML form-encoding rule), so multi-line text arrived with
+// carriage returns and was stored that way — in every description and summary, and from there in the PDF and every
+// ATS text export. Line endings are normalised to a plain line feed before anything else.
+const normaliseLineEndings = (value: unknown) => (typeof value === "string" ? value.replace(/\r\n?/g, "\n") : value);
+const optionalText = (maxLength: number) =>
+  z.preprocess(normaliseLineEndings, z.string().trim().max(maxLength).nullish()).transform(blankToUndefined);
 
 export const createCvSchema = z.object({
   title: z.string().trim().min(1, "Give your CV a name.").max(200),
@@ -63,7 +68,7 @@ export const personalSchema = z.object({
 
 export const summarySchema = z.object({
   versionId: uuid,
-  content: z.string().trim().max(2000),
+  content: z.preprocess(normaliseLineEndings, z.string().trim().max(2000)),
 });
 
 const dateOrUndefined = z.string().trim().nullish().transform(blankToUndefined);
@@ -272,4 +277,16 @@ export const runAtsScanSchema = z.object({
 
 export const fetchJobUrlSchema = z.object({
   url: z.string().trim().min(1, "Paste a link first.").max(2000),
+});
+
+/**
+ * The ATS Scanner's "scan a file, not a saved CV" input — the job description is validated the same as
+ * `runAtsScanSchema`'s; the CV text itself comes from one of two mutually exclusive sources (a parsed
+ * upload's extracted text, or text pasted directly), validated here as plain text either way — the file
+ * itself is a `File` in the `FormData`, checked separately (size, real content) by `parseDocument`.
+ */
+export const runManualAtsScanSchema = z.object({
+  jobDescription: z.string().trim().min(30, "Paste the full job description first.").max(20000),
+  cvText: z.string().trim().min(1, "Add your CV text, or upload a file, before scanning.").max(12000),
+  reusedFromScanId: uuid.optional(),
 });

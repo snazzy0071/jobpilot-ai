@@ -48,8 +48,12 @@ export async function generateMetadata({
 
   return buildMetadata({
     title: sponsor.companyName,
-    description: `${sponsor.companyName} — a UK visa sponsor licence from the Home Office's public register, as of ${formatDate(sponsor.sourceDate)}.`,
+    description: sponsor.isActive
+      ? `${sponsor.companyName} — a UK visa sponsor licence from the Home Office's public register, as of ${formatDate(sponsor.sourceDate)}.`
+      : `${sponsor.companyName} no longer appears on the Home Office's register of licensed sponsors.`,
     path: `/visa-sponsors/companies/${id}`,
+    // A removed sponsor's page exists so an old link explains itself — it shouldn't be indexed as a current sponsor.
+    noIndex: !sponsor.isActive,
   });
 }
 
@@ -106,6 +110,18 @@ export default async function SponsorCompanyPage({ params }: { params: Promise<{
           </p>
         </div>
 
+        {!sponsor.isActive && (
+          <div role="status" className="rounded-xl border border-destructive/40 bg-destructive/5 p-4 text-sm">
+            <p className="font-medium text-destructive">No longer on the register</p>
+            <p className="mt-1 text-muted-foreground">
+              {sponsor.companyName} was on the Home Office&apos;s register of licensed sponsors
+              {sponsor.removedOn ? ` but was removed in the sync of ${formatDate(sponsor.removedOn)}` : " but no longer appears on the latest sync"}.
+              Don&apos;t assume this employer can currently sponsor a visa — the details below are what it held when it was last listed
+              (verified {formatDate(sponsor.sourceDate)}).
+            </p>
+          </div>
+        )}
+
         <Card className="shadow-floating">
           <CardHeader>
             <CardTitle className="text-sm text-muted-foreground">Sponsor details</CardTitle>
@@ -154,7 +170,7 @@ export default async function SponsorCompanyPage({ params }: { params: Promise<{
               <Badge variant={RATING_BADGE_VARIANT[sponsor.rating]}>{SPONSOR_RATING_LABELS[sponsor.rating]}</Badge>
             </div>
             <div className="flex items-center justify-between gap-4">
-              <span className="text-sm text-muted-foreground">Last verified</span>
+              <span className="text-sm text-muted-foreground">{sponsor.isActive ? "Last verified" : "Last listed"}</span>
               <span className="text-sm font-medium">{formatDate(sponsor.sourceDate)}</span>
             </div>
           </CardContent>

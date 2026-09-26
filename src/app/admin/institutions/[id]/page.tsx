@@ -4,6 +4,7 @@ import { ArrowLeftIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getAdminInstitutionDetail, listPlanOptions } from "@/lib/admin/institutions/queries";
 import { LicencePanel } from "@/components/admin/institutions/licence-panel";
+import { DomainsAdminPanel } from "@/components/admin/institutions/domains-admin-panel";
 import { AddAdminForm } from "@/components/admin/institutions/add-admin-form";
 
 export const dynamic = "force-dynamic";
@@ -22,7 +23,8 @@ export default async function AdminInstitutionDetailPage({ params }: { params: P
         <p className="mt-1 text-muted-foreground">{institution.slug}</p>
       </div>
 
-      <LicencePanel institutionId={institution.id} licence={institution.licence} plans={plans} />
+      <LicencePanel institutionId={institution.id} licence={institution.licence} plans={plans} seatsUsed={institution.seatsUsed} />
+      <DomainsAdminPanel domains={institution.domains} />
       <AddAdminForm institutionId={institution.id} admins={institution.admins} />
     </div>
   );

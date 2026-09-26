@@ -6,6 +6,7 @@ import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { publicEnv } from "@/lib/env";
 import { eraseUserAccount } from "@/lib/account/erase-account";
+import { verifyCurrentPassword } from "@/lib/auth/reauth";
 import {
   careerPreferencesSchema,
   deleteAccountSchema,
@@ -78,9 +79,11 @@ export async function updateAccountEmail(
   _prevState: SettingsResult,
   formData: FormData,
 ): Promise<SettingsResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = updateEmailSchema.safeParse({ email: formData.get("email") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const reauth = await verifyCurrentPassword(user, formData.get("currentPassword"));
+  if (reauth) return { error: reauth };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser(
@@ -96,12 +99,14 @@ export async function updateAccountPassword(
   _prevState: SettingsResult,
   formData: FormData,
 ): Promise<SettingsResult> {
-  await requireUser();
+  const user = await requireUser();
   const parsed = updateAccountPasswordSchema.safeParse({
     password: formData.get("password"),
     confirmPassword: formData.get("confirmPassword"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const reauth = await verifyCurrentPassword(user, formData.get("currentPassword"));
+  if (reauth) return { error: reauth };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.updateUser({ password: parsed.data.password });
@@ -164,6 +169,8 @@ export async function deleteAccount(
     confirmation: formData.get("confirmation"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const reauth = await verifyCurrentPassword(user, formData.get("currentPassword"));
+  if (reauth) return { error: reauth };
 
   const result = await eraseUserAccount(user.id);
   if ("error" in result) return { error: result.error };

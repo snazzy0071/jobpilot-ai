@@ -13,6 +13,8 @@ import { ComparisonTable, type ComparisonColumn, type ComparisonRow } from "@/co
 import { Faq } from "@/components/marketing/faq";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { buildMetadata } from "@/lib/seo/metadata";
+import { getLiveComparisons } from "@/lib/comparisons/queries";
+import { formatCheckedDate } from "@/components/comparisons/comparison-view";
 
 export const metadata = buildMetadata({
   title: "Compare",
@@ -118,7 +120,13 @@ function VersusPreview() {
   );
 }
 
-export default function ComparePage() {
+// Read per request: the "by name" section lists whichever sourced comparisons are published right now.
+export const dynamic = "force-dynamic";
+
+export default async function ComparePage() {
+  // A failure here only hides the by-name list; the rest of the page never depends on the database.
+  const named = await getLiveComparisons().catch(() => []);
+
   return (
     <>
       <PageHero
@@ -143,6 +151,22 @@ export default function ComparePage() {
           <ComparisonTable columns={COLUMNS} rows={ROWS} />
         </Reveal>
       </Section>
+
+      {named.length > 0 && (
+        <Section className="pt-0">
+          <SectionHeading eyebrow="By name" title="Compare JobPilot AI with a specific tool" />
+          <ul className="mx-auto mt-10 grid max-w-4xl gap-4 sm:grid-cols-2 lg:grid-cols-3" data-testid="named-comparisons">
+            {named.map((page) => (
+              <li key={page.id}>
+                <Link href={`/compare/${page.slug}`} className="block rounded-xl border bg-card p-5 transition-colors hover:bg-muted/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none">
+                  <span className="block font-medium">JobPilot AI vs {page.competitorName}</span>
+                  <span className="mt-1 block text-xs text-muted-foreground">Sourced · checked {formatCheckedDate(page.updatedOn)}</span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
 
       <Section tone="muted">
         <SectionHeading eyebrow="By alternative" title="Where JobPilot AI fits" />

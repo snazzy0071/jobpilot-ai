@@ -19,7 +19,8 @@ import { AnimatedCounter } from "@/components/motion/animated-counter";
 import { AnimatedBar } from "@/components/dashboard/animated-bar";
 import { APPLICATION_STATUS_LABELS, type ApplicationStatus } from "@/lib/applications/types";
 import type { ApplicationFunnelAnalytics } from "@/lib/applications/analytics";
-import type { SavedJobPreview } from "@/lib/dashboard/overview";
+import type { JobMatchPreview, SavedJobPreview } from "@/lib/dashboard/overview";
+import { deadlineLabel, type DeadlineItem } from "@/lib/dashboard/deadlines";
 
 // Every card below is a plain Server Component composed from the shared
 // Card variants (ui/card.tsx) — the only client pieces are the tiny
@@ -95,7 +96,7 @@ export function OverviewMetricCard({
   href?: string;
 }) {
   const body = (
-    <Card variant={href ? "feature" : "metric"} className="h-full gap-3 p-5">
+    <Card data-metric={label} variant={href ? "feature" : "metric"} className="h-full gap-3 p-5">
       <div className="flex items-start justify-between gap-2">
         <CardIcon icon={icon} className="size-9" />
         {href && <CardArrow className="mt-1" />}
@@ -147,7 +148,7 @@ export function WelcomeCard({
   const missing = completion.filter((item) => !item.done);
 
   return (
-    <Card variant="tool" animatedAccent className="gap-5 p-6 md:flex-row md:items-center md:justify-between">
+    <Card data-testid="dashboard-welcome" variant="tool" animatedAccent className="gap-5 p-6 md:flex-row md:items-center md:justify-between">
       <div className="min-w-0">
         <Badge variant="tinted" className="mb-2 capitalize">
           {planLabel} plan
@@ -208,7 +209,7 @@ function meterPct(meter: UsageMeter): number {
 
 export function PlanUsageCard({ planLabel, meters, upgradeHref }: { planLabel: string; meters: UsageMeter[]; upgradeHref?: string }) {
   return (
-    <Card variant="tool" className="h-full gap-4 p-5">
+    <Card data-testid="dashboard-plan" variant="tool" className="h-full gap-4 p-5">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <CardIcon icon={SparklesIcon} className="size-9" />
@@ -254,7 +255,7 @@ const STAGE_COLOURS: Record<ApplicationStatus, string> = {
 
 export function ApplicationsByStageCard({ funnel }: { funnel: ApplicationFunnelAnalytics }) {
   return (
-    <Card variant="tool" className="h-full gap-4 p-5">
+    <Card data-testid="dashboard-stages" variant="tool" className="h-full gap-4 p-5">
       <CardHeading
         icon={BriefcaseIcon}
         eyebrow="Your pipeline"
@@ -324,7 +325,7 @@ export function InterviewsCard({
   openInterview: { id: string; role: string } | null;
 }) {
   return (
-    <Card variant="tool" className="h-full gap-4 p-5">
+    <Card data-testid="dashboard-interviews" variant="tool" className="h-full gap-4 p-5">
       <CardHeading
         icon={MessagesSquareIcon}
         eyebrow="Interviews"
@@ -371,7 +372,7 @@ export function InterviewsCard({
 
 export function SavedJobsCard({ total, sponsored, latest }: { total: number; sponsored: number; latest: SavedJobPreview[] }) {
   return (
-    <Card variant="tool" className="h-full gap-4 p-5">
+    <Card data-testid="dashboard-saved-jobs" variant="tool" className="h-full gap-4 p-5">
       <CardHeading
         icon={TargetIcon}
         eyebrow="Saved jobs"
@@ -421,7 +422,7 @@ export function SponsorActivityCard({ funnel }: { funnel: ApplicationFunnelAnaly
   const active = funnel.sponsorSplit.filter((entry) => entry.count > 0);
   const confirmed = funnel.sponsorSplit.find((entry) => entry.status === "confirmed_sponsor")?.count ?? 0;
   return (
-    <Card variant="tool" className="h-full gap-4 p-5">
+    <Card data-testid="dashboard-sponsor" variant="tool" className="h-full gap-4 p-5">
       <CardHeading
         icon={ShieldCheckIcon}
         eyebrow="Sponsor activity"
@@ -460,17 +461,19 @@ export function SponsorActivityCard({ funnel }: { funnel: ApplicationFunnelAnaly
 
 export function TestPrepInsightCard({
   sessionCount,
-  averageAccuracy,
+  overallAccuracy,
+  answerCount,
   bestAccuracy,
   weakArea,
 }: {
   sessionCount: number;
-  averageAccuracy: number | null;
+  overallAccuracy: number | null;
+  answerCount: number;
   bestAccuracy: number | null;
   weakArea: string | null;
 }) {
   return (
-    <Card variant="tool" className="h-full gap-4 p-5">
+    <Card data-testid="dashboard-testprep" variant="tool" className="h-full gap-4 p-5">
       <CardHeading
         icon={FlameIcon}
         eyebrow="Test prep"
@@ -488,9 +491,9 @@ export function TestPrepInsightCard({
           <div className="grid grid-cols-2 gap-2">
             <div className="rounded-lg border bg-muted/30 p-3">
               <p className="font-heading text-2xl font-semibold">
-                {averageAccuracy !== null ? <AnimatedCounter value={averageAccuracy} suffix="%" /> : "—"}
+                {overallAccuracy !== null ? <AnimatedCounter value={overallAccuracy} suffix="%" /> : "—"}
               </p>
-              <p className="text-[11px] text-muted-foreground">Average accuracy</p>
+              <p className="text-[11px] text-muted-foreground">Overall accuracy · {answerCount} answer{answerCount === 1 ? "" : "s"}</p>
             </div>
             <div className="rounded-lg border bg-muted/30 p-3">
               <p className="font-heading text-2xl font-semibold">
@@ -518,7 +521,7 @@ export type NextAction = { icon: LucideIcon; title: string; description: string;
 
 export function NextActionsCard({ actions }: { actions: NextAction[] }) {
   return (
-    <Card variant="action" className="h-full gap-3 p-5">
+    <Card data-testid="dashboard-next-actions" variant="action" className="h-full gap-3 p-5">
       <CardHeading icon={SparklesIcon} eyebrow="Recommended next" title="What to do today" />
       {actions.length === 0 ? (
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -557,7 +560,7 @@ export type ActivityEntry = { id: string; icon: LucideIcon; title: string; detai
 
 export function RecentActivityCard({ entries }: { entries: ActivityEntry[] }) {
   return (
-    <Card variant="admin" className="gap-0 p-0">
+    <Card data-testid="dashboard-activity" variant="admin" className="gap-0 p-0">
       <div className="flex items-center gap-2.5 border-b p-5">
         <CardIcon icon={CalendarClockIcon} className="size-9" />
         <p className="font-heading text-xl font-semibold">Recent activity</p>
@@ -580,6 +583,87 @@ export function RecentActivityCard({ entries }: { entries: ActivityEntry[] }) {
                   <span className="block truncate text-xs text-muted-foreground">{entry.detail}</span>
                 </span>
                 <span className="shrink-0 text-xs text-muted-foreground">{timeAgo(entry.at)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------
+// Job matches — jobs this user has already had scored against a CV
+// (nothing is scored on the dashboard itself, and nothing is invented).
+// ---------------------------------------------------------------
+
+export function JobMatchesCard({ scored, strong, top, strongThreshold }: { scored: number; strong: number; top: JobMatchPreview[]; strongThreshold: number }) {
+  return (
+    <Card variant="tool" className="h-full gap-4 p-5" data-testid="dashboard-job-matches">
+      <CardHeading
+        icon={TargetIcon}
+        eyebrow="Job matches"
+        title={<><AnimatedCounter value={scored} /> scored</>}
+        href="/dashboard/jobs"
+        linkLabel="Job feed"
+      />
+      {top.length === 0 ? (
+        <EmptyState
+          message="Open a job in the feed and score it against your CV to see how well you match."
+          action={<Button size="sm" variant="outline" render={<Link href="/dashboard/jobs">Find jobs</Link>} />}
+        />
+      ) : (
+        <>
+          <div className="flex flex-col gap-2">
+            {top.map((match) => (
+              <Link key={match.jobId} href="/dashboard/jobs" className="flex items-center justify-between gap-3 rounded-lg border p-2.5 hover:bg-muted/40">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{match.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">{match.company}</p>
+                </div>
+                <span className="shrink-0 text-sm font-semibold text-primary">{match.score}%</span>
+              </Link>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {strong} of your {scored} scored job{scored === 1 ? "" : "s"} {strong === 1 ? "is" : "are"} a strong match ({strongThreshold}%+). Active listings only.
+          </p>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ---------------------------------------------------------------
+// Deadlines — dates that were actually recorded: the user's own
+// not-yet-applied tracker entries and published scheme closing dates.
+// ---------------------------------------------------------------
+
+export function DeadlinesCard({ items }: { items: DeadlineItem[] }) {
+  return (
+    <Card variant="tool" className="h-full gap-4 p-5" data-testid="dashboard-deadlines">
+      <CardHeading
+        icon={CalendarClockIcon}
+        eyebrow="Deadlines"
+        title={items.length === 0 ? "None in 30 days" : <><AnimatedCounter value={items.length} /> coming up</>}
+        href="/deadlines"
+        linkLabel="All deadlines"
+      />
+      {items.length === 0 ? (
+        <EmptyState
+          message="Add a deadline to a tracked application, or browse graduate schemes with published closing dates."
+          action={<Button size="sm" variant="outline" render={<Link href="/graduate-schemes">Graduate schemes</Link>} />}
+        />
+      ) : (
+        <ul className="flex flex-col gap-2">
+          {items.map((item) => (
+            <li key={item.id}>
+              <Link href={item.href} className="flex items-center justify-between gap-3 rounded-lg border p-2.5 hover:bg-muted/40">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{item.title}</p>
+                  <p className="truncate text-xs text-muted-foreground">{item.subtitle} · {new Date(`${item.date}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}</p>
+                </div>
+                <span className={`shrink-0 text-xs font-semibold ${item.daysLeft <= 3 ? "text-destructive" : "text-primary"}`}>{deadlineLabel(item.daysLeft)}</span>
               </Link>
             </li>
           ))}

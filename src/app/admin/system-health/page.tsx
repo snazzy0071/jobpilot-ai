@@ -1,6 +1,9 @@
 import { AlertTriangleIcon, CheckCircle2Icon, CircleOffIcon, XCircleIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import Link from "next/link";
+import { requireAdmin } from "@/lib/auth/session";
+import { hasPermission } from "@/lib/admin/permissions";
 import { runAllHealthChecks } from "@/lib/health/checks";
 import type { HealthCheckResult, HealthStatus } from "@/lib/health/types";
 
@@ -44,7 +47,8 @@ function CheckCard({ check }: { check: HealthCheckResult }) {
  * implementations that could drift apart.
  */
 export default async function AdminSystemHealthPage() {
-  const checks = await runAllHealthChecks();
+  const { user } = await requireAdmin();
+  const [checks, canSeeEmailLogs] = await Promise.all([runAllHealthChecks(), hasPermission(user.id, "view_email_logs")]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,6 +56,15 @@ export default async function AdminSystemHealthPage() {
         <h1 className="font-heading text-2xl font-semibold tracking-tight">System health</h1>
         <p className="mt-1 text-muted-foreground">Live checks, full detail — the public /status page shows a safe summary of the same data.</p>
       </div>
+
+      {canSeeEmailLogs && (
+        <p className="text-sm">
+          <Link href="/admin/email-logs" className="font-medium text-primary hover:underline">
+            Email logs
+          </Link>{" "}
+          <span className="text-muted-foreground">— every transactional email sent, and any that failed.</span>
+        </p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2">
         {checks.map((check) => (

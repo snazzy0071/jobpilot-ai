@@ -1,3 +1,5 @@
+import type { LicenceState } from "@/lib/institutions/licence";
+
 export type AdminInstitutionListItem = {
   id: string;
   name: string;
@@ -20,6 +22,7 @@ export type AdminInstitutionLicenceDetail = {
   startsAt: string;
   expiresAt: string | null;
   isActive: boolean;
+  state: LicenceState;
 };
 
 export type AdminInstitutionDetail = {
@@ -29,4 +32,8 @@ export type AdminInstitutionDetail = {
   createdAt: string;
   licence: AdminInstitutionLicenceDetail | null;
   admins: AdminInstitutionAdminAccount[];
+  domains: AdminInstitutionDomain[];
+  seatsUsed: number;
 };
+
+export type AdminInstitutionDomain = { id: string; domain: string; isVerified: boolean; createdAt: string };

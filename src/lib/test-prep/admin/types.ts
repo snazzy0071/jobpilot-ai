@@ -1,4 +1,5 @@
 import type { QuestionDifficulty, QuestionType } from "@/lib/test-prep/types";
+import type { Exhibit, FigureCell } from "@/lib/test-prep/exhibit";
 
 // Admin-facing shapes — kept separate from src/lib/test-prep/types.ts
 // on purpose: that file's own header comment explains why the public
@@ -40,8 +41,11 @@ export type AdminQuestion = {
   id: string;
   questionPackId: string;
   questionType: QuestionType;
+  stimulus: string | null;
   prompt: string;
   options: string[];
+  exhibit: Exhibit | null;
+  optionFigures: FigureCell[] | null;
   correctAnswer: string | null;
   explanation: string | null;
   difficulty: QuestionDifficulty | null;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { saveSummary } from "@/lib/cvs/section-actions";
 import { rewriteSummaryWithAi } from "@/lib/cvs/ai-actions";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,8 +14,19 @@ import type { CvSummary } from "@/lib/cvs/types";
 export function SummaryForm({ versionId, initial }: { versionId: string; initial: CvSummary | null }) {
   const formRef = useRef<HTMLFormElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
-  const { setLiveSummary } = useCvPreview();
+  const { preview, setLiveSummary } = useCvPreview();
   const { status, errorMessage, scheduleSave } = useAutosave(saveSummary);
+
+  // The box is uncontrolled, so a change made elsewhere — accepting an ATS keyword rewrite, say — updates the CV and the
+  // preview but would leave this box showing the old text, and the next keystroke here would save that old text back over
+  // it. While the box isn't being typed in, keep it in step with the CV. (When typing, the preview mirrors the box, so
+  // there is nothing to sync.)
+  const current = preview.summary?.content ?? "";
+  useEffect(() => {
+    const box = contentRef.current;
+    if (!box || document.activeElement === box) return;
+    if (box.value !== current) box.value = current;
+  }, [current]);
 
   function handleChange() {
     if (!formRef.current) return;

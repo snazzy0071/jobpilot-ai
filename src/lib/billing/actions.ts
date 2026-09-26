@@ -5,12 +5,41 @@ import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { createCheckoutSessionSchema } from "@/lib/billing/schemas";
 import type { PaidPlanSlug, BillingCycle } from "@/lib/billing/types";
+import { hasLiveStripeSubscription, hasCancellableSubscription } from "@/lib/billing/subscription-state";
 import { getStripeClient } from "@/lib/stripe/client";
 import { getStripePriceId } from "@/lib/stripe/prices";
 import { resolveStripeCustomerId } from "@/lib/stripe/customer";
 import { siteConfig } from "@/config/site";
 
 export type CheckoutResult = { error: string } | void;
+
+const STRIPE_UNAVAILABLE = "Payments aren't set up yet — check back soon.";
+const STRIPE_FAILED = "We couldn't reach our payment provider — nothing was changed. Try again in a moment.";
+
+type SubscriptionRow = {
+  status: string;
+  stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
+  billing_cycle: string | null;
+  cancel_at_period_end: boolean;
+  plans: { slug: string } | { slug: string }[] | null;
+};
+
+/** This user's own subscription row, read through their session (RLS: theirs only). The database, never a query string, decides what they have. */
+async function loadSubscription(userId: string): Promise<SubscriptionRow | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("subscriptions")
+    .select("status, stripe_customer_id, stripe_subscription_id, billing_cycle, cancel_at_period_end, plans(slug)")
+    .eq("user_id", userId)
+    .maybeSingle();
+  return (data as SubscriptionRow | null) ?? null;
+}
+
+const planSlugOf = (row: SubscriptionRow | null): string | null => {
+  const plans = row?.plans;
+  return (Array.isArray(plans) ? plans[0]?.slug : plans?.slug) ?? null;
+};
 
 // Bound with (planSlug, billingCycle) at the call site — see
 // UpgradeButton — so it fits useActionState's (prevState, formData)
@@ -23,7 +52,9 @@ export type CheckoutResult = { error: string } | void;
 // `plans` table (does this plan exist and is it purchasable at all),
 // the Stripe price id table (what does Stripe actually charge for it),
 // and Stripe itself once the session is created (what the customer is
-// actually shown) — none of which the client can influence.
+// actually shown) — none of which the client can influence. And it
+// refuses to start a second subscription for someone who already has a
+// live one (that would bill them twice): changing plan is a different action.
 export async function createCheckoutSession(
   planSlug: PaidPlanSlug,
   billingCycle: BillingCycle,
@@ -49,39 +80,53 @@ export async function createCheckoutSession(
     return { error: "That plan isn't available right now." };
   }
 
+  const existing = await loadSubscription(user.id);
+  if (hasLiveStripeSubscription(existing)) {
+    return { error: "You already have a subscription. Use “Change plan” to switch, or “Manage billing” to update your payment details." };
+  }
+
   let priceId: string;
   let stripe;
   try {
     priceId = getStripePriceId(parsed.data.planSlug, parsed.data.billingCycle);
     stripe = getStripeClient();
   } catch {
-    return { error: "Payments aren't set up yet — check back soon." };
+    return { error: STRIPE_UNAVAILABLE };
   }
 
-  const customerId = await resolveStripeCustomerId(stripe, user.id, user.email);
+  let url: string | null;
+  try {
+    const customerId = await resolveStripeCustomerId(stripe, user.id, user.email);
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    customer: customerId,
-    line_items: [{ price: priceId, quantity: 1 }],
-    client_reference_id: user.id,
-    success_url: `${siteConfig.domain}/dashboard/settings?checkout=success`,
-    cancel_url: `${siteConfig.domain}/dashboard/settings?checkout=canceled`,
-    subscription_data: {
-      metadata: { supabase_user_id: user.id, plan_slug: parsed.data.planSlug },
-    },
-    metadata: {
-      supabase_user_id: user.id,
-      plan_slug: parsed.data.planSlug,
-      billing_cycle: parsed.data.billingCycle,
-    },
-  });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      client_reference_id: user.id,
+      // These URLs only decide which message the settings page shows. They never grant anything: the plan comes from the
+      // subscriptions row that Stripe's webhook writes.
+      success_url: `${siteConfig.domain}/dashboard/settings?tab=billing&checkout=success`,
+      cancel_url: `${siteConfig.domain}/dashboard/settings?tab=billing&checkout=canceled`,
+      subscription_data: {
+        metadata: { supabase_user_id: user.id, plan_slug: parsed.data.planSlug },
+      },
+      metadata: {
+        supabase_user_id: user.id,
+        plan_slug: parsed.data.planSlug,
+        billing_cycle: parsed.data.billingCycle,
+      },
+    });
+    url = session.url;
+  } catch (err) {
+    console.error("createCheckoutSession: Stripe call failed:", err);
+    return { error: STRIPE_FAILED };
+  }
 
-  if (!session.url) {
+  if (!url) {
     return { error: "Something went wrong starting checkout — try again in a moment." };
   }
 
-  redirect(session.url);
+  redirect(url);
 }
 
 export type BillingActionResult = { error: string } | void;
@@ -98,13 +143,7 @@ export async function createBillingPortalSession(
 ): Promise<BillingActionResult> {
   const user = await requireUser();
 
-  const supabase = await createClient();
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("stripe_customer_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
+  const subscription = await loadSubscription(user.id);
   if (!subscription?.stripe_customer_id) {
     return { error: "Subscribe to a paid plan first — there's no billing account to manage yet." };
   }
@@ -113,22 +152,31 @@ export async function createBillingPortalSession(
   try {
     stripe = getStripeClient();
   } catch {
-    return { error: "Payments aren't set up yet — check back soon." };
+    return { error: STRIPE_UNAVAILABLE };
   }
 
-  const session = await stripe.billingPortal.sessions.create({
-    customer: subscription.stripe_customer_id,
-    return_url: `${siteConfig.domain}/dashboard/settings?tab=billing`,
-  });
+  let url: string;
+  try {
+    const session = await stripe.billingPortal.sessions.create({
+      customer: subscription.stripe_customer_id,
+      return_url: `${siteConfig.domain}/dashboard/settings?tab=billing`,
+    });
+    url = session.url;
+  } catch (err) {
+    console.error("createBillingPortalSession: Stripe call failed:", err);
+    return { error: STRIPE_FAILED };
+  }
 
-  redirect(session.url);
+  redirect(url);
 }
 
-// Upgrade/downgrade for someone who already has a live Stripe
-// subscription — changes the price on the existing subscription in
-// place (with proration) instead of starting a new Checkout Session. If
-// they don't have one yet (still on Free), this is really a first
-// subscription, so it defers to createCheckoutSession instead.
+// Upgrade/downgrade (or a monthly <-> annual switch) for someone who
+// already has a live Stripe subscription — changes the price on the
+// existing subscription in place (with proration) instead of starting a
+// new Checkout Session. If they don't have one (still on Free, or a
+// previous subscription has ended), this is really a first subscription,
+// so it defers to createCheckoutSession instead. Asking for exactly the
+// plan and cycle they already have is refused.
 export async function changeSubscriptionPlan(
   planSlug: PaidPlanSlug,
   billingCycle: BillingCycle,
@@ -154,14 +202,13 @@ export async function changeSubscriptionPlan(
     return { error: "That plan isn't available right now." };
   }
 
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("stripe_subscription_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!subscription?.stripe_subscription_id) {
+  const subscription = await loadSubscription(user.id);
+  if (!hasLiveStripeSubscription(subscription) || !subscription?.stripe_subscription_id) {
     return createCheckoutSession(planSlug, billingCycle, prevState, formData);
+  }
+
+  if (planSlugOf(subscription) === parsed.data.planSlug && subscription.billing_cycle === parsed.data.billingCycle) {
+    return { error: "You're already on that plan." };
   }
 
   let stripe;
@@ -170,21 +217,27 @@ export async function changeSubscriptionPlan(
     stripe = getStripeClient();
     priceId = getStripePriceId(parsed.data.planSlug, parsed.data.billingCycle);
   } catch {
-    return { error: "Payments aren't set up yet — check back soon." };
+    return { error: STRIPE_UNAVAILABLE };
   }
 
-  const currentStripeSubscription = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
-  const currentItemId = currentStripeSubscription.items.data[0]?.id;
-  if (!currentItemId) {
-    return { error: "Couldn't find your current subscription details — try again in a moment." };
+  try {
+    const current = await stripe.subscriptions.retrieve(subscription.stripe_subscription_id);
+    const currentItemId = current.items.data[0]?.id;
+    if (!currentItemId) {
+      return { error: "Couldn't find your current subscription details — try again in a moment." };
+    }
+
+    await stripe.subscriptions.update(subscription.stripe_subscription_id, {
+      items: [{ id: currentItemId, price: priceId }],
+      proration_behavior: "create_prorations",
+      metadata: { supabase_user_id: user.id, plan_slug: parsed.data.planSlug },
+    });
+  } catch (err) {
+    console.error("changeSubscriptionPlan: Stripe call failed:", err);
+    return { error: STRIPE_FAILED };
   }
 
-  await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-    items: [{ id: currentItemId, price: priceId }],
-    proration_behavior: "create_prorations",
-    metadata: { supabase_user_id: user.id, plan_slug: parsed.data.planSlug },
-  });
-
+  // The plan in force changes when Stripe's webhook lands and updates the row, not here.
   redirect("/dashboard/settings?tab=billing&plan=updated");
 }
 
@@ -194,27 +247,27 @@ export async function cancelSubscription(
 ): Promise<BillingActionResult> {
   const user = await requireUser();
 
-  const supabase = await createClient();
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("stripe_subscription_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!subscription?.stripe_subscription_id) {
+  const subscription = await loadSubscription(user.id);
+  if (!hasCancellableSubscription(subscription) || !subscription?.stripe_subscription_id) {
     return { error: "You don't have an active subscription to cancel." };
+  }
+  if (subscription.cancel_at_period_end) {
+    return { error: "Your subscription is already set to end at the end of the current period." };
   }
 
   let stripe;
   try {
     stripe = getStripeClient();
   } catch {
-    return { error: "Payments aren't set up yet — check back soon." };
+    return { error: STRIPE_UNAVAILABLE };
   }
 
-  await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-    cancel_at_period_end: true,
-  });
+  try {
+    await stripe.subscriptions.update(subscription.stripe_subscription_id, { cancel_at_period_end: true });
+  } catch (err) {
+    console.error("cancelSubscription: Stripe call failed:", err);
+    return { error: STRIPE_FAILED };
+  }
 
   redirect("/dashboard/settings?tab=billing&plan=canceling");
 }
@@ -225,27 +278,27 @@ export async function reactivateSubscription(
 ): Promise<BillingActionResult> {
   const user = await requireUser();
 
-  const supabase = await createClient();
-  const { data: subscription } = await supabase
-    .from("subscriptions")
-    .select("stripe_subscription_id")
-    .eq("user_id", user.id)
-    .maybeSingle();
-
-  if (!subscription?.stripe_subscription_id) {
+  const subscription = await loadSubscription(user.id);
+  if (!hasCancellableSubscription(subscription) || !subscription?.stripe_subscription_id) {
     return { error: "You don't have a subscription to reactivate." };
+  }
+  if (!subscription.cancel_at_period_end) {
+    return { error: "Your subscription isn't set to end, so there's nothing to reactivate." };
   }
 
   let stripe;
   try {
     stripe = getStripeClient();
   } catch {
-    return { error: "Payments aren't set up yet — check back soon." };
+    return { error: STRIPE_UNAVAILABLE };
   }
 
-  await stripe.subscriptions.update(subscription.stripe_subscription_id, {
-    cancel_at_period_end: false,
-  });
+  try {
+    await stripe.subscriptions.update(subscription.stripe_subscription_id, { cancel_at_period_end: false });
+  } catch (err) {
+    console.error("reactivateSubscription: Stripe call failed:", err);
+    return { error: STRIPE_FAILED };
+  }
 
   redirect("/dashboard/settings?tab=billing&plan=reactivated");
 }

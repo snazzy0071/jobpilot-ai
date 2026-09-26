@@ -5,12 +5,21 @@ import { ApplicationTrackerBoard } from "@/components/applications/application-t
 import { requireUser } from "@/lib/auth/session";
 import { listApplications } from "@/lib/applications/queries";
 import { listCvs } from "@/lib/cvs/queries";
+import { listCoverLetters } from "@/lib/cover-letters/queries";
+import { getReminderSummaryByApplication, listDueInAppReminders } from "@/lib/applications/reminders/queries";
+import { DueReminders } from "@/components/applications/due-reminders";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApplicationsPage() {
   const user = await requireUser();
-  const [applications, cvs] = await Promise.all([listApplications(user.id), listCvs(user.id)]);
+  const [applications, cvs, coverLetters, reminderSummary, dueReminders] = await Promise.all([
+    listApplications(user.id),
+    listCvs(user.id),
+    listCoverLetters(user.id),
+    getReminderSummaryByApplication(user.id),
+    listDueInAppReminders(user.id),
+  ]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -32,7 +41,14 @@ export default async function ApplicationsPage() {
         </div>
       </div>
 
-      <ApplicationTrackerBoard applications={applications} cvs={cvs.map((cv) => ({ id: cv.id, title: cv.title }))} />
+      <DueReminders reminders={dueReminders} />
+
+      <ApplicationTrackerBoard
+        applications={applications}
+        cvs={cvs.map((cv) => ({ id: cv.id, title: cv.title }))}
+        coverLetters={coverLetters.map((letter) => ({ id: letter.id, companyName: letter.companyName, jobTitle: letter.jobTitle }))}
+        reminders={reminderSummary}
+      />
     </div>
   );
 }

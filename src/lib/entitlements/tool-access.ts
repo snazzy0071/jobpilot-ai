@@ -1,6 +1,6 @@
 import "server-only";
 import { hasFeature, checkUsageAllowed } from "@/lib/entitlements/service";
-import type { FeatureKey, MeteredKey } from "@/lib/entitlements/types";
+import { TOOL_ENTITLEMENT_CHECKS, type ToolAccessCheck } from "@/lib/entitlements/tool-checks";
 import { TOOLS } from "@/config/tools";
 
 // The real, per-tool entitlement mapping — the "cover all paid tools"
@@ -12,27 +12,6 @@ import { TOOLS } from "@/config/tools";
 // UI-only notion of "which plan unlocks this" would only add a third
 // place for the two to disagree. Every check here reads the actual
 // configured entitlement instead.
-type ToolAccessCheck =
-  | { kind: "feature"; key: FeatureKey; label: string }
-  | { kind: "metered"; key: MeteredKey; label: string };
-
-const TOOL_ENTITLEMENT_CHECKS: Record<string, ToolAccessCheck[]> = {
-  cv: [{ kind: "metered", key: "cv_limit", label: "CVs" }],
-  ats: [
-    { kind: "metered", key: "quick_ats_scans_per_month", label: "Quick ATS scans" },
-    { kind: "metered", key: "tailored_ats_scans_per_month", label: "Tailored ATS scans" },
-  ],
-  "cover-letter": [{ kind: "feature", key: "cover_letter_generator", label: "Cover Letter Generator" }],
-  interview: [
-    { kind: "metered", key: "chat_interviews_per_month", label: "Chat interviews" },
-    { kind: "metered", key: "voice_interviews_per_month", label: "Voice interviews" },
-  ],
-  tracker: [{ kind: "feature", key: "job_tracker", label: "Job Tracker" }],
-  linkedin: [{ kind: "feature", key: "linkedin_optimiser", label: "LinkedIn Optimiser" }],
-  jobmatch: [{ kind: "feature", key: "job_match", label: "Job Match" }],
-  gradprep: [{ kind: "feature", key: "grad_scheme_prep", label: "Grad Scheme Prep" }],
-};
-
 export type AccessStatus = "available" | "locked" | "limit-reached";
 
 export type CheckResult = {

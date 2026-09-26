@@ -30,6 +30,8 @@ export type CvTemplateContentData = {
   languages: CvLanguage[];
   customSections: CvCustomSection[];
   sectionOrder: SectionKey[];
+  /** Render contact details as plain text (no anchors): set for thumbnails, which sit inside a link/button (nested anchors are invalid HTML and break hydration). */
+  staticLinks?: boolean;
 };
 
 /** The parts of a CV that don't change while typing in the live-preview forms — passed alongside the live context to build a full preview. */

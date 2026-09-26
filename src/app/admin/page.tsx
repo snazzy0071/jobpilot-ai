@@ -101,6 +101,9 @@ export default async function AdminOverviewPage() {
   if (sponsors.state === "failed") {
     attention.push({ tone: "bad", text: "The last sponsor register import failed", href: permissions.has("view_sponsor_sync") ? "/admin/sponsors" : undefined });
   }
+  if (sponsors.state === "stale") {
+    attention.push({ tone: "warn", text: "The sponsor register hasn't synced in over 36 hours", href: permissions.has("view_sponsor_sync") ? "/admin/sponsors" : undefined });
+  }
   if (hasSnapshot && failures7d.emails > 0) {
     attention.push({
       tone: "warn",

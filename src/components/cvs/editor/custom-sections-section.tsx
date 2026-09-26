@@ -52,9 +52,9 @@ function CustomSectionForm({
       <input type="hidden" name="id" value={rowId ?? ""} readOnly />
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="title">Section title</Label>
+        <Label htmlFor="custom-section-title">Section title</Label>
         <Input
-          id="title"
+          id="custom-section-title"
           name="title"
           required
           placeholder="e.g. Volunteering, Publications, Awards"
@@ -64,8 +64,8 @@ function CustomSectionForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="content">Content</Label>
-        <Textarea id="content" name="content" rows={4} maxLength={4000} defaultValue={initial?.content ?? ""} />
+        <Label htmlFor="custom-section-content">Content</Label>
+        <Textarea id="custom-section-content" name="content" rows={4} maxLength={4000} defaultValue={initial?.content ?? ""} />
       </div>
 
       <AutosaveStatus status={status} errorMessage={errorMessage} />

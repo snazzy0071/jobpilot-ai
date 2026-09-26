@@ -40,3 +40,17 @@ export function carryRowId(formData: FormData, savedId: string | null): FormData
   if (savedId && !formData.get("id")) formData.set("id", savedId);
   return formData;
 }
+
+/**
+ * A role/course/project that is current (or ongoing) has no end date, and the
+ * server rejects the combination. Ticking the box fires two handlers — the
+ * checkbox's own, and the form-level change handler, which re-reads the DOM
+ * where the end-date field is still mounted for one more render — so a
+ * snapshot could carry both a ticked box and the old end date, fail
+ * validation, and the tick would never save. Every snapshot goes through
+ * this, so however it was built it can't hold both.
+ */
+export function dropEndDateWhenOngoing(formData: FormData, flag: "isCurrent" | "isOngoing"): FormData {
+  if (formData.get(flag) === "on") formData.delete("endDate");
+  return formData;
+}

@@ -23,7 +23,7 @@ const SCENARIOS: Scenario[] = [
     icon: MailXIcon,
     label: "I apply and hear nothing back",
     heading: "Start with the ATS Scanner",
-    body: "Most silent rejections happen before a human ever reads your CV. Check it against the exact job description first — it's free and unlimited.",
+    body: "Most silent rejections happen before a human ever reads your CV. Check it against the exact job description first — it's free to start.",
     primary: { label: "Try the ATS Scanner", href: "/features/ats" },
     secondary: { label: "Or rebuild your CV", href: "/features/cv" },
   },

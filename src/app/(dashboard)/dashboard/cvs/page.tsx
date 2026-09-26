@@ -1,5 +1,6 @@
 import { PlusIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
+import { getLimit } from "@/lib/entitlements/service";
 import { listCvsWithPreview } from "@/lib/cvs/queries";
 import { CreateCvDialog } from "@/components/cvs/create-cv-dialog";
 import { CvCard } from "@/components/cvs/cv-card";
@@ -19,7 +20,7 @@ export const dynamic = "force-dynamic";
  */
 export default async function CvsPage() {
   const user = await requireUser();
-  const cvs = await listCvsWithPreview(user.id);
+  const [cvs, templateLimit] = await Promise.all([listCvsWithPreview(user.id), getLimit(user.id, "cv_template_count")]);
   const active = cvs.filter((cv) => !cv.isArchived);
   const archived = cvs.filter((cv) => cv.isArchived);
 
@@ -31,13 +32,14 @@ export default async function CvsPage() {
           <h1 className="mt-1 font-heading text-4xl font-bold tracking-tight">Your CVs</h1>
           <p className="mt-1 text-muted-foreground">Create, tailor, and manage every version of your CV.</p>
         </div>
-        <CreateCvDialog />
+        <CreateCvDialog templateLimit={templateLimit} />
       </div>
 
       {active.length === 0 ? (
         <div className="rounded-xl border border-dashed p-8 text-center">
           <p className="text-muted-foreground">You haven&apos;t created a CV yet.</p>
           <CreateCvDialog
+            templateLimit={templateLimit}
             trigger={
               <Button className="mt-4">
                 <PlusIcon /> New CV
@@ -52,6 +54,7 @@ export default async function CvsPage() {
           ))}
 
           <CreateCvDialog
+            templateLimit={templateLimit}
             trigger={
               <button
                 type="button"

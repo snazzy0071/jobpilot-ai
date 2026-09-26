@@ -3,8 +3,11 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { newsletterSubscribeSchema } from "@/lib/newsletter/schemas";
 import { consumeIpRateLimit } from "@/lib/rate-limit/ip-limit";
+import { echoFields, type EchoedValues } from "@/lib/forms/echo";
 
-export type NewsletterResult = { error: string } | { success: string } | void;
+const NEWSLETTER_FIELDS = ["email"] as const;
+
+export type NewsletterResult = { error: string; values?: EchoedValues } | { success: string } | void;
 
 const RATE_LIMIT_MESSAGE = "Too many attempts — try again in a bit.";
 
@@ -35,7 +38,7 @@ export async function subscribeToNewsletter(
   formData: FormData,
 ): Promise<NewsletterResult> {
   if (!(await consumeIpRateLimit("lead_newsletter", { windowSeconds: 60 * 60, maxRequests: 5 }))) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { error: RATE_LIMIT_MESSAGE, values: echoFields(formData, NEWSLETTER_FIELDS) };
   }
 
   const parsed = newsletterSubscribeSchema.safeParse({
@@ -44,7 +47,7 @@ export async function subscribeToNewsletter(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { error: parsed.error.issues[0].message, values: echoFields(formData, NEWSLETTER_FIELDS) };
   }
 
   const admin = createAdminClient();
@@ -60,7 +63,7 @@ export async function subscribeToNewsletter(
   );
 
   if (error) {
-    return { error: "Something went wrong — try again in a moment." };
+    return { error: "Something went wrong — try again in a moment.", values: echoFields(formData, NEWSLETTER_FIELDS) };
   }
 
   return { success: "You're subscribed — thanks for signing up." };

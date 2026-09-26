@@ -15,8 +15,12 @@ type StubResult = { data: unknown; error: unknown };
  * from a `.in("company_name_normalized", ...)` name lookup on the same
  * "sponsors" table without depending on call order.
  */
-function createSupabaseStub(resolve: (call: StubCall) => StubResult) {
+type RpcResolver = (name: string, args: Record<string, unknown>) => StubResult;
+
+function createSupabaseStub(resolve: (call: StubCall) => StubResult, resolveRpc: RpcResolver = () => ({ data: [], error: null })) {
   return {
+    // The stem tier is one RPC (migration 0101) — the register's row-level security made a per-stem ilike a full scan.
+    rpc: (name: string, args: Record<string, unknown>) => Promise.resolve(resolveRpc(name, args)),
     from(table: string) {
       const filters: StubCall["filters"] = [];
       const builder: Record<string, (...args: never[]) => unknown> = {};
@@ -51,9 +55,9 @@ function sponsorRow(overrides: Partial<{ id: string; company_name: string; town_
   };
 }
 
-async function withStub(resolve: (call: StubCall) => StubResult, run: () => Promise<void>) {
+async function withStub(resolve: (call: StubCall) => StubResult, run: () => Promise<void>, resolveRpc?: RpcResolver) {
   const { createClient } = await import("@/lib/supabase/server");
-  (createClient as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(createSupabaseStub(resolve));
+  (createClient as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(createSupabaseStub(resolve, resolveRpc));
   await run();
 }
 
@@ -141,19 +145,57 @@ describe("matchJobsToSponsors", () => {
 
   it("falls back to a stem match (likely) only when Tier 1 found nothing", async () => {
     await withStub(
-      ({ table, filters }) => {
-        if (table === "sponsors" && filters.some((f) => f.method === "ilike")) {
-          // "acme consulting ltd" -> stem "acme consulting"
-          return { data: [sponsorRow({ id: "s1", company_name: "Acme Consulting Group", company_name_normalized: "acme consulting" })], error: null };
-        }
-        return { data: [], error: null };
-      },
+      () => ({ data: [], error: null }),
       async () => {
         const result = await matchJobsToSponsors(["Acme Consulting Ltd"]);
         const match = result.get("Acme Consulting Ltd");
         expect(match?.status).toBe("unconfirmed");
         expect(match?.confidence).toBe("likely");
       },
+      (name, args) => {
+        expect(name).toBe("sponsor_stem_candidates");
+        expect(args.p_stems).toEqual(["acme consulting"]);
+        // A prefix candidate that isn't the same company once its own suffix is stripped must be ignored.
+        return {
+          data: [
+            { stem: "acme consulting", ...sponsorRow({ id: "s1", company_name: "Acme Consulting Group", company_name_normalized: "acme consulting group" }) },
+            { stem: "acme consulting", ...sponsorRow({ id: "s2", company_name: "Acme Consulting Partners", company_name_normalized: "acme consulting partners" }) },
+          ],
+          error: null,
+        };
+      },
+    );
+  });
+
+  it("does not use the stem tier for a name Tier 1 already resolved exactly", async () => {
+    const rpc = vi.fn(() => ({ data: [], error: null }));
+    await withStub(
+      ({ table, filters }) =>
+        table === "sponsors" && filters.some((f) => f.method === "in" && f.args[0] === "company_name_normalized")
+          ? { data: [sponsorRow({})], error: null }
+          : { data: [], error: null },
+      async () => {
+        const result = await matchJobsToSponsors(["Acme Ltd"]);
+        expect(result.get("Acme Ltd")?.confidence).toBe("exact");
+        expect(rpc).not.toHaveBeenCalled();
+      },
+      rpc,
+    );
+  });
+
+  it("throws when the register can't be queried, instead of reporting the employer as not found", async () => {
+    await withStub(
+      () => ({ data: null, error: { message: "canceling statement due to statement timeout" } }),
+      async () => {
+        await expect(matchJobsToSponsors(["Acme Ltd"])).rejects.toThrow(/Sponsor cross-check failed/);
+      },
+    );
+    await withStub(
+      () => ({ data: [], error: null }),
+      async () => {
+        await expect(matchJobsToSponsors(["Acme Consulting Ltd"])).rejects.toThrow(/Sponsor cross-check failed/);
+      },
+      () => ({ data: null, error: { message: "timeout" } }),
     );
   });
 

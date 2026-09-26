@@ -13,6 +13,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createApplication, updateApplication } from "@/lib/applications/actions";
 import { APPLICATION_STATUSES, APPLICATION_STATUS_LABELS, type Application, type ApplicationStatus } from "@/lib/applications/types";
 
+function formatDay(iso: string): string {
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short", year: "numeric" }).format(new Date(iso.length === 10 ? `${iso}T12:00:00` : iso));
+}
+
 const NO_CV = "__no_cv__";
 const NO_COVER_LETTER = "__no_cover_letter__";
 
@@ -34,10 +38,12 @@ export function ApplicationForm({
   application,
   cvs,
   coverLetters,
+  submittedCv,
 }: {
   application?: Application;
   cvs: { id: string; title: string }[];
   coverLetters: { id: string; companyName: string; jobTitle: string }[];
+  submittedCv?: { id: string; cvId: string; label: string | null; createdAt: string } | null;
 }) {
   const router = useRouter();
   const isEditing = !!application;
@@ -102,7 +108,7 @@ export function ApplicationForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="app-status">Status</Label>
-            <Select name="status" value={status} onValueChange={(value) => value && setStatus(value as ApplicationStatus)}>
+            <Select name="status" items={APPLICATION_STATUS_LABELS} value={status} onValueChange={(value) => value && setStatus(value as ApplicationStatus)}>
               <SelectTrigger id="app-status" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -124,7 +130,7 @@ export function ApplicationForm({
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="app-cv">CV used (optional)</Label>
-            <Select name="cvId" value={cvId} onValueChange={(value) => value && setCvId(value)}>
+            <Select name="cvId" items={{ [NO_CV]: "None", ...Object.fromEntries(cvs.map((cv) => [cv.id, cv.title])) }} value={cvId} onValueChange={(value) => value && setCvId(value)}>
               <SelectTrigger id="app-cv" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -140,7 +146,10 @@ export function ApplicationForm({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="app-cover-letter">Cover letter used (optional)</Label>
-            <Select name="coverLetterId" value={coverLetterId} onValueChange={(value) => value && setCoverLetterId(value)}>
+            <Select
+              name="coverLetterId"
+              items={{ [NO_COVER_LETTER]: "None", ...Object.fromEntries(coverLetters.map((letter) => [letter.id, `${letter.companyName} — ${letter.jobTitle}`])) }}
+              value={coverLetterId} onValueChange={(value) => value && setCoverLetterId(value)}>
               <SelectTrigger id="app-cover-letter" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -162,7 +171,7 @@ export function ApplicationForm({
         </div>
 
         {isEditing && (
-          <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 text-sm">
+          <div className="flex flex-col gap-2 rounded-lg border border-dashed p-3 text-sm" data-testid="snapshot-panel">
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-muted-foreground">Sponsor state:</span>
               <Badge variant={application.sponsorStatus === "confirmed_sponsor" ? "tinted" : "outline"}>
@@ -170,19 +179,42 @@ export function ApplicationForm({
               </Badge>
               <span className="text-muted-foreground">Match score:</span>
               <span className="font-medium">
-                {application.matchScore !== null ? `${application.matchScore}/100` : "Not scored — link a job from the feed to enable this"}
+                {application.matchScore !== null ? `${application.matchScore}/100` : "Not scored — score this job against your CV in the job feed"}
               </span>
+              {application.appliedAt && (
+                <>
+                  <span className="text-muted-foreground">Applied:</span>
+                  <span className="font-medium">{formatDay(application.appliedAt)}</span>
+                </>
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
               {application.frozenAt ? (
                 <>
-                  Frozen when first moved to Applied, on {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(application.frozenAt))}
-                  {application.submittedCvVersionId && " — including the CV version submitted at that moment"}. Editing company/status/CV now won&apos;t change any of this.
+                  Frozen when first moved to Applied, on {new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "long", year: "numeric" }).format(new Date(application.frozenAt))}. Editing the company, status or CV now won&apos;t change the sponsor state, match score or submitted CV below.
                 </>
               ) : (
-                "Not frozen yet — sponsor state keeps updating with the company name above until this application first reaches Applied, at which point it (and the CV version used) lock permanently."
+                "Not frozen yet — the sponsor state and match score keep following the company and CV above until this application first reaches Applied, when they lock permanently along with a copy of the CV."
               )}
             </p>
+            {application.frozenAt && (
+              <p className="text-xs">
+                <span className="text-muted-foreground">CV submitted: </span>
+                {submittedCv ? (
+                  <>
+                    <span className="font-medium">{submittedCv.label ?? "Saved copy"}</span>{" "}
+                    <span className="text-muted-foreground">
+                      (copied {formatDay(submittedCv.createdAt)}) —{" "}
+                      <a className="underline underline-offset-4" href={`/dashboard/cvs/${submittedCv.cvId}`}>
+                        open the CV, then its version history
+                      </a>
+                    </span>
+                  </>
+                ) : (
+                  <span className="text-muted-foreground">{application.submittedCvVersionId ? "that copy has since been deleted" : "no CV was linked when this was submitted"}</span>
+                )}
+              </p>
+            )}
           </div>
         )}
 

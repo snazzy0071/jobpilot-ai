@@ -32,7 +32,9 @@ export function CookieConsentBanner() {
 
   return (
     <>
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background p-4 shadow-floating">
+      {/* print:hidden — the PDF exports render real pages headlessly, where nothing has been consented yet; the banner is
+          fixed to the viewport, so without this it is printed onto every page of a CV, cover letter or report. */}
+      <div className="fixed inset-x-0 bottom-0 z-50 border-t bg-background p-4 shadow-floating print:hidden">
         <div className="mx-auto flex max-w-4xl flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-muted-foreground">
             We use necessary cookies to run this site, and optional analytics/marketing cookies only if you

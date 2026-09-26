@@ -1,12 +1,20 @@
 const DEFAULT_REDIRECT = "/dashboard";
 
-function isSafeRelativePath(value: unknown): value is string {
-  return (
-    typeof value === "string" &&
-    value.startsWith("/") &&
-    !value.startsWith("//") &&
-    !value.includes("://")
-  );
+/**
+ * A same-site path and nothing else. Beyond "starts with a single slash" this rejects what browsers quietly normalise into a
+ * different host: a backslash (`/\\evil.com` is read as `//evil.com`), tabs/newlines/control characters (stripped by the URL
+ * parser, so `/<tab>/evil.com` becomes `//evil.com`) and any whitespace. It then resolves the value against a placeholder origin
+ * and requires it to stay there, so nothing the parser can turn into another origin gets through.
+ */
+export function isSafeRelativePath(value: unknown): value is string {
+  if (typeof value !== "string" || value.length === 0 || value.length > 2048) return false;
+  if (!value.startsWith("/") || value.startsWith("//") || value.includes("://")) return false;
+  if (/[\\\u0000-\u001f\u007f\s]/.test(value)) return false;
+  try {
+    return new URL(value, "http://safe.invalid").origin === "http://safe.invalid";
+  } catch {
+    return false;
+  }
 }
 
 /**

@@ -19,6 +19,7 @@ export function TemplatePreviewPanel({
   data,
   usingSample,
   current,
+  locked = false,
   position,
   total,
   onBack,
@@ -29,6 +30,7 @@ export function TemplatePreviewPanel({
   data: CvTemplateContentData;
   usingSample: boolean;
   current: boolean;
+  locked?: boolean;
   position: number;
   total: number;
   onBack: () => void;
@@ -64,11 +66,13 @@ export function TemplatePreviewPanel({
           </Button>
         </div>
 
-        <Button type="button" size="sm" onClick={onUse} disabled={current}>
+        <Button type="button" size="sm" onClick={onUse} disabled={current || locked}>
           {current ? (
             <>
               <CheckIcon /> In use
             </>
+          ) : locked ? (
+            "Needs a paid plan"
           ) : (
             "Use template"
           )}

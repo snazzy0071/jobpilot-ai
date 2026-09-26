@@ -1,10 +1,13 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { partnerInquirySchema } from "@/lib/partners/schemas";
 import { consumeIpRateLimit } from "@/lib/rate-limit/ip-limit";
+import { echoFields, type EchoedValues } from "@/lib/forms/echo";
 
-export type PartnerInquiryResult = { error: string } | { success: string } | void;
+const PARTNER_FIELDS = ["organisationName", "contactName", "email", "partnershipType", "message"] as const;
+
+export type PartnerInquiryResult = { error: string; values?: EchoedValues } | { success: string } | void;
 
 const RATE_LIMIT_MESSAGE = "Too many inquiries sent — try again in a bit.";
 
@@ -13,7 +16,7 @@ export async function submitPartnerInquiry(
   formData: FormData,
 ): Promise<PartnerInquiryResult> {
   if (!(await consumeIpRateLimit("lead_partner", { windowSeconds: 60 * 60, maxRequests: 5 }))) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { error: RATE_LIMIT_MESSAGE, values: echoFields(formData, PARTNER_FIELDS) };
   }
 
   const parsed = partnerInquirySchema.safeParse({
@@ -25,10 +28,12 @@ export async function submitPartnerInquiry(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { error: parsed.error.issues[0].message, values: echoFields(formData, PARTNER_FIELDS) };
   }
 
-  const supabase = await createClient();
+  // Service role, after the rate limit and validation above: the tables no longer accept anonymous inserts (migration 0124), so the
+  // only way in is through this action and its checks.
+  const supabase = createAdminClient();
   const { error } = await supabase.from("partner_inquiries").insert({
     organisation_name: parsed.data.organisationName,
     contact_name: parsed.data.contactName,
@@ -38,7 +43,7 @@ export async function submitPartnerInquiry(
   });
 
   if (error) {
-    return { error: "Something went wrong — try again in a moment." };
+    return { error: "Something went wrong — try again in a moment.", values: echoFields(formData, PARTNER_FIELDS) };
   }
 
   return { success: "Thanks — we'll get back to you within a business day." };

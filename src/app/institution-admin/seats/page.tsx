@@ -36,7 +36,9 @@ export default async function InstitutionAdminSeatsPage() {
         <p className="mt-1 text-muted-foreground">
           {seatsTotal !== null
             ? `${seatsUsed} of ${seatsTotal} seats in use.`
-            : "Your institution has no active licence, so no seats are available."}
+            : licence?.state === "expired"
+              ? "Your licence has expired, so no seats are available."
+              : "Your institution has no active licence, so no seats are available."}
         </p>
       </div>
 

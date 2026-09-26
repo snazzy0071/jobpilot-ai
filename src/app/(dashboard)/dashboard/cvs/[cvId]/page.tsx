@@ -23,6 +23,8 @@ import { AtsPreflightPanel } from "@/components/cvs/editor/ats-preflight-panel";
 import { BuildProgress } from "@/components/cvs/editor/build-progress";
 import { SectionNav } from "@/components/cvs/editor/section-nav";
 import { TemplatePickerDialog } from "@/components/cvs/templates/template-picker-dialog";
+import { TemplateLimitProvider } from "@/components/cvs/templates/template-limit-context";
+import { getLimit } from "@/lib/entitlements/service";
 import { CurrentTemplateSummary } from "@/components/cvs/editor/current-template-summary";
 import { sectionAnchorId } from "@/components/cvs/editor/jump-to-section";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
@@ -67,7 +69,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Personal details
         </AccordionTrigger>
         <AccordionContent>
-          <PersonalForm versionId={data.versionId} initial={data.personal} />
+          <PersonalForm key={data.versionId} versionId={data.versionId} initial={data.personal} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -77,7 +79,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Professional summary
         </AccordionTrigger>
         <AccordionContent>
-          <SummaryForm versionId={data.versionId} initial={data.summary} />
+          <SummaryForm key={data.versionId} versionId={data.versionId} initial={data.summary} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -87,7 +89,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Experience ({data.experience.length})
         </AccordionTrigger>
         <AccordionContent>
-          <ExperienceSection versionId={data.versionId} items={data.experience} />
+          <ExperienceSection key={data.versionId} versionId={data.versionId} items={data.experience} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -97,7 +99,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Education ({data.education.length})
         </AccordionTrigger>
         <AccordionContent>
-          <EducationSection versionId={data.versionId} items={data.education} />
+          <EducationSection key={data.versionId} versionId={data.versionId} items={data.education} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -107,7 +109,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Skills ({data.skills.length})
         </AccordionTrigger>
         <AccordionContent>
-          <SkillsSection versionId={data.versionId} items={data.skills} />
+          <SkillsSection key={data.versionId} versionId={data.versionId} items={data.skills} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -117,7 +119,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Projects ({data.projects.length})
         </AccordionTrigger>
         <AccordionContent>
-          <ProjectsSection versionId={data.versionId} items={data.projects} />
+          <ProjectsSection key={data.versionId} versionId={data.versionId} items={data.projects} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -127,7 +129,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Certifications ({data.certifications.length})
         </AccordionTrigger>
         <AccordionContent>
-          <CertificationsSection versionId={data.versionId} items={data.certifications} />
+          <CertificationsSection key={data.versionId} versionId={data.versionId} items={data.certifications} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -137,7 +139,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Languages ({data.languages.length})
         </AccordionTrigger>
         <AccordionContent>
-          <LanguagesSection versionId={data.versionId} items={data.languages} />
+          <LanguagesSection key={data.versionId} versionId={data.versionId} items={data.languages} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -147,7 +149,7 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
           {index}. Custom sections ({data.customSections.length})
         </AccordionTrigger>
         <AccordionContent>
-          <CustomSectionsSection versionId={data.versionId} items={data.customSections} />
+          <CustomSectionsSection key={data.versionId} versionId={data.versionId} items={data.customSections} />
         </AccordionContent>
       </AccordionItem>
     ),
@@ -162,77 +164,95 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
     sectionOrder: data.sectionOrder,
   };
 
+  const templateLimit = await getLimit(user.id, "cv_template_count");
+
   return (
-    <div className="flex flex-col gap-6">
-      <CvPreviewProvider
-        cvId={data.cvId}
-        initial={{
-          template: data.template,
-          personal: data.personal,
-          summary: data.summary,
-          experience: data.experience,
-          education: data.education,
-        }}
-      >
-        {/* Real <h1> — this page previously had no heading of any
+    <TemplateLimitProvider limit={templateLimit}>
+      <div className="flex flex-col gap-6">
+        <CvPreviewProvider
+          cvId={data.cvId}
+          versionId={data.versionId}
+          initial={{
+            template: data.template,
+            personal: data.personal,
+            summary: data.summary,
+            experience: data.experience,
+            education: data.education,
+          }}
+        >
+          {/* Real <h1> — this page previously had no heading of any
             level. EditorHeader's own title is an editable <Input>
             (rightly so — it's a live-editable field, not static text),
             so this is a separate, sr-only page title rather than
             changing that input's semantics. */}
-        <h1 className="sr-only">{data.cvTitle}</h1>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <EditorHeader cvId={data.cvId} title={data.cvTitle} template={data.template} atsScore={data.atsScore} templateContent={templateContent} />
-          <VersionHistoryDialog
-            versions={versions}
-            restore={restoreVersion}
-            containerIdField="cvId"
-            containerId={data.cvId}
+          <h1 className="sr-only">{data.cvTitle}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <EditorHeader
+              cvId={data.cvId}
+              title={data.cvTitle}
+              template={data.template}
+              atsScore={data.atsScore}
+              templateContent={templateContent}
+            />
+            <VersionHistoryDialog versions={versions} restore={restoreVersion} containerIdField="cvId" containerId={data.cvId} />
+          </div>
+
+          <Card>
+            <CardContent className="flex flex-col gap-4">
+              <BuildProgress percent={computeBuildProgress(data)} />
+              <SectionNav sections={data.sectionOrder} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-4">
+              <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <LayoutTemplateIcon className="size-6" />
+              </div>
+              <CurrentTemplateSummary />
+              <TemplatePickerDialog currentTemplate={data.template} content={templateContent} triggerLabel="Swap template" />
+            </CardContent>
+          </Card>
+
+          <SectionOrderList versionId={data.versionId} order={data.sectionOrder} />
+
+          <AtsPreflightPanel
+            versionId={data.versionId}
+            sectionOrder={data.sectionOrder}
+            skills={data.skills}
+            projects={data.projects}
+            certifications={data.certifications}
+            languages={data.languages}
+            customSections={data.customSections}
+            initialScan={latestScan}
+            recentJobOptions={recentJobOptions}
           />
-        </div>
 
-        <Card>
-          <CardContent className="flex flex-col gap-4">
-            <BuildProgress percent={computeBuildProgress(data)} />
-            <SectionNav sections={data.sectionOrder} />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-wrap items-center gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <LayoutTemplateIcon className="size-6" />
-            </div>
-            <CurrentTemplateSummary />
-            <TemplatePickerDialog currentTemplate={data.template} content={templateContent} triggerLabel="Swap template" />
-          </CardContent>
-        </Card>
-
-        <SectionOrderList versionId={data.versionId} order={data.sectionOrder} />
-
-        <AtsPreflightPanel
-          versionId={data.versionId}
-          sectionOrder={data.sectionOrder}
-          skills={data.skills}
-          projects={data.projects}
-          certifications={data.certifications}
-          languages={data.languages}
-          customSections={data.customSections}
-          initialScan={latestScan}
-          recentJobOptions={recentJobOptions}
-        />
-
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_460px]">
-          {/* sr-only <h2> — bridges h1 above to each AccordionTrigger's
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_460px]">
+            {/* sr-only <h2> — bridges h1 above to each AccordionTrigger's
               own <h3> (Base UI's Accordion.Header default) so the
               sequence has no level skip. */}
-          <h2 className="sr-only">CV sections</h2>
-          <Accordion defaultValue={data.sectionOrder} multiple>
-            {data.sectionOrder.map((key, index) => accordionItems[key]?.(index + 1))}
-          </Accordion>
+            <h2 className="sr-only">CV sections</h2>
+            <Accordion defaultValue={data.sectionOrder} multiple>
+              {data.sectionOrder.map((key, index) => accordionItems[key]?.(index + 1))}
+            </Accordion>
 
-          {/* Desktop split-view — a permanently-visible sticky column. Hidden below lg: a second column doesn't fit at phone widths, and MobilePreviewTrigger below is the usable mobile equivalent, not this shrunk down. */}
-          <div className="hidden lg:sticky lg:top-6 lg:block">
-            <CvPreviewTabs
+            {/* Desktop split-view — a permanently-visible sticky column. Hidden below lg: a second column doesn't fit at phone widths, and MobilePreviewTrigger below is the usable mobile equivalent, not this shrunk down. */}
+            <div className="hidden lg:sticky lg:top-6 lg:block">
+              <CvPreviewTabs
+                cvId={data.cvId}
+                sectionOrder={data.sectionOrder}
+                skills={data.skills}
+                projects={data.projects}
+                certifications={data.certifications}
+                languages={data.languages}
+                customSections={data.customSections}
+              />
+            </div>
+          </div>
+
+          <div className="lg:hidden">
+            <MobilePreviewTrigger
               cvId={data.cvId}
               sectionOrder={data.sectionOrder}
               skills={data.skills}
@@ -242,20 +262,8 @@ export default async function CvEditorPage({ params }: { params: Promise<{ cvId:
               customSections={data.customSections}
             />
           </div>
-        </div>
-
-        <div className="lg:hidden">
-          <MobilePreviewTrigger
-            cvId={data.cvId}
-            sectionOrder={data.sectionOrder}
-            skills={data.skills}
-            projects={data.projects}
-            certifications={data.certifications}
-            languages={data.languages}
-            customSections={data.customSections}
-          />
-        </div>
-      </CvPreviewProvider>
-    </div>
+        </CvPreviewProvider>
+      </div>
+    </TemplateLimitProvider>
   );
 }

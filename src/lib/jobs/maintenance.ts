@@ -85,7 +85,19 @@ export async function pruneOldInactiveJobs(supabase: ReturnType<typeof createAdm
   return data?.length ?? 0;
 }
 
-export type JobsMaintenanceResult = { error: string } | { deactivatedCount: number; prunedCount: number };
+/**
+ * A duplicate is hidden only while the listing it duplicates is live (migration 0060). Once that original has expired
+ * or been deactivated, promote the earliest-seen duplicate to the visible listing (and re-point the rest at it) —
+ * otherwise a role still being advertised elsewhere would vanish from the feed the day its first posting closed. Must
+ * run after deactivateExpiredJobs so it sees the originals that just went inactive.
+ */
+export async function promoteOrphanedDuplicates(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
+  const { data, error } = await supabase.rpc("promote_orphaned_job_duplicates");
+  if (error) throw new Error(`Couldn't promote orphaned duplicate jobs: ${error.message}`);
+  return typeof data === "number" ? data : 0;
+}
+
+export type JobsMaintenanceResult = { error: string } | { deactivatedCount: number; promotedCount: number; prunedCount: number };
 
 /**
  * The cross-source maintenance sweep (GET /api/cron/jobs-maintenance) —
@@ -104,6 +116,7 @@ export async function runJobsMaintenance(): Promise<JobsMaintenanceResult> {
 
   try {
     const deactivatedCount = await deactivateExpiredJobs(supabase);
+    const promotedCount = await promoteOrphanedDuplicates(supabase);
     const prunedCount = await pruneOldInactiveJobs(supabase);
 
     await supabase
@@ -116,7 +129,7 @@ export async function runJobsMaintenance(): Promise<JobsMaintenanceResult> {
       })
       .eq("id", importRow.id);
 
-    return { deactivatedCount, prunedCount };
+    return { deactivatedCount, promotedCount, prunedCount };
   } catch (err) {
     const message = err instanceof Error ? err.message : "Jobs maintenance failed.";
     await supabase

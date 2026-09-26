@@ -490,3 +490,146 @@ html {
     scroll-behavior: auto !important;
   }
 }
+/* ------------------------------------------------------------------
+   Public-site visual layer. Everything below is decorative and only
+   used by components under components/marketing; the global
+   prefers-reduced-motion rule earlier in this file already collapses
+   every CSS animation/transition here, so none of it needs a
+   per-component JS check.
+   ------------------------------------------------------------------ */
+
+/* A deep violet band for stat/proof sections: two soft brand glows over
+   a near-black violet, with the grid faintly showing through. Text on
+   it is white; use `.on-dark` helpers for muted copy. */
+@utility section-dark {
+  color: oklch(0.985 0 0);
+  background-color: oklch(0.2 0.06 285);
+  background-image:
+    radial-gradient(ellipse 60% 70% at 88% 0%, color-mix(in oklch, var(--primary), transparent 55%), transparent 65%),
+    radial-gradient(ellipse 50% 60% at 6% 100%, color-mix(in oklch, var(--brand-secondary), transparent 72%), transparent 65%);
+}
+
+/* A soft peach -> lavender -> sky wash (our own colours, tuned to the
+   brand violet) for storytelling sections that should feel lighter
+   than `muted` without being plain white. */
+@utility section-aurora {
+  background-image:
+    radial-gradient(ellipse 55% 60% at 12% 8%, color-mix(in oklch, var(--brand-secondary), transparent 90%), transparent 70%),
+    radial-gradient(ellipse 60% 70% at 88% 18%, color-mix(in oklch, var(--primary), transparent 88%), transparent 70%),
+    radial-gradient(ellipse 60% 60% at 50% 110%, color-mix(in oklch, oklch(0.85 0.08 240), transparent 75%), transparent 70%);
+}
+
+@utility bg-dots {
+  background-image: radial-gradient(color-mix(in oklch, var(--foreground), transparent 86%) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent 90%);
+}
+
+/* Hover: lift, deeper shadow and a brand-gradient hairline that fades
+   in around the card (a masked ::after ring, so the card's own border
+   and layout never change). */
+@utility card-sheen {
+  position: relative;
+  transition:
+    transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.35s ease;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--primary), var(--brand-secondary) 55%, transparent 80%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+  }
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-elevated);
+  }
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
+/* A light sweep across a solid/gradient button on hover. */
+@utility btn-shine {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 0.35) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s ease;
+  }
+  &:hover::before {
+    transform: translateX(120%);
+  }
+}
+
+/* Slow drifting colour orbs for hero/CTA backdrops. */
+@keyframes orb-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(24px, -18px, 0) scale(1.08);
+  }
+}
+@utility animate-orb {
+  animation: orb-drift 14s ease-in-out infinite;
+}
+
+/* Horizontal snap row for phone-width card carousels. */
+@utility snap-row {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  & > * {
+    scroll-snap-align: start;
+    flex: 0 0 82%;
+  }
+}
+
+/* Just the gradient hairline from card-sheen, for cards that already have their own hover lift (the shared Card variants) or that
+   clip overflow: drawn inside the border box so nothing is cut off. */
+@utility card-ring {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, var(--primary), var(--brand-secondary) 55%, transparent 80%);
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+    z-index: 30;
+  }
+  &:hover::after {
+    opacity: 1;
+  }
+}

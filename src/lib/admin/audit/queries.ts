@@ -23,11 +23,15 @@ export async function listAdminAuditLogs(filters: AdminAuditLogFilters): Promise
   if (filters.entityType) {
     query = query.eq("entity_type", filters.entityType);
   }
+  // Searched in the database, before the row limit: filtering the newest 200 rows afterwards would miss any older entry. The characters
+  // that mean something inside a PostgREST filter list and the % wildcard are dropped from the term.
+  const term = filters.search?.replace(/[,()%*"']/g, " ").trim();
+  if (term) query = query.or(`action.ilike.%${term}%,actor_email.ilike.%${term}%,entity_id.ilike.%${term}%`);
 
   const { data, error } = await query;
   if (error || !data) return [];
 
-  let entries: AdminAuditLogEntry[] = data.map((row) => ({
+  return data.map((row) => ({
     id: row.id,
     actorEmail: row.actor_email,
     action: row.action,
@@ -36,18 +40,6 @@ export async function listAdminAuditLogs(filters: AdminAuditLogFilters): Promise
     metadata: (row.metadata ?? {}) as Record<string, unknown>,
     createdAt: row.created_at,
   }));
-
-  if (filters.search) {
-    const term = filters.search.trim().toLowerCase();
-    entries = entries.filter(
-      (entry) =>
-        entry.action.toLowerCase().includes(term) ||
-        (entry.actorEmail ?? "").toLowerCase().includes(term) ||
-        (entry.entityId ?? "").toLowerCase().includes(term),
-    );
-  }
-
-  return entries;
 }
 
 export async function listAuditEntityTypes(): Promise<string[]> {

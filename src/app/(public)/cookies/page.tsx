@@ -4,7 +4,7 @@ import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
   title: cookiePolicy.title,
-  description: cookiePolicy.intro,
+  description: "How JobPilot AI uses cookies: every cookie we set is strictly necessary, we use no analytics or advertising cookies, and you can review your choice at any time.",
   path: "/cookies",
 });
 

@@ -43,41 +43,62 @@ export async function generateCvPdf(
   const browser = await launchBrowser();
 
   try {
-    const page = await browser.newPage();
+    // One retry with a fresh page. Headless Chromium occasionally drops the page's frame mid-navigation ("Navigating
+    // frame was detached") under load; that is a browser hiccup, not a bad CV, and a second attempt succeeds.
+    const renderOnce = async () => {
+      const page = await browser.newPage();
 
-    if (requestCookies.length > 0) {
-      await page.setCookie(
-        ...requestCookies.map((cookie) => ({
-          name: cookie.name,
-          value: cookie.value,
-          domain: siteUrl.hostname,
-          path: "/",
-          secure: siteUrl.protocol === "https:",
-        })),
-      );
+      if (requestCookies.length > 0) {
+        await page.setCookie(
+          ...requestCookies.map((cookie) => ({
+            name: cookie.name,
+            value: cookie.value,
+            domain: siteUrl.hostname,
+            path: "/",
+            secure: siteUrl.protocol === "https:",
+          })),
+        );
+      }
+
+      const response = await page.goto(`${origin}/print/cvs/${cvId}`, { waitUntil: "networkidle0" });
+      if (!response || !response.ok()) {
+        throw new Error(`Print page responded with ${response ? response.status() : "no response"}`);
+      }
+
+      // The template's webfonts load lazily (only the faces this CV uses) — wait for them so the PDF is set in the same type as the preview.
+      await page.evaluate(() => document.fonts.ready);
+
+      // What the print page actually rendered (its own read of the database), not what this function read a moment
+      // earlier — so the caller can prove the PDF is the template and version the editor is showing.
+      const rendered = await page.$eval("[data-cv-render]", (el) => ({
+        template: el.getAttribute("data-template") ?? "",
+        versionId: el.getAttribute("data-version-id") ?? "",
+      }));
+      if (!rendered.template || !rendered.versionId) throw new Error("The print page didn't say which template/version it rendered.");
+
+      return { page, rendered };
+    };
+    let attempt;
+    try {
+      attempt = await renderOnce();
+    } catch (error) {
+      if (!isTransientNavigationError(error)) throw error;
+      console.warn("CV PDF export: retrying after a transient browser error:", error instanceof Error ? error.message : error);
+      attempt = await renderOnce();
     }
-
-    const response = await page.goto(`${origin}/print/cvs/${cvId}`, { waitUntil: "networkidle0" });
-    if (!response || !response.ok()) {
-      throw new Error(`Print page responded with ${response ? response.status() : "no response"}`);
-    }
-
-    // The template's webfonts load lazily (only the faces this CV uses) — wait for them so the PDF is set in the same type as the preview.
-    await page.evaluate(() => document.fonts.ready);
-
-    // What the print page actually rendered (its own read of the database), not what this function read a moment
-    // earlier — so the caller can prove the PDF is the template and version the editor is showing.
-    const rendered = await page.$eval("[data-cv-render]", (el) => ({
-      template: el.getAttribute("data-template") ?? "",
-      versionId: el.getAttribute("data-version-id") ?? "",
-    }));
-    if (!rendered.template || !rendered.versionId) throw new Error("The print page didn't say which template/version it rendered.");
+    const { page, rendered } = attempt;
 
     const buffer = await page.pdf({ printBackground: true, preferCSSPageSize: true });
     return { buffer: Buffer.from(buffer), title: data.cvTitle, ...rendered };
   } finally {
     await browser.close();
   }
+}
+
+/** The headless-browser failures that are worth one retry — the page, not the CV, went away. */
+export function isTransientNavigationError(error: unknown): boolean {
+  const message = error instanceof Error ? `${error.message} ${error.cause instanceof Error ? error.cause.message : ""}` : "";
+  return /frame was detached|LifecycleWatcher disposed|Target closed|Session closed|net::ERR_ABORTED/i.test(message);
 }
 
 /**

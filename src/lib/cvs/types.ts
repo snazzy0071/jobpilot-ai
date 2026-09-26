@@ -6,6 +6,7 @@
 // placeholder values to 24 real ones.
 export type { CvTemplate } from "@/config/cv-templates";
 import type { CvTemplate } from "@/config/cv-templates";
+import type { AtsFormatCheck } from "@/lib/files/ats-format-analysis";
 
 export type CvListItem = {
   id: string;
@@ -235,3 +236,12 @@ export type CvAtsJobOption = {
   jobDescription: string;
   createdAt: string;
 };
+
+/**
+ * The ATS Scanner's own "scan a file, not a saved CV" result (`source: 'manual_text'`, see migration 0031) —
+ * the same real AI scoring engine as `CvAtsScan`, plus the uploaded file's own real structural facts
+ * (`src/lib/files/ats-format-analysis.ts`: embedded fonts, tables, columns, headings...), which the AI scan
+ * never sees since it only ever reads extracted text. `null` for a plain-text upload or pasted text, which
+ * has no file format to check beyond "is it readable" — already true by the time a scan runs at all.
+ */
+export type ManualAtsScan = CvAtsScan & { fileFormatChecks: AtsFormatCheck[] | null };

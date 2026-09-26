@@ -13,6 +13,7 @@ export type FeatureKey =
   | "job_match"
   | "grad_scheme_prep"
   | "job_tracker"
+  | "auto_apply"
   | "visa_sponsor_register"
   | "voice_topups_allowed";
 

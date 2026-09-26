@@ -4,80 +4,47 @@ import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { PricingCard } from "@/components/marketing/pricing-card";
-import { PLAN_LABELS, PLAN_PRICING, type PlanTier } from "@/config/plans";
+import { formatPounds, monthsFreeAnnually, planBullets, sortPlans, type PublicPlan } from "@/lib/plans/plan-features";
 import { cn } from "@/lib/utils";
 
-type PaidTier = Exclude<PlanTier, "free">;
-
-const TIER_COPY: Record<PaidTier, { description: string; features: string[]; popular?: boolean }> = {
-  pro: {
-    description: "For getting your applications in shape.",
-    features: [
-      "Everything in Free",
-      "Unlimited CVs & templates",
-      "AI bullet rewriting",
-      "Cover Letter Generator",
-      "LinkedIn Optimiser",
-    ],
-  },
-  premium: {
-    description: "For actively interviewing.",
-    features: ["Everything in Pro", "AI Interview Coach (text)", "Job Match Engine", "Grad Scheme Prep"],
-    popular: true,
-  },
-  elite: {
-    description: "For the full toolkit.",
-    features: ["Everything in Premium", "Voice Interview Coach", "Priority support"],
-  },
+// Taglines are marketing copy; everything else on a card (price, what it includes) is worked out from the plan's own row in the
+// `plans` table (src/lib/plans/plan-features.ts), the same entitlements the server enforces.
+const TAGLINES: Record<string, { description: string; popular?: boolean }> = {
+  free: { description: "To get started." },
+  pro: { description: "For getting your applications in shape." },
+  premium: { description: "For actively interviewing.", popular: true },
+  elite: { description: "For the full toolkit." },
 };
 
-const PAID_TIERS: PaidTier[] = ["pro", "premium", "elite"];
-
-export function PricingTiers() {
+export function PricingTiers({ plans }: { plans: PublicPlan[] }) {
   const [annual, setAnnual] = useState(false);
+  const ordered = sortPlans(plans);
+  const savings = Math.max(0, ...ordered.map(monthsFreeAnnually));
 
   return (
     <div className="flex flex-col gap-10">
       <div className="flex items-center justify-center gap-3">
-        <span className={cn("text-sm", !annual ? "font-medium text-foreground" : "text-muted-foreground")}>
-          Monthly
-        </span>
+        <span className={cn("text-sm", !annual ? "font-medium text-foreground" : "text-muted-foreground")}>Monthly</span>
         <Switch checked={annual} onCheckedChange={setAnnual} aria-label="Toggle annual billing" />
-        <span className={cn("text-sm", annual ? "font-medium text-foreground" : "text-muted-foreground")}>
-          Annual
-        </span>
-        <Badge variant="secondary">2 months free</Badge>
+        <span className={cn("text-sm", annual ? "font-medium text-foreground" : "text-muted-foreground")}>Annual</span>
+        {savings > 0 && <Badge variant="secondary">{savings} months free</Badge>}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
-        <PricingCard
-          name="Free"
-          price="£0"
-          period="forever"
-          description="To get started."
-          features={[
-            "1 saved CV",
-            "Unlimited ATS scans",
-            "Job Tracker",
-            "UK Visa Sponsor Register search",
-          ]}
-          ctaLabel="Create free account"
-          ctaHref="/signup"
-        />
-        {PAID_TIERS.map((tier) => {
-          const pricing = PLAN_PRICING[tier];
-          const copy = TIER_COPY[tier];
+      <div className={cn("grid gap-6", ordered.length >= 4 ? "lg:grid-cols-4" : "lg:grid-cols-3")}>
+        {ordered.map((plan, index) => {
+          const tagline = TAGLINES[plan.slug] ?? { description: "" };
+          const isFree = plan.monthlyPence === 0;
           return (
             <PricingCard
-              key={tier}
-              name={PLAN_LABELS[tier]}
-              price={`£${annual ? pricing.annual : pricing.monthly}`}
-              period={annual ? "/year" : "/month"}
-              description={copy.description}
-              features={copy.features}
-              popular={copy.popular}
-              ctaLabel="Get started"
-              ctaHref={`/signup?plan=${tier}`}
+              key={plan.slug}
+              name={plan.name}
+              price={isFree ? "£0" : formatPounds(annual ? plan.annualPence : plan.monthlyPence)}
+              period={isFree ? "forever" : annual ? "/year" : "/month"}
+              description={tagline.description}
+              features={planBullets(plan, index > 0 ? ordered[index - 1] : null)}
+              popular={tagline.popular}
+              ctaLabel={isFree ? "Create free account" : "Get started"}
+              ctaHref="/signup"
             />
           );
         })}

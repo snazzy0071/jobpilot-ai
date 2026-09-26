@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth/session";
+import { consumeRateLimit } from "@/lib/ai/rate-limit";
 import { generateCvPdf, sanitizeFilename } from "@/lib/cvs/pdf-export";
 
 export const dynamic = "force-dynamic";
@@ -25,6 +26,10 @@ export const maxDuration = 60;
 export async function GET(request: Request, { params }: { params: Promise<{ cvId: string }> }) {
   const { cvId } = await params;
   const user = await requireUser();
+  // Each export launches a headless browser: cap how fast one account can start them.
+  if (!(await consumeRateLimit(user.id, "cv_export")).allowed) {
+    return NextResponse.json({ error: "You're exporting too quickly — wait a moment and try again." }, { status: 429 });
+  }
   // The template the editor is showing. If the database doesn't have it yet, the PDF would silently be a
   // different template from the preview — refuse that instead of exporting the wrong thing.
   const expectedTemplate = new URL(request.url).searchParams.get("template");

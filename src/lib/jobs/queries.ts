@@ -1,64 +1,17 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
-import { escapeLikePattern } from "@/lib/jobs/normalize";
 import { matchJobToSponsor, matchJobsToSponsors, type JobSponsorMatch } from "@/lib/jobs/sponsor-match";
 import type { Job, JobMatch, JobSearchFilters, JobSearchResult, JobSource, JobSourceSyncStatus } from "@/lib/jobs/types";
 
-// This is the ONLY place a page/Server Action should read jobs from —
-// every function here queries public.jobs (or job_source_sync_status,
-// a view over public.job_imports; or, for match-threshold filtering,
-// public.job_matches) directly, through the anon-respecting client, and
-// never imports anything from src/lib/jobs/adapters/* or
-// src/lib/jobs/ingest.ts. That split is what "queryable without calling
-// external APIs on every page load" actually means in this codebase:
-// ingestion (adapters/ingest.ts, service-role, cron-triggered) and
-// reading (this file, RLS-scoped, request-time) never share a code
-// path, so a page render can never accidentally trigger an
-// Adzuna/Reed request no matter what it does. Cross-referencing the
-// sponsor register (src/lib/jobs/sponsor-match.ts, used for
-// `sponsorOnly` and getJobWithSponsorMatch/getSponsorMatchesForJobs
-// below) stays inside that same rule too — it reads another table in
-// this same local Postgres database, not an external API.
-//
-// Same "never the admin client" rule src/lib/sponsors/queries.ts and
-// src/lib/graduate-schemes/queries.ts document for the same reason:
-// this is a public, unauthenticated feature, so it must see exactly
-// what an anonymous visitor's own RLS-governed request would see —
-// active, unexpired, non-duplicate jobs (migration 0060's select
-// policy), never a half-synced or since-deactivated row. Match-
-// threshold filtering is the one exception that's inherently
-// authenticated: job_matches' own RLS (`auth.uid() = user_id`) already
-// scopes that query to whichever user's session cookie this request
-// carries, so there's no separate user id to pass in here — an
-// unauthenticated request simply sees zero job_matches rows, same as
-// it would querying that table directly.
+// This is the ONLY place a page/Server Action should read jobs from. Every function here reads the local database
+// through the request's own (RLS-respecting) client and never imports anything from src/lib/jobs/adapters/* or
+// src/lib/jobs/ingest.ts. That split is what "queryable without calling external APIs on every page load" means in
+// this codebase: ingestion (adapters/sync-runner, service role, cron-triggered) and reading (this file, request-time)
+// never share a code path, so rendering a page can never trigger an Adzuna/Reed request.
 
 const PAGE_SIZE = 20;
-// A keywords search fetches a bounded candidate set and paginates in
-// memory, same approach and same reasoning as
-// src/lib/sponsors/queries.ts's CANDIDATE_LIMIT: two separate .ilike()
-// calls (title, company) merged and deduped in application code, rather
-// than one hand-built .or() filter string — a user-typed search term is
-// exactly the input an untested PostgREST filter DSL shouldn't be
-// trusted with (commas/parens in the term could break out of the
-// intended filter structure; escapeLikePattern only guards ILIKE's own
-// wildcards, not that).
-const CANDIDATE_LIMIT = 300;
-// sponsorOnly can't be a SQL filter at all — sponsor matching is a live
-// in-app cross-reference (src/lib/jobs/sponsor-match.ts), not a stored
-// column. So a sponsorOnly request fetches up to this many *candidate*
-// rows (matching every other filter, in the requested sort order) and
-// filters them in application code instead of paginating the full
-// result set — the same "bounded candidate window, be honest about the
-// cap" shape as CANDIDATE_LIMIT above, just for a different reason.
-const SPONSOR_CANDIDATE_LIMIT = 200;
 
-const JOB_SELECT_FIELDS =
-  "id, source_id, external_id, title, company_name, location, description, url, posted_at, expires_at, is_active";
-const JOB_WITH_MATCH_SELECT_FIELDS =
-  "id, source_id, external_id, title, company_name, location, description, url, posted_at, expires_at, is_active, job_matches!inner(match_score)";
-
-type JobRow = {
+type SearchRow = {
   id: string;
   source_id: string;
   external_id: string | null;
@@ -70,11 +23,16 @@ type JobRow = {
   posted_at: string | null;
   expires_at: string | null;
   is_active: boolean;
+  match_score: number | null;
+  total_count: number | string;
 };
 
-type JobRowWithMatch = JobRow & { job_matches: { match_score: number }[] };
+const JOB_SELECT_FIELDS =
+  "id, source_id, external_id, title, company_name, location, description, url, posted_at, expires_at, is_active";
 
-function toJob(row: JobRow): Job {
+type JobRow = Omit<SearchRow, "match_score" | "total_count">;
+
+function toJob(row: JobRow & { match_score?: number | null }): Job {
   return {
     id: row.id,
     sourceId: row.source_id,
@@ -87,260 +45,85 @@ function toJob(row: JobRow): Job {
     postedAt: row.posted_at,
     expiresAt: row.expires_at,
     isActive: row.is_active,
+    matchScore: row.match_score ?? null,
   };
 }
 
-function emptyResult(page: number, truncated = false): JobSearchResult {
-  return { results: [], total: 0, page, pageSize: PAGE_SIZE, totalPages: 0, truncated };
+function failedResult(page: number): JobSearchResult {
+  return { results: [], total: 0, page, pageSize: PAGE_SIZE, totalPages: 0, failed: true };
 }
 
-/** Filters and sponsor-cross-references a candidate list down to confirmed sponsors only, then paginates the filtered list in memory — shared by every branch below once it has a candidate array to work with. */
-async function filterToSponsorsAndPaginate(
-  candidates: JobRow[],
-  page: number,
-  candidateLimitHit: boolean,
-): Promise<JobSearchResult> {
-  if (candidates.length === 0) return emptyResult(page, candidateLimitHit);
+async function callSearch(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  filters: JobSearchFilters,
+  offset: number,
+) {
+  const hasKeywords = !!filters.keywords?.trim();
+  const useCv = !!filters.cvVersionId;
+  // relevance needs a query, best-match needs a CV; either without its input falls back to newest-first.
+  const requested = filters.sort ?? (hasKeywords ? "relevance" : "newest");
+  const sort = requested === "relevance" && !hasKeywords ? "newest" : requested === "match_desc" && !useCv ? "newest" : requested;
 
-  const matches = await matchJobsToSponsors(candidates.map((row) => row.company_name));
-  const confirmed = candidates.filter((row) => matches.get(row.company_name)?.status === "confirmed_sponsor");
-
-  const total = confirmed.length;
-  const from = (page - 1) * PAGE_SIZE;
-  return {
-    results: confirmed.slice(from, from + PAGE_SIZE).map(toJob),
-    total,
-    page,
-    pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    truncated: candidateLimitHit,
-  };
-}
-
-function sortRows<T extends { posted_at: string | null; company_name: string }>(rows: T[], sort: JobSearchFilters["sort"]): T[] {
-  const sorted = [...rows];
-  if (sort === "company_az") return sorted.sort((a, b) => a.company_name.localeCompare(b.company_name));
-  if (sort === "oldest") {
-    return sorted.sort((a, b) => {
-      if (!a.posted_at) return 1;
-      if (!b.posted_at) return -1;
-      return a.posted_at.localeCompare(b.posted_at);
-    });
-  }
-  // "newest" (default) and "match_desc" without an active threshold
-  // filter both fall back to newest-first — match_desc only really
-  // applies within searchByMatchThreshold, which orders by score
-  // itself before this ever runs.
-  return sorted.sort((a, b) => {
-    if (!a.posted_at) return 1;
-    if (!b.posted_at) return -1;
-    return b.posted_at.localeCompare(a.posted_at);
+  return supabase.rpc("search_jobs", {
+    p_query: hasKeywords ? filters.keywords!.trim().slice(0, 200) : null,
+    p_location: filters.location?.trim() ? filters.location.trim().slice(0, 100) : null,
+    p_source_id: filters.sourceId ?? null,
+    p_posted_within_days: filters.postedWithinDays && filters.postedWithinDays > 0 ? filters.postedWithinDays : null,
+    p_sponsor_only: filters.sponsorOnly === true,
+    p_cv_version_id: useCv ? filters.cvVersionId : null,
+    p_min_score: useCv && filters.minMatchScore ? filters.minMatchScore : null,
+    p_sort: sort,
+    p_limit: PAGE_SIZE,
+    p_offset: offset,
   });
 }
 
-/** Browsing (no keywords, no match threshold) — real DB-level filters, and (when sponsorOnly is off) exact count + range pagination; no candidate cap needed since there's no OR ambiguity to work around. */
-async function browseWithoutKeywords(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  filters: JobSearchFilters,
-  page: number,
-): Promise<JobSearchResult> {
-  if (filters.sponsorOnly) {
-    let query = supabase.from("jobs").select(JOB_SELECT_FIELDS).limit(SPONSOR_CANDIDATE_LIMIT);
-    if (filters.location) query = query.ilike("location", `%${escapeLikePattern(filters.location.trim())}%`);
-    if (filters.sourceId) query = query.eq("source_id", filters.sourceId);
-    if (filters.postedWithinDays) {
-      query = query.gte("posted_at", new Date(Date.now() - filters.postedWithinDays * 86_400_000).toISOString());
-    }
-    const orderColumn = filters.sort === "company_az" ? "company_name" : "posted_at";
-    const { data, error } = await query.order(orderColumn, { ascending: filters.sort === "oldest" || filters.sort === "company_az" });
-    if (error) {
-      console.error("searchJobs (sponsorOnly browse) failed:", error.message);
-      return emptyResult(page);
-    }
-    const rows = (data as JobRow[]) ?? [];
-    return filterToSponsorsAndPaginate(rows, page, rows.length >= SPONSOR_CANDIDATE_LIMIT);
-  }
-
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-
-  let query = supabase.from("jobs").select(JOB_SELECT_FIELDS, { count: "exact" });
-  if (filters.location) query = query.ilike("location", `%${escapeLikePattern(filters.location.trim())}%`);
-  if (filters.sourceId) query = query.eq("source_id", filters.sourceId);
-  if (filters.postedWithinDays) {
-    query = query.gte("posted_at", new Date(Date.now() - filters.postedWithinDays * 86_400_000).toISOString());
-  }
-
-  const orderColumn = filters.sort === "company_az" ? "company_name" : "posted_at";
-  const { data, error, count } = await query
-    .order(orderColumn, { ascending: filters.sort === "oldest" || filters.sort === "company_az", nullsFirst: false })
-    .range(from, to);
-  if (error) {
-    console.error("searchJobs failed:", error.message);
-    return emptyResult(page);
-  }
-
-  const total = count ?? 0;
-  return {
-    results: (data as JobRow[] | null)?.map(toJob) ?? [],
-    total,
-    page,
-    pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    truncated: false,
-  };
-}
-
-/** Keywords given — see this file's own CANDIDATE_LIMIT comment for why this fetches two bounded candidate sets and merges in memory instead of one .or() filter string. sponsorOnly, when set, filters this same merged candidate list before pagination — no extra query shape needed here. */
-async function searchByKeywords(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  filters: JobSearchFilters,
-  page: number,
-): Promise<JobSearchResult> {
-  const pattern = `%${escapeLikePattern(filters.keywords!.trim())}%`;
-
-  let titleQuery = supabase.from("jobs").select(JOB_SELECT_FIELDS).ilike("title", pattern).limit(CANDIDATE_LIMIT);
-  let companyQuery = supabase.from("jobs").select(JOB_SELECT_FIELDS).ilike("company_name", pattern).limit(CANDIDATE_LIMIT);
-  if (filters.location) {
-    const locationPattern = `%${escapeLikePattern(filters.location.trim())}%`;
-    titleQuery = titleQuery.ilike("location", locationPattern);
-    companyQuery = companyQuery.ilike("location", locationPattern);
-  }
-  if (filters.sourceId) {
-    titleQuery = titleQuery.eq("source_id", filters.sourceId);
-    companyQuery = companyQuery.eq("source_id", filters.sourceId);
-  }
-  if (filters.postedWithinDays) {
-    const cutoff = new Date(Date.now() - filters.postedWithinDays * 86_400_000).toISOString();
-    titleQuery = titleQuery.gte("posted_at", cutoff);
-    companyQuery = companyQuery.gte("posted_at", cutoff);
-  }
-
-  const [titleResult, companyResult] = await Promise.all([titleQuery, companyQuery]);
-  if (titleResult.error || companyResult.error) {
-    console.error("searchJobs failed:", titleResult.error?.message ?? companyResult.error?.message);
-    return emptyResult(page);
-  }
-
-  const merged = new Map<string, JobRow>();
-  for (const row of [...(titleResult.data as JobRow[]), ...(companyResult.data as JobRow[])]) {
-    merged.set(row.id, row);
-  }
-  const candidateLimitHit = titleResult.data.length >= CANDIDATE_LIMIT || companyResult.data.length >= CANDIDATE_LIMIT;
-  const sorted = sortRows([...merged.values()], filters.sort);
-
-  if (filters.sponsorOnly) {
-    return filterToSponsorsAndPaginate(sorted, page, candidateLimitHit);
-  }
-
-  const total = sorted.length;
-  const from = (page - 1) * PAGE_SIZE;
-  return {
-    results: sorted.slice(from, from + PAGE_SIZE).map(toJob),
-    total,
-    page,
-    pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    truncated: candidateLimitHit,
-  };
-}
-
 /**
- * Match-threshold filtering — only jobs already scored (job_matches)
- * for `filters.cvVersionId` at or above `filters.minMatchScore`. A real
- * inner join (`job_matches!inner(match_score)`), same established
- * pattern src/lib/sponsors/queries.ts's route filter uses
- * (`sponsor_routes!inner(route)`) — a literal, non-computed select
- * string, not a runtime ternary (supabase-js parses `.select()` as a
- * template-literal type; a computed string breaks that inference, the
- * exact bug that pattern was already fixed for once this session).
- * job_matches' own RLS (`auth.uid() = user_id`) scopes this to the
- * requesting session automatically — no explicit user id needed here.
- * Never runs an AI call: a job never scored for this CV simply isn't
- * in the join's result set.
- */
-async function searchByMatchThreshold(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  filters: JobSearchFilters,
-  page: number,
-): Promise<JobSearchResult> {
-  if (filters.sponsorOnly) {
-    let query = supabase
-      .from("jobs")
-      .select(JOB_WITH_MATCH_SELECT_FIELDS)
-      .eq("job_matches.cv_version_id", filters.cvVersionId!)
-      .gte("job_matches.match_score", filters.minMatchScore!)
-      .limit(SPONSOR_CANDIDATE_LIMIT);
-    if (filters.location) query = query.ilike("location", `%${escapeLikePattern(filters.location.trim())}%`);
-    if (filters.sourceId) query = query.eq("source_id", filters.sourceId);
-    if (filters.postedWithinDays) {
-      query = query.gte("posted_at", new Date(Date.now() - filters.postedWithinDays * 86_400_000).toISOString());
-    }
-    const { data, error } = await query.order("match_score", { referencedTable: "job_matches", ascending: false });
-    if (error) {
-      console.error("searchJobs (match threshold, sponsorOnly) failed:", error.message);
-      return emptyResult(page);
-    }
-    const rows = (data as JobRowWithMatch[]) ?? [];
-    return filterToSponsorsAndPaginate(rows, page, rows.length >= SPONSOR_CANDIDATE_LIMIT);
-  }
-
-  const from = (page - 1) * PAGE_SIZE;
-  const to = from + PAGE_SIZE - 1;
-
-  let query = supabase
-    .from("jobs")
-    .select(JOB_WITH_MATCH_SELECT_FIELDS, { count: "exact" })
-    .eq("job_matches.cv_version_id", filters.cvVersionId!)
-    .gte("job_matches.match_score", filters.minMatchScore!);
-  if (filters.location) query = query.ilike("location", `%${escapeLikePattern(filters.location.trim())}%`);
-  if (filters.sourceId) query = query.eq("source_id", filters.sourceId);
-  if (filters.postedWithinDays) {
-    query = query.gte("posted_at", new Date(Date.now() - filters.postedWithinDays * 86_400_000).toISOString());
-  }
-
-  const { data, error, count } = await query
-    .order("match_score", { referencedTable: "job_matches", ascending: false })
-    .range(from, to);
-  if (error) {
-    console.error("searchJobs (match threshold) failed:", error.message);
-    return emptyResult(page);
-  }
-
-  const total = count ?? 0;
-  return {
-    results: ((data as JobRowWithMatch[] | null) ?? []).map(toJob),
-    total,
-    page,
-    pageSize: PAGE_SIZE,
-    totalPages: Math.max(1, Math.ceil(total / PAGE_SIZE)),
-    truncated: false,
-  };
-}
-
-/**
- * Real search over public.jobs — RLS already limits this to
- * active/unexpired/non-duplicate rows (migration 0060), so there's no
- * extra visibility filtering to apply here on top of what the policy
- * itself guarantees. Dispatches to whichever of the three strategies
- * above the filters call for; `cvVersionId` + `minMatchScore` together
- * take priority over `keywords` — combining a text search with a match-
- * threshold filter in one query isn't supported yet (a documented
- * simplification, not an oversight: the two would need a genuinely
- * different join/merge shape with no live database in this environment
- * to validate it against).
+ * Real search over public.jobs, one ranked SQL call (migration 0101's search_jobs): full-text over title, company and
+ * description plus substring on title/company, location and date filters, the licensed-sponsor filter evaluated over
+ * the WHOLE candidate set against the register, and — for a signed-in user with a CV picked — that user's stored match
+ * scores for threshold filtering and best-match ordering, all combinable. It only ever returns what the public jobs
+ * policy allows (active, unexpired, non-duplicate). A failed query is reported as `failed`, never as "no jobs": an
+ * outage must not read as an empty feed.
  */
 export async function searchJobs(filters: JobSearchFilters = {}): Promise<JobSearchResult> {
   const supabase = await createClient();
-  const page = Math.max(1, filters.page ?? 1);
+  const page = Math.max(1, Math.floor(filters.page ?? 1));
 
-  if (filters.cvVersionId && filters.minMatchScore) {
-    return searchByMatchThreshold(supabase, filters, page);
+  const { data: initialData, error } = await callSearch(supabase, filters, (page - 1) * PAGE_SIZE);
+  if (error) {
+    console.error("searchJobs failed:", error.message);
+    return failedResult(page);
   }
-  if (filters.keywords?.trim()) {
-    return searchByKeywords(supabase, filters, page);
+
+  // A page past the end of the results has no rows to carry the total from — show the last page that has some.
+  let rows = (initialData ?? []) as SearchRow[];
+  let effectivePage = page;
+  if (rows.length === 0 && page > 1) {
+    const first = await callSearch(supabase, filters, 0);
+    if (first.error) {
+      console.error("searchJobs failed:", first.error.message);
+      return failedResult(page);
+    }
+    rows = (first.data ?? []) as SearchRow[];
+    const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+    effectivePage = Math.min(page, Math.max(1, Math.ceil(total / PAGE_SIZE)));
+    if (effectivePage > 1) {
+      const last = await callSearch(supabase, filters, (effectivePage - 1) * PAGE_SIZE);
+      if (last.error) return failedResult(page);
+      rows = (last.data ?? []) as SearchRow[];
+    }
   }
-  return browseWithoutKeywords(supabase, filters, page);
+
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  return {
+    results: rows.map(toJob),
+    total,
+    page: effectivePage,
+    pageSize: PAGE_SIZE,
+    totalPages: total === 0 ? 0 : Math.ceil(total / PAGE_SIZE),
+    failed: false,
+  };
 }
 
 /** The real, current set of job sources — for the feed's source filter dropdown, never a hardcoded list (same reasoning src/lib/sponsors/queries.ts's getDistinctSponsorRoutes gives for its own filter options). */
@@ -462,4 +245,81 @@ export async function getSavedJobIds(jobIds: string[]): Promise<Set<string>> {
   const supabase = await createClient();
   const { data } = await supabase.from("saved_jobs").select("job_id").in("job_id", jobIds);
   return new Set((data ?? []).map((row) => row.job_id).filter((id): id is string => id !== null));
+}
+
+/** Which of these jobs the user already has in their tracker, as job id -> application id: the feed's "In tracker" state, one query per page. Scoped to the requesting user by applications' own RLS. */
+export async function getTrackedApplicationIds(jobIds: string[]): Promise<Map<string, string>> {
+  const tracked = new Map<string, string>();
+  if (jobIds.length === 0) return tracked;
+  const supabase = await createClient();
+  const { data } = await supabase.from("applications").select("id, job_id").in("job_id", jobIds);
+  for (const row of data ?? []) if (row.job_id) tracked.set(row.job_id, row.id);
+  return tracked;
+}
+
+// The daily sync runs at 02:00-02:30 UTC; a source that has not completed one in this long has missed a run.
+const FEED_STALE_AFTER_HOURS = 36;
+
+export type JobFeedSourceStatus = {
+  sourceId: string;
+  name: string;
+  lastCompletedAt: string | null;
+  /** The most recent sync run's outcome: 'failed' means the newest attempt did not work even if an older one did. */
+  latestRunStatus: "pending" | "processing" | "completed" | "failed" | null;
+  latestRunError: string | null;
+  stale: boolean;
+};
+
+export type JobFeedStatus = {
+  totalVisible: number;
+  /** When the feed last completed any source's sync, or null if nothing has ever synced. */
+  lastUpdatedAt: string | null;
+  sources: JobFeedSourceStatus[];
+};
+
+/**
+ * What the feed page needs to be honest about its data: how many listings are live, when each source last synced, and
+ * whether the newest attempt failed or has gone stale. Sources that have never run are omitted (an unconfigured
+ * provider is not an outage). Reads only the local database.
+ */
+export async function getJobFeedStatus(): Promise<JobFeedStatus> {
+  const supabase = await createClient();
+  const [{ data: sources }, { data: statusRows }, { count }] = await Promise.all([
+    supabase.from("job_sources").select("id, name").eq("is_active", true).order("name"),
+    supabase.from("job_source_sync_status").select("source_id, completed_at"),
+    supabase.from("jobs").select("id", { count: "exact", head: true }),
+  ]);
+
+  const completedBySource = new Map((statusRows ?? []).map((row) => [row.source_id as string, row.completed_at as string]));
+  const now = Date.now();
+
+  const withRuns = await Promise.all(
+    (sources ?? []).map(async (source) => {
+      const { data: latest } = await supabase
+        .from("job_imports")
+        .select("status, error_message")
+        .eq("run_type", "sync")
+        .eq("source_id", source.id)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const lastCompletedAt = completedBySource.get(source.id) ?? null;
+      return {
+        sourceId: source.id,
+        name: source.name,
+        lastCompletedAt,
+        latestRunStatus: (latest?.status ?? null) as JobFeedSourceStatus["latestRunStatus"],
+        latestRunError: latest?.status === "failed" ? (latest.error_message ?? null) : null,
+        stale: lastCompletedAt !== null && now - new Date(lastCompletedAt).getTime() > FEED_STALE_AFTER_HOURS * 3_600_000,
+      };
+    }),
+  );
+  const sourcesWithHistory = withRuns.filter((source) => source.latestRunStatus !== null);
+
+  const completedTimes = sourcesWithHistory.map((source) => source.lastCompletedAt).filter((value): value is string => value !== null);
+  return {
+    totalVisible: count ?? 0,
+    lastUpdatedAt: completedTimes.length > 0 ? completedTimes.reduce((a, b) => (a > b ? a : b)) : null,
+    sources: sourcesWithHistory,
+  };
 }

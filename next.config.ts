@@ -117,6 +117,12 @@ const nextConfig: NextConfig = {
   // (stale external links, bookmarks, or bots guessing at /features/cv's
   // shape under /dashboard). Catching them here sends real traffic to the
   // right page without touching any page, component, or nav config.
+  // Scheme-specific signup: `/signup?from=grad&scheme=<slug>` is served by src/app/(auth)/signup/scheme/page.tsx, keeping the URL. A
+  // rewrite (not a redirect) so the address is the one that was shared, and so the ordinary /signup page stays static and untouched.
+  async rewrites() {
+    // beforeFiles: /signup is itself a real (static) page, and ordinary rewrites only run when no page matches.
+    return { beforeFiles: [{ source: "/signup", has: [{ type: "query", key: "from", value: "grad" }], destination: "/signup/scheme" }] };
+  },
   async redirects() {
     return [
       { source: "/dashboard/cv", destination: "/dashboard/cvs", permanent: true },

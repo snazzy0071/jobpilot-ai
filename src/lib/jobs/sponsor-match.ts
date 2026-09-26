@@ -130,13 +130,15 @@ export async function matchJobsToSponsors(companyNames: string[]): Promise<Map<s
 
   // --- Tier 1: exact match, on the sponsor's own registered name or a
   // known trading/legal-name alias.
-  const [{ data: nameRows }, { data: aliasRows }] = await Promise.all([
+  const [{ data: nameRows, error: nameError }, { data: aliasRows, error: aliasError }] = await Promise.all([
     supabase
       .from("sponsors")
       .select("id, company_name, town_city, rating, company_name_normalized")
       .in("company_name_normalized", normalizedKeys),
     supabase.from("sponsor_aliases").select("sponsor_id, alias_name_normalized").in("alias_name_normalized", normalizedKeys),
   ]);
+
+  if (nameError || aliasError) throw new Error(`Sponsor cross-check failed: ${(nameError ?? aliasError)?.message}`);
 
   const exactByKey = new Map<string, { row: SponsorRow; via: "name" | "alias" }[]>();
   for (const row of (nameRows ?? []) as SponsorRow[]) {
@@ -169,27 +171,19 @@ export async function matchJobsToSponsors(companyNames: string[]): Promise<Map<s
 
   const stemCandidates = new Map<string, SponsorRow[]>();
   if (uniqueStems.length > 0) {
-    // One prefix-ilike query per distinct stem — bounded by how many
-    // names Tier 1 left unresolved, not by the register's own size.
-    // Whether Postgres can use the existing company_name_normalized
-    // btree index for a left-anchored `stem%` pattern depends on the
-    // database's collation (unverified here — no live project to
-    // check); if it can't, this still returns correct results, just via
-    // a slower scan bounded to `.limit(20)` per stem rather than the
-    // whole register.
-    const stemResults = await Promise.all(
-      uniqueStems.map((stem) =>
-        supabase
-          .from("sponsors")
-          .select("id, company_name, town_city, rating, company_name_normalized")
-          .ilike("company_name_normalized", `${stem}%`)
-          .limit(20)
-          .then((res) => ({ stem, rows: (res.data ?? []) as SponsorRow[] })),
-      ),
-    );
-    for (const { stem, rows } of stemResults) {
-      // Confirm the full stripped name matches, not just the prefix —
-      // the ilike above is a candidate filter, not the actual check.
+    // One set-based call for every stem (migration 0101's sponsor_stem_candidates, prefix-indexed): as the anon role the
+    // register's row-level security makes a per-stem `ilike` a full scan of 127k rows each (~1.5s), which timed out
+    // and read as "not found". Only a definite "no rows" may mean no match — a failed lookup must not.
+    const { data, error } = await supabase.rpc("sponsor_stem_candidates", { p_stems: uniqueStems });
+    if (error) throw new Error(`Sponsor cross-check failed: ${error.message}`);
+    const rowsByStem = new Map<string, SponsorRow[]>();
+    for (const row of (data ?? []) as (SponsorRow & { stem: string })[]) {
+      const list = rowsByStem.get(row.stem) ?? [];
+      list.push(row);
+      rowsByStem.set(row.stem, list);
+    }
+    for (const [stem, rows] of rowsByStem) {
+      // Confirm the full stripped name matches, not just the prefix — the prefix is a candidate filter, not the check.
       const matches = rows.filter((row) => stripLegalSuffixes(row.company_name_normalized) === stem);
       if (matches.length > 0) stemCandidates.set(stem, matches);
     }

@@ -14,23 +14,30 @@ type AdminNavItem = SidebarNavItem & { permission?: AdminPermission };
 // same list. `permission: undefined` means visible to any admin — the
 // overview has nothing specific to gate.
 export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
-  { href: "/admin", label: "Admin Dashboard", icon: "layout-dashboard" },
+  { href: "/admin", label: "Dashboard", icon: "layout-dashboard" },
   { href: "/admin/users", label: "Users", icon: "users", permission: "manage_users" },
-  { href: "/admin/graduate-schemes", label: "Graduate Schemes", icon: "graduation-cap", permission: "manage_graduate_schemes" },
-  { href: "/admin/test-prep", label: "Test Prep", icon: "list-checks", permission: "manage_test_prep" },
-  { href: "/admin/ai-usage", label: "AI Usage", icon: "sparkles", permission: "view_ai_usage" },
-  { href: "/admin/access-codes", label: "Access Codes", icon: "key-round", permission: "manage_access_codes" },
   { href: "/admin/institutions", label: "Institutions", icon: "building", permission: "manage_institutions" },
-  { href: "/admin/sponsors", label: "Sponsor Sync", icon: "shield", permission: "view_sponsor_sync" },
-  { href: "/admin/jobs", label: "Job Feed", icon: "briefcase", permission: "view_job_sync" },
+  { href: "/admin/plans", label: "Plans/Subscriptions", icon: "credit-card", permission: "view_plans" },
+  { href: "/admin/access-codes", label: "Access Codes", icon: "key-round", permission: "manage_access_codes" },
+  { href: "/admin/ai-usage", label: "AI Usage", icon: "sparkles", permission: "view_ai_usage" },
+  { href: "/admin/sponsors", label: "Sponsors", icon: "shield", permission: "view_sponsor_sync" },
+  { href: "/admin/graduate-schemes", label: "Graduate Schemes", icon: "graduation-cap", permission: "manage_graduate_schemes" },
+  { href: "/admin/deadlines", label: "Deadlines", icon: "calendar-clock", permission: "manage_graduate_schemes" },
+  { href: "/admin/jobs", label: "Jobs", icon: "briefcase", permission: "view_job_sync" },
+  { href: "/admin/test-prep", label: "Test Prep", icon: "list-checks", permission: "manage_test_prep" },
+  { href: "/admin/advice-hub", label: "Advice Hub", icon: "book-open", permission: "manage_advice_hub" },
   { href: "/admin/blog", label: "Blog", icon: "file-text", permission: "manage_blog" },
+  { href: "/admin/compare", label: "Comparisons", icon: "scale", permission: "manage_comparisons" },
+  { href: "/admin/auto-apply", label: "Auto-Apply", icon: "send", permission: "view_auto_apply" },
   { href: "/admin/leads", label: "Leads", icon: "mail", permission: "view_leads" },
-  { href: "/admin/settings", label: "Settings", icon: "settings", permission: "manage_settings" },
-  { href: "/admin/roles", label: "Admin Roles", icon: "shield-check", permission: "manage_admin_roles" },
+  { href: "/admin/roles", label: "Roles", icon: "shield-check", permission: "manage_admin_roles" },
   { href: "/admin/audit-log", label: "Audit Log", icon: "history", permission: "view_audit_logs" },
+  { href: "/admin/settings", label: "Settings", icon: "settings", permission: "manage_settings" },
   { href: "/admin/system-health", label: "System Health", icon: "activity", permission: "view_system_health" },
-  { href: "/admin/email-logs", label: "Email Logs", icon: "send", permission: "view_email_logs" },
 ];
+
+/** Reachable pages (linked from System Health) that are deliberately not in the menu; they only supply the header title. */
+export const ADMIN_UNLISTED_PAGES: SidebarNavItem[] = [{ href: "/admin/email-logs", label: "Email Logs", icon: "send" }];
 
 /**
  * Renders only the nav items this specific admin actually has

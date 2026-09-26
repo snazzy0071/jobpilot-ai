@@ -5,7 +5,7 @@ import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { listCvs } from "@/lib/cvs/queries";
 import { listCoverLetters } from "@/lib/cover-letters/queries";
-import { resolveSnapshotFreeze } from "@/lib/applications/snapshot";
+import { resolveSnapshotFreeze, SnapshotError, type SnapshotFields } from "@/lib/applications/snapshot";
 import {
   createApplicationSchema,
   updateApplicationSchema,
@@ -18,6 +18,22 @@ import type { Application } from "@/lib/applications/types";
 export type ApplicationActionResult = { error: string } | { application: Application };
 export type ApplicationMutationResult = { error: string } | { success: string } | void;
 
+/** resolveSnapshotFreeze, with a failure turned into a message for the person instead of an unhandled throw. */
+async function resolveSnapshot(params: Parameters<typeof resolveSnapshotFreeze>[0]): Promise<{ snapshot: SnapshotFields } | { error: string }> {
+  try {
+    return { snapshot: await resolveSnapshotFreeze(params) };
+  } catch (err) {
+    if (err instanceof SnapshotError) return { error: err.message };
+    console.error("resolveSnapshot failed:", err);
+    return { error: "Couldn't save that application — try again." };
+  }
+}
+
+/** The form's "None" options carry a placeholder value ("__no_cv__"); that means no link, not an invalid id. */
+function idOrUndefined(value: FormDataEntryValue | null): string | undefined {
+  return typeof value === "string" && value !== "" && !value.startsWith("__") ? value : undefined;
+}
+
 function applicationInputFromFormData(formData: FormData) {
   return {
     companyName: formData.get("companyName"),
@@ -28,8 +44,8 @@ function applicationInputFromFormData(formData: FormData) {
     deadline: formData.get("deadline") || undefined,
     notes: formData.get("notes") || undefined,
     status: formData.get("status"),
-    cvId: formData.get("cvId") || undefined,
-    coverLetterId: formData.get("coverLetterId") || undefined,
+    cvId: idOrUndefined(formData.get("cvId")),
+    coverLetterId: idOrUndefined(formData.get("coverLetterId")),
   };
 }
 
@@ -64,14 +80,17 @@ export async function createApplication(formData: FormData): Promise<Application
   const ownershipError = await verifyOwnedLinks(user.id, parsed.data.cvId, parsed.data.coverLetterId);
   if (ownershipError) return { error: ownershipError };
 
-  const snapshot = await resolveSnapshotFreeze({
+  const resolved = await resolveSnapshot({
     userId: user.id,
     companyName: parsed.data.companyName,
+    jobTitle: parsed.data.jobTitle,
     cvId: parsed.data.cvId,
     jobId: null,
     newStatus: parsed.data.status,
     existing: null,
   });
+  if ("error" in resolved) return { error: resolved.error };
+  const snapshot = resolved.snapshot;
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -122,9 +141,10 @@ export async function updateApplication(
   // can no longer change what was frozen at Applied. Migration 0065's
   // own trigger is the backstop if this call site (or any future one)
   // ever fails to honour that.
-  const snapshot = await resolveSnapshotFreeze({
+  const resolved = await resolveSnapshot({
     userId: user.id,
     companyName: parsed.data.companyName,
+    jobTitle: parsed.data.jobTitle,
     cvId: parsed.data.cvId,
     jobId: existing.jobId,
     newStatus: parsed.data.status,
@@ -135,6 +155,8 @@ export async function updateApplication(
       frozenAt: existing.frozenAt,
     },
   });
+  if ("error" in resolved) return { error: resolved.error };
+  const snapshot = resolved.snapshot;
 
   const supabase = await createClient();
   const { error } = await supabase
@@ -165,7 +187,8 @@ export async function updateApplication(
   return { success: "Saved." };
 }
 
-export type UpdateApplicationStatusResult = { error: string } | { status: Application["status"] };
+/** The application as the server stored it after the move: it carries the freeze (sponsor state, score, submitted CV copy) and applied date that the move may have set. */
+export type UpdateApplicationStatusResult = { error: string } | { application: Application };
 
 /**
  * The kanban/table's own move — id + new status, but now also
@@ -192,9 +215,10 @@ export async function updateApplicationStatus(input: {
   const existing = await getApplicationById(user.id, parsed.data.id);
   if (!existing) return { error: "That application couldn't be found." };
 
-  const snapshot = await resolveSnapshotFreeze({
+  const resolved = await resolveSnapshot({
     userId: user.id,
     companyName: existing.companyName,
+    jobTitle: existing.jobTitle,
     cvId: existing.cvId,
     jobId: existing.jobId,
     newStatus: parsed.data.status,
@@ -205,6 +229,8 @@ export async function updateApplicationStatus(input: {
       frozenAt: existing.frozenAt,
     },
   });
+  if ("error" in resolved) return { error: resolved.error };
+  const snapshot = resolved.snapshot;
 
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -218,14 +244,15 @@ export async function updateApplicationStatus(input: {
     })
     .eq("id", parsed.data.id)
     .eq("user_id", user.id)
-    .select("id")
+    .select(APPLICATION_SELECT_FIELDS)
     .maybeSingle();
 
   if (error) return { error: "Couldn't move that card — try again." };
   if (!data) return { error: "That application couldn't be found." };
 
   revalidatePath("/dashboard/applications");
-  return { status: parsed.data.status };
+  revalidatePath("/dashboard/applications/analytics");
+  return { application: toApplication(data) };
 }
 
 export async function deleteApplication(

@@ -26,8 +26,9 @@ export async function createAccessCode(formData: FormData) {
     label: formData.get("label"),
     maxRedemptions: formData.get("maxRedemptions"),
     expiresAt: formData.get("expiresAt"),
-    institutionId: formData.get("institutionId"),
-    grantedPlanId: formData.get("grantedPlanId"),
+    // Absent (not empty) when "None" is chosen: FormData.get() gives null, which the optional schema fields reject.
+    institutionId: formData.get("institutionId") ?? undefined,
+    grantedPlanId: formData.get("grantedPlanId") ?? undefined,
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 

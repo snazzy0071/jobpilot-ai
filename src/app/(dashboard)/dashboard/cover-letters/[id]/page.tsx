@@ -41,68 +41,74 @@ export default async function CoverLetterEditorPage({ params }: { params: Promis
   const fullText = data.paragraphs.map((paragraph) => paragraph.content).join("\n\n");
 
   return (
-    <div className="flex max-w-6xl flex-col gap-6">
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-fit"
-        render={
-          <Link href="/dashboard/cover-letters">
-            <ArrowLeftIcon /> All cover letters
-          </Link>
-        }
-      />
+    // Wraps the *entire* page, not just the paragraph editor/preview split below — CoverLetterTemplatePickerDialog
+    // in the header row also reads this context (setLiveTemplate, for the picker's own live-switch preview), so it
+    // has to be inside the provider's subtree too. It previously wasn't: the provider only wrapped the body, while
+    // the picker rendered in the header above it, which crashed this page's every single render with "
+    // useCoverLetterPreview must be used within a CoverLetterPreviewProvider" — a genuine, 100%-reproducible bug
+    // (not a timing race) found while adding this feature's first e2e coverage.
+    <CoverLetterPreviewProvider
+      initial={{
+        template: data.template,
+        senderName: data.senderName,
+        senderEmail: data.senderEmail,
+        senderPhone: data.senderPhone,
+        senderLocation: data.senderLocation,
+        companyName: data.companyName,
+        jobTitle: data.jobTitle,
+        paragraphs: data.paragraphs,
+      }}
+    >
+      <div className="flex max-w-6xl flex-col gap-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-fit"
+          render={
+            <Link href="/dashboard/cover-letters">
+              <ArrowLeftIcon /> All cover letters
+            </Link>
+          }
+        />
 
-      <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">
-            {data.jobTitle} at {data.companyName}
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Version {data.versionNumber}</p>
-        </div>
-
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex flex-col gap-1.5">
-            <Label>Template</Label>
-            <CoverLetterTemplatePickerDialog coverLetterId={data.coverLetterId} currentTemplate={data.template} />
-            <p className="max-w-40 text-xs text-muted-foreground">{getCoverLetterTemplate(data.template).name}</p>
+        <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
+          <div>
+            <h1 className="font-heading text-2xl font-semibold tracking-tight">
+              {data.jobTitle} at {data.companyName}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">Version {data.versionNumber}</p>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <Label>Export</Label>
-            {/* A plain download link, not a client fetch+blob — same
-                reasoning as the CV editor's export button: the route
-                already returns Content-Disposition: attachment. */}
-            <Button
-              size="sm"
-              variant="outline"
-              render={<a href={`/api/cover-letters/${data.coverLetterId}/export`} target="_blank" rel="noopener noreferrer" />}
-            >
-              <DownloadIcon /> Export PDF
-            </Button>
+          <div className="flex flex-wrap items-end gap-4">
+            <div className="flex flex-col gap-1.5">
+              <Label>Template</Label>
+              <CoverLetterTemplatePickerDialog coverLetterId={data.coverLetterId} currentTemplate={data.template} />
+              <p className="max-w-40 text-xs text-muted-foreground">{getCoverLetterTemplate(data.template).name}</p>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <Label>Export</Label>
+              {/* A plain download link, not a client fetch+blob — same
+                  reasoning as the CV editor's export button: the route
+                  already returns Content-Disposition: attachment. */}
+              <Button
+                size="sm"
+                variant="outline"
+                render={<a href={`/api/cover-letters/${data.coverLetterId}/export`} target="_blank" rel="noopener noreferrer" />}
+              >
+                <DownloadIcon /> Export PDF
+              </Button>
+            </div>
+
+            <VersionHistoryDialog
+              versions={versions}
+              restore={restoreCoverLetterVersion}
+              containerIdField="coverLetterId"
+              containerId={data.coverLetterId}
+            />
           </div>
-
-          <VersionHistoryDialog
-            versions={versions}
-            restore={restoreCoverLetterVersion}
-            containerIdField="coverLetterId"
-            containerId={data.coverLetterId}
-          />
         </div>
-      </div>
 
-      <CoverLetterPreviewProvider
-        initial={{
-          template: data.template,
-          senderName: data.senderName,
-          senderEmail: data.senderEmail,
-          senderPhone: data.senderPhone,
-          senderLocation: data.senderLocation,
-          companyName: data.companyName,
-          jobTitle: data.jobTitle,
-          paragraphs: data.paragraphs,
-        }}
-      >
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_420px]">
           <div className="flex flex-col gap-6">
             <ToneLengthControls versionId={data.versionId} tone={data.tone} length={data.length} />
@@ -126,7 +132,7 @@ export default async function CoverLetterEditorPage({ params }: { params: Promis
         <div className="lg:hidden">
           <CoverLetterMobilePreviewTrigger />
         </div>
-      </CoverLetterPreviewProvider>
-    </div>
+      </div>
+    </CoverLetterPreviewProvider>
   );
 }

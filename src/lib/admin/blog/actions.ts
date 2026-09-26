@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/admin/permissions";
+import { logAdminAction } from "@/lib/admin/audit/log";
 import {
   createBlogPostSchema,
   updateBlogPostSchema,
@@ -17,8 +18,12 @@ import {
 // write in this file needs the service-role client, not just the
 // posts list's own read.
 
+async function audit(user: { id: string; email?: string | null }, action: string, entityId: string | null, metadata: Record<string, unknown>) {
+  await logAdminAction({ actorId: user.id, actorEmail: user.email ?? null, action, entityType: "blog_post", entityId, metadata });
+}
+
 export async function createBlogPost(formData: FormData) {
-  await requirePermission("manage_blog");
+  const { user } = await requirePermission("manage_blog");
 
   const parsed = createBlogPostSchema.safeParse({
     slug: formData.get("slug"),
@@ -50,12 +55,15 @@ export async function createBlogPost(formData: FormData) {
     return { error: "Couldn't create that post — try again." };
   }
 
+  await audit(user, "blog_post.create", data.id as string, { slug: parsed.data.slug, published: parsed.data.publishedAt !== null });
   revalidatePath("/admin/blog");
+  revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
   return { id: data.id as string };
 }
 
 export async function updateBlogPost(_prevState: unknown, formData: FormData) {
-  await requirePermission("manage_blog");
+  const { user } = await requirePermission("manage_blog");
 
   const parsed = updateBlogPostSchema.safeParse({
     id: formData.get("id"),
@@ -87,27 +95,32 @@ export async function updateBlogPost(_prevState: unknown, formData: FormData) {
     return { error: "Couldn't update that post — try again." };
   }
 
+  await audit(user, "blog_post.update", parsed.data.id, { slug: parsed.data.slug, published: parsed.data.publishedAt !== null });
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
   revalidatePath(`/blog/${parsed.data.slug}`);
 }
 
 export async function deleteBlogPost(_prevState: unknown, formData: FormData) {
-  await requirePermission("manage_blog");
+  const { user } = await requirePermission("manage_blog");
 
   const parsed = blogPostIdSchema.safeParse({ id: formData.get("id") });
   if (!parsed.success) return { error: "Invalid request." };
 
   const admin = createAdminClient();
+  const { data: existing } = await admin.from("blog_posts").select("slug").eq("id", parsed.data.id).maybeSingle();
   const { error } = await admin.from("blog_posts").delete().eq("id", parsed.data.id);
   if (error) return { error: "Couldn't delete that post — try again." };
 
+  await audit(user, "blog_post.delete", parsed.data.id, { slug: existing?.slug ?? null });
   revalidatePath("/admin/blog");
   revalidatePath("/blog");
+  revalidatePath("/sitemap.xml");
 }
 
 export async function createBlogCategory(formData: FormData) {
-  await requirePermission("manage_blog");
+  const { user } = await requirePermission("manage_blog");
 
   const parsed = createBlogCategorySchema.safeParse({ slug: formData.get("slug"), name: formData.get("name") });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -119,11 +132,12 @@ export async function createBlogCategory(formData: FormData) {
     return { error: "Couldn't create that category — try again." };
   }
 
+  await audit(user, "blog_category.create", null, { slug: parsed.data.slug });
   revalidatePath("/admin/blog");
 }
 
 export async function createBlogAuthor(formData: FormData) {
-  await requirePermission("manage_blog");
+  const { user } = await requirePermission("manage_blog");
 
   const parsed = createBlogAuthorSchema.safeParse({
     slug: formData.get("slug"),
@@ -139,5 +153,6 @@ export async function createBlogAuthor(formData: FormData) {
     return { error: "Couldn't create that author — try again." };
   }
 
+  await audit(user, "blog_author.create", null, { slug: parsed.data.slug });
   revalidatePath("/admin/blog");
 }

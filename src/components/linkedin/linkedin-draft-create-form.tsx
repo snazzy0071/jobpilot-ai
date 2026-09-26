@@ -38,7 +38,15 @@ export function LinkedinDraftCreateForm() {
 
     const formData = new FormData(event.currentTarget);
     setLoading(true);
-    const response = await createLinkedinDraft(formData);
+    let response: Awaited<ReturnType<typeof createLinkedinDraft>>;
+    try {
+      response = await createLinkedinDraft(formData);
+    } catch {
+      // A dropped connection rejects the Server Action call itself — without this the button stayed on "Generating…".
+      setLoading(false);
+      setError("Couldn't reach the server — check your connection and try again.");
+      return;
+    }
 
     if ("error" in response) {
       setLoading(false);
@@ -83,6 +91,7 @@ export function LinkedinDraftCreateForm() {
           <Select
             name="targetSeniority"
             value={targetSeniority}
+            items={LINKEDIN_TARGET_SENIORITY_LABELS}
             onValueChange={(value) => value && setTargetSeniority(value as LinkedinTargetSeniority)}
           >
             <SelectTrigger id="linkedin-draft-seniority" className="w-full">

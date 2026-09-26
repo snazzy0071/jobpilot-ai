@@ -10,6 +10,9 @@ export type QuickScanReducedResult = {
   matchedKeywords: string[];
   missingKeywords: string[];
   topFixes: string[];
+  /** False for a general CV/ATS-readiness scan run with no job description (that field is optional) — the raw
+   *  text itself is never stored, so this is what a reopened result later uses to show the right framing. */
+  hasJobDescription: boolean;
 };
 
 /**
@@ -30,6 +33,7 @@ export async function persistQuickScanResult(result: QuickScanReducedResult): Pr
     matched_keywords: result.matchedKeywords,
     missing_keywords: result.missingKeywords,
     top_fixes: result.topFixes,
+    has_job_description: result.hasJobDescription,
     expires_at: expiresAt,
   });
 
@@ -42,7 +46,7 @@ export async function getQuickScanResultByToken(token: string): Promise<QuickSca
   const admin = createAdminClient();
   const { data, error } = await admin
     .from("quick_scan_results")
-    .select("overall_score, summary, matched_keywords, missing_keywords, top_fixes")
+    .select("overall_score, summary, matched_keywords, missing_keywords, top_fixes, has_job_description")
     .eq("token_hash", hashResultToken(token))
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -55,5 +59,6 @@ export async function getQuickScanResultByToken(token: string): Promise<QuickSca
     matchedKeywords: data.matched_keywords as string[],
     missingKeywords: data.missing_keywords as string[],
     topFixes: data.top_fixes as string[],
+    hasJobDescription: data.has_job_description,
   };
 }

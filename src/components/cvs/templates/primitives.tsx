@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { CV_FONT_STACKS } from "@/components/cvs/templates/fonts";
 import { parseDescription } from "@/components/cvs/templates/content";
+import { safeTracking } from "@/components/cvs/templates/design";
 import type {
   BulletStyle,
   ColorRole,
@@ -81,7 +82,7 @@ function headingTextStyle(design: TemplateDesign, tone: Tone): CSSProperties {
     fontSize: h.size,
     fontWeight: h.weight,
     fontStyle: h.italic ? "italic" : "normal",
-    letterSpacing: `${h.tracking}em`,
+    letterSpacing: `${safeTracking(h.tracking)}em`,
     textTransform: h.case === "upper" ? "uppercase" : "none",
     fontVariantCaps: h.case === "small-caps" ? "small-caps" : "normal",
     color: colorOf(tone, h.color),

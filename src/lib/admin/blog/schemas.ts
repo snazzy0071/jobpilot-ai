@@ -3,11 +3,13 @@ import { z } from "zod";
 // Mirrors src/lib/content/blocks.ts's own ContentBlock union exactly —
 // that file is the render-side source of truth, this is the
 // write-side validation of the same shape.
+const BLOCK_TEXT = "Every content block needs some text (or remove the empty block)";
+
 const contentBlockSchema = z.discriminatedUnion("type", [
-  z.object({ type: z.literal("paragraph"), text: z.string().trim().min(1) }),
-  z.object({ type: z.literal("heading"), level: z.union([z.literal(2), z.literal(3)]), id: z.string().trim().min(1), text: z.string().trim().min(1) }),
-  z.object({ type: z.literal("list"), items: z.array(z.string().trim().min(1)).min(1) }),
-  z.object({ type: z.literal("quote"), text: z.string().trim().min(1) }),
+  z.object({ type: z.literal("paragraph"), text: z.string().trim().min(1, BLOCK_TEXT) }),
+  z.object({ type: z.literal("heading"), level: z.union([z.literal(2), z.literal(3)]), id: z.string().trim().min(1, "Every heading needs an anchor id"), text: z.string().trim().min(1, BLOCK_TEXT) }),
+  z.object({ type: z.literal("list"), items: z.array(z.string().trim().min(1, BLOCK_TEXT)).min(1, BLOCK_TEXT) }),
+  z.object({ type: z.literal("quote"), text: z.string().trim().min(1, BLOCK_TEXT) }),
 ]);
 
 // The block editor (src/components/admin/blog/content-block-editor.tsx)

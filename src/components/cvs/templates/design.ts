@@ -90,6 +90,19 @@ export type HeadingStyle =
   | "overline" // heavy rule above the text
   | "square"; // small accent square before the text
 
+/**
+ * The most letter-spacing (in em) a template may put on text. Chromium places letter-spaced text glyph by glyph in
+ * the PDF, and text extraction (an ATS parsing the file) reads a wide enough gap as a space: "EDUCATION" at 0.12em
+ * comes out as "E D U C AT I O N", and the parser no longer finds the Education heading. Where the gap tips over
+ * depends on the face (Montserrat already splits "L ANGUAGES" at 0.1em); at 0.06em every word stays whole in all 24
+ * templates. Every letter-spacing in the templates goes through `safeTracking`, in the preview and the PDF alike, so
+ * the two always match.
+ */
+export const MAX_TRACKING_EM = 0.06;
+export function safeTracking(em: number): number {
+  return Math.min(em, MAX_TRACKING_EM);
+}
+
 export type HeadingDesign = {
   style: HeadingStyle;
   size: number;

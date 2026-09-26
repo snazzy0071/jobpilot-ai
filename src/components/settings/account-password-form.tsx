@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormMessage } from "@/components/settings/form-message";
 
-export function AccountPasswordForm() {
+export function AccountPasswordForm({ requiresPassword = false }: { requiresPassword?: boolean }) {
   const [state, formAction, pending] = useActionState<SettingsResult, FormData>(
     updateAccountPassword,
     undefined,
@@ -15,6 +15,14 @@ export function AccountPasswordForm() {
 
   return (
     <form action={formAction} className="flex max-w-md flex-col gap-4">
+      {requiresPassword && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="currentPasswordForPassword">Current password</Label>
+          <Input id="currentPasswordForPassword" name="currentPassword" type="password" required autoComplete="current-password" />
+          <p className="text-xs text-muted-foreground">We ask for this to confirm it&apos;s really you.</p>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <Label htmlFor="password">New password</Label>
         <Input

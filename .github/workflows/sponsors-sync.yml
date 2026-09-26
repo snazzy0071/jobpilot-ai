@@ -24,11 +24,12 @@ on:
     # doesn't document a fixed one) turns out to differ meaningfully.
     - cron: "0 3 * * *"
   workflow_dispatch:
-    inputs:
-      force:
-        description: "Re-import even if today's source date already completed"
-        type: boolean
-        default: false
+
+concurrency:
+  # Two importers racing over the same ~130k rows (the schedule firing while a manual run is still going) would
+  # corrupt the added/removed accounting; a second run waits for the first instead.
+  group: sponsors-sync
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -53,8 +54,4 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
-          if [ "${{ inputs.force }}" = "true" ]; then
-            node scripts/import-sponsors.mjs --force
-          else
-            node scripts/import-sponsors.mjs
-          fi
+          node scripts/import-sponsors.mjs

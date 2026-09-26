@@ -18,7 +18,7 @@ export default function AtsScannerPage() {
       title="Know before you apply"
       description="Check how your CV reads to the applicant tracking systems that filter applications before a human sees them."
       plan="free"
-      quickAnswer="Yes — scan your CV against a job description for free, with unlimited scans."
+      quickAnswer="Yes. Scan your CV against a job description for free; paid plans add unlimited scans saved to your account."
       demo={<AtsScorePreview />}
       capabilities={[
         "Match your CV against a specific job description",
@@ -52,7 +52,7 @@ export default function AtsScannerPage() {
         },
         {
           question: "How many scans do I get?",
-          answer: "Unlimited, on every plan including Free.",
+          answer: "The Free plan includes a small monthly allowance of quick scans, and the free checker needs no account. Paid plans lift the limit; the pricing page shows the exact allowance for each plan.",
         },
       ]}
     />

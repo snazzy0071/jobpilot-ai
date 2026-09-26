@@ -78,7 +78,7 @@ export function UnavailablePanel({ title }: { title: string }) {
   );
 }
 
-function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
+export function Stat({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
   return (
     <div>
       <dt className="text-xs text-muted-foreground">{label}</dt>
@@ -93,6 +93,7 @@ const SYNC_TONE: Record<SyncState, { tone: Tone; label: string }> = {
   stale: { tone: "warn", label: "Stale" },
   failed: { tone: "bad", label: "Last run failed" },
   never: { tone: "muted", label: "Never run" },
+  running: { tone: "muted", label: "Running" },
 };
 
 const HEALTH_TONE: Record<HealthStatus, { tone: Tone; label: string }> = {
@@ -146,12 +147,12 @@ export function BillingPanel({ billing }: { billing: BillingOverview }) {
   return (
     <Panel
       title="Subscriptions & billing"
-      description="MRR counts active paid subscriptions only. Trials haven't been charged and past-due payments have already failed once."
+      description="MRR counts active paid subscriptions that Stripe bills. Trials haven't been charged, past-due payments have already failed once, and complimentary or access-code plans bring in nothing."
     >
       <dl className="grid grid-cols-3 gap-4">
         <Stat label="MRR" value={formatCount(billing.mrrPence, "gbp")} />
         <Stat label="ARR (MRR × 12)" value={formatCount(billing.arrPence, "gbp")} />
-        <Stat label="Paying" value={billing.activePaid.toLocaleString("en-GB")} />
+        <Stat label="Paying" value={billing.activePaid.toLocaleString("en-GB")} hint={billing.complimentary > 0 ? `+ ${billing.complimentary.toLocaleString("en-GB")} complimentary` : undefined} />
       </dl>
 
       <StackedBar

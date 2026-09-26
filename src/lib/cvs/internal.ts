@@ -313,6 +313,21 @@ export async function ensureHistorySnapshot(
   const lastSnapshotAt = version.last_snapshotted_at ? new Date(version.last_snapshotted_at).getTime() : 0;
   if (Date.now() - lastSnapshotAt < SNAPSHOT_THROTTLE_MS) return;
 
+  // Claim the checkpoint atomically. Several forms can save at the same moment, and each would otherwise see "not
+  // snapshotted recently" and add its own copy. Only the save whose conditional update matches the row (still
+  // unclaimed, or claimed more than the throttle ago) goes on to create it; the others skip.
+  const claimedAt = new Date().toISOString();
+  const cutoff = new Date(Date.now() - SNAPSHOT_THROTTLE_MS).toISOString();
+  const { data: claimed, error: claimError } = await supabase
+    .from("cv_versions")
+    .update({ last_snapshotted_at: claimedAt })
+    .eq("id", versionId)
+    .or(`last_snapshotted_at.is.null,last_snapshotted_at.lt.${cutoff}`)
+    .select("id");
+  if (claimError || !claimed || claimed.length === 0) return;
+  const releaseClaim = () =>
+    supabase.from("cv_versions").update({ last_snapshotted_at: version.last_snapshotted_at }).eq("id", versionId).eq("last_snapshotted_at", claimedAt);
+
   try {
     const sections = await getVersionSections(versionId);
 
@@ -328,6 +343,7 @@ export async function ensureHistorySnapshot(
       .single();
     if (snapshotError || !snapshotVersion) {
       console.error("ensureHistorySnapshot: failed to create snapshot version:", snapshotError?.message);
+      await releaseClaim();
       return;
     }
 
@@ -335,11 +351,49 @@ export async function ensureHistorySnapshot(
     if (!copied) {
       console.error("ensureHistorySnapshot: failed to copy sections into snapshot version");
       await supabase.from("cv_versions").delete().eq("id", snapshotVersion.id);
+      await releaseClaim(); // let the next save try again
       return;
     }
-
-    await supabase.from("cv_versions").update({ last_snapshotted_at: new Date().toISOString() }).eq("id", versionId);
   } catch (err) {
     console.error("ensureHistorySnapshot failed:", err);
+    await releaseClaim();
+  }
+}
+
+/**
+ * A permanent, non-current copy of a CV version's content — what the application tracker freezes when an application
+ * first reaches Applied ("this is the CV I actually sent"). Freezing the current version's *id* would not freeze the
+ * CV: edits are applied to the current version in place, so the same id would show whatever the CV says months later.
+ * The copy shows up in the CV's version history under `label` and can be restored like any checkpoint. Returns the new
+ * version's id, or null if it couldn't be made (nothing half-written is left behind).
+ */
+export async function createSubmittedCvVersion(
+  supabase: SupabaseClient,
+  userId: string,
+  cvId: string,
+  sourceVersionId: string,
+  label: string,
+): Promise<string | null> {
+  try {
+    const sections = await getVersionSections(sourceVersionId);
+    const { data: snapshot, error } = await supabase
+      .from("cv_versions")
+      .insert({ cv_id: cvId, user_id: userId, is_current: false, label: label.slice(0, 200) })
+      .select("id")
+      .single();
+    if (error || !snapshot) {
+      console.error("createSubmittedCvVersion: couldn't create the version:", error?.message);
+      return null;
+    }
+    const copied = await copySectionsToVersion(supabase, userId, snapshot.id, sections);
+    if (!copied) {
+      console.error("createSubmittedCvVersion: couldn't copy the CV content");
+      await supabase.from("cv_versions").delete().eq("id", snapshot.id);
+      return null;
+    }
+    return snapshot.id as string;
+  } catch (err) {
+    console.error("createSubmittedCvVersion failed:", err);
+    return null;
   }
 }

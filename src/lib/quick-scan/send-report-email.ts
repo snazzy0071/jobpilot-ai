@@ -27,7 +27,7 @@ function fixListHtml(fixes: string[]): string {
 function buildReportEmailHtml(result: QuickScanReducedResult, resultLink: string): string {
   const bodyHtml = `
     <h1 style="font-size:18px;margin:0 0 4px;color:#111827;">Your ATS scan result</h1>
-    <p style="font-size:36px;font-weight:700;margin:16px 0 0;">${result.overallScore}<span style="font-size:14px;color:#6b7280;font-weight:400;"> / 100</span></p>
+    <p style="font-size:36px;font-weight:700;margin:16px 0 0;">${result.overallScore}<span style="font-size:14px;color:#6b7280;font-weight:400;"> / 100 ${result.hasJobDescription ? "match with your job description" : "general ATS-readiness"}</span></p>
     <p style="font-size:13px;line-height:1.6;margin:8px 0 20px;">${escapeHtml(result.summary)}</p>
 
     <h2 style="font-size:12px;text-transform:uppercase;letter-spacing:0.04em;color:#6b7280;margin:0 0 6px;">Top matched keywords</h2>

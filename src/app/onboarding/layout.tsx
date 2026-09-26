@@ -4,6 +4,8 @@ import { getCurrentInstitutionBranding } from "@/lib/institutions/queries";
 import { Logo } from "@/components/layout/logo";
 import { InstitutionCobrandBanner } from "@/components/onboarding/institution-cobrand-banner";
 import { SkipLink } from "@/components/layout/skip-link";
+import { SchemeSignupContext } from "@/components/graduate-schemes/scheme-signup-context";
+import { getPendingScheme } from "@/lib/graduate-schemes/signup-server";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 
 // See src/app/(dashboard)/layout.tsx's own comment on why this is set
@@ -19,6 +21,8 @@ export default async function OnboardingLayout({ children }: { children: React.R
   // by proxy.ts, same as every other dashboard-area mutation.
   const user = await requireUser();
   const institution = await getCurrentInstitutionBranding(user.id);
+  // Signed up for a specific graduate scheme: keep it in view, since finishing onboarding takes them straight into its preparation.
+  const scheme = await getPendingScheme(user);
   const impersonation = await getImpersonationStatus();
   const effectiveProfile = impersonation ? await getEffectiveProfile() : null;
   const effectiveUser = impersonation ? await getEffectiveUser() : null;
@@ -32,6 +36,11 @@ export default async function OnboardingLayout({ children }: { children: React.R
       <main id="main-content" className="flex min-h-screen flex-1 flex-col items-center gap-8 px-4 py-16">
         <Logo />
         {institution && <InstitutionCobrandBanner institution={institution} />}
+        {scheme && (
+          <div className="w-full max-w-lg">
+            <SchemeSignupContext scheme={scheme} heading="After this, you'll prepare for" />
+          </div>
+        )}
         <div className="w-full max-w-lg">{children}</div>
       </main>
     </>

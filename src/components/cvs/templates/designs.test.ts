@@ -101,3 +101,15 @@ describe("CV template designs", () => {
     }
   });
 });
+
+describe("letter-spacing stays extractable", () => {
+  it("never exceeds the point where a PDF's text stops reading as whole words", async () => {
+    const { MAX_TRACKING_EM, safeTracking } = await import("@/components/cvs/templates/design");
+    expect(MAX_TRACKING_EM).toBe(0.06);
+    expect(safeTracking(0.22)).toBe(0.06);
+    expect(safeTracking(0.14)).toBe(0.06);
+    expect(safeTracking(0.1)).toBe(0.06);
+    expect(safeTracking(0.04)).toBe(0.04);
+    expect(safeTracking(-0.01)).toBe(-0.01);
+  });
+});

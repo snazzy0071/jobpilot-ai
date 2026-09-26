@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { requireUser } from "@/lib/auth/session";
+import { consumeRateLimit } from "@/lib/ai/rate-limit";
 import { generateCoverLetterPdf } from "@/lib/cover-letters/pdf-export";
 import { sanitizeFilename } from "@/lib/cvs/pdf-export";
 
@@ -21,6 +22,10 @@ export const maxDuration = 60;
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser();
+  // Each export launches a headless browser: cap how fast one account can start them.
+  if (!(await consumeRateLimit(user.id, "cover_letter_export")).allowed) {
+    return NextResponse.json({ error: "You're exporting too quickly — wait a moment and try again." }, { status: 429 });
+  }
 
   const cookieStore = await cookies();
   const forwardedCookies = cookieStore.getAll().map((cookie) => ({ name: cookie.name, value: cookie.value }));

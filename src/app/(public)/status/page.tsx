@@ -16,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = buildMetadata({
   title: "System Status",
-  description: "Live status of JobPilot AI's core services.",
+  description: "Live status of JobPilot AI's core services, including the website, sign-in and database, checked each time you load this page.",
   path: "/status",
 });
 

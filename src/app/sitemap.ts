@@ -2,6 +2,9 @@ import type { MetadataRoute } from "next";
 import { siteConfig } from "@/config/site";
 import { getBlogPosts } from "@/lib/blog/queries";
 import { SPONSOR_CITIES } from "@/config/sponsor-cities";
+import { getGraduateSchemes } from "@/lib/graduate-schemes/queries";
+import { getLiveGuides } from "@/lib/advice/queries";
+import { getLiveComparisons } from "@/lib/comparisons/queries";
 
 // visa-sponsors/companies/[company] is deliberately excluded: there's no
 // real, enumerable set of company slugs yet (no register data connected),
@@ -26,10 +29,13 @@ const STATIC_ROUTES: { path: string; changeFrequency: MetadataRoute.Sitemap[numb
   { path: "/visa-sponsors/cities", changeFrequency: "weekly", priority: 0.6 },
   { path: "/visa-sponsors/statistics", changeFrequency: "weekly", priority: 0.6 },
   { path: "/sponsor-licence-check", changeFrequency: "weekly", priority: 0.7 },
+  { path: "/deadlines", changeFrequency: "daily", priority: 0.8 },
+  { path: "/graduate-schemes", changeFrequency: "daily", priority: 0.8 },
   { path: "/graduate-visa-sponsorship", changeFrequency: "weekly", priority: 0.7 },
   { path: "/compare", changeFrequency: "monthly", priority: 0.6 },
   { path: "/go", changeFrequency: "monthly", priority: 0.6 },
   { path: "/blog", changeFrequency: "daily", priority: 0.7 },
+  { path: "/advice-hub", changeFrequency: "weekly", priority: 0.8 },
   { path: "/about", changeFrequency: "monthly", priority: 0.5 },
   { path: "/contact", changeFrequency: "yearly", priority: 0.4 },
   { path: "/newsletter", changeFrequency: "yearly", priority: 0.4 },
@@ -67,5 +73,32 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticEntries, ...cityEntries, ...postEntries];
+  // Only published schemes that really exist — an empty catalogue contributes no URLs.
+  const schemes = await getGraduateSchemes();
+  const schemeEntries: MetadataRoute.Sitemap = schemes.map((scheme) => ({
+    url: `${siteConfig.domain}/graduate-schemes/${scheme.slug}`,
+    lastModified: scheme.updatedAt,
+    changeFrequency: "weekly",
+    priority: 0.7,
+  }));
+
+  // Live guides only (drafts and scheduled ones aren't public).
+  const guides = await getLiveGuides().catch(() => []);
+  const guideEntries: MetadataRoute.Sitemap = guides.map((guide) => ({
+    url: `${siteConfig.domain}/advice-hub/${guide.slug}`,
+    lastModified: guide.updatedAt,
+    changeFrequency: "monthly",
+    priority: 0.7,
+  }));
+
+  // Live comparison pages only.
+  const comparisons = await getLiveComparisons().catch(() => []);
+  const comparisonEntries: MetadataRoute.Sitemap = comparisons.map((page) => ({
+    url: `${siteConfig.domain}/compare/${page.slug}`,
+    lastModified: page.updatedOn,
+    changeFrequency: "monthly",
+    priority: 0.6,
+  }));
+
+  return [...staticEntries, ...cityEntries, ...postEntries, ...schemeEntries, ...guideEntries, ...comparisonEntries];
 }

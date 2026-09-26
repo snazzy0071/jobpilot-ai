@@ -27,7 +27,7 @@ export async function getJobFeedHealth(): Promise<AdminJobFeedHealth> {
     supabase
       .from("job_imports")
       .select(
-        "id, run_type, status, fetched_count, created_count, updated_count, duplicate_count, deactivated_count, pruned_count, error_message, started_at, completed_at, job_sources(name)",
+        "id, run_type, status, fetched_count, created_count, updated_count, duplicate_count, skipped_count, deactivated_count, pruned_count, error_message, started_at, completed_at, job_sources(name)",
       )
       .order("started_at", { ascending: false })
       .limit(RECENT_RUNS_LIMIT),
@@ -70,6 +70,7 @@ export async function getJobFeedHealth(): Promise<AdminJobFeedHealth> {
       createdCount: run.created_count,
       updatedCount: run.updated_count,
       duplicateCount: run.duplicate_count,
+      skippedCount: run.skipped_count,
       deactivatedCount: run.deactivated_count,
       prunedCount: run.pruned_count,
       errorMessage: run.error_message,

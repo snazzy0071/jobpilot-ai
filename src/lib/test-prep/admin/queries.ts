@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { exhibitSchema, optionFiguresSchema } from "@/lib/test-prep/exhibit";
 import type { AdminTestType, AdminQuestionPack, AdminQuestion } from "@/lib/test-prep/admin/types";
 
 // Every function here reads through the service-role client
@@ -17,7 +18,7 @@ const TEST_TYPE_FIELDS = "id, slug, name, description, created_by, is_active, cr
 const QUESTION_PACK_FIELDS =
   "id, test_type_id, slug, name, description, sector_style, time_limit_seconds, created_by, is_active, created_at, updated_at";
 const QUESTION_FIELDS =
-  "id, question_pack_id, question_type, prompt, options, correct_answer, explanation, difficulty, subtype, display_order, created_by, is_active, created_at, updated_at";
+  "id, question_pack_id, question_type, stimulus, prompt, options, exhibit, option_figures, correct_answer, explanation, difficulty, subtype, display_order, created_by, is_active, created_at, updated_at";
 
 type TestTypeRow = {
   id: string;
@@ -77,8 +78,11 @@ type QuestionRow = {
   id: string;
   question_pack_id: string;
   question_type: AdminQuestion["questionType"];
+  stimulus: string | null;
   prompt: string;
   options: string[];
+  exhibit: unknown;
+  option_figures: unknown;
   correct_answer: string | null;
   explanation: string | null;
   difficulty: AdminQuestion["difficulty"];
@@ -95,8 +99,11 @@ function toAdminQuestion(row: QuestionRow): AdminQuestion {
     id: row.id,
     questionPackId: row.question_pack_id,
     questionType: row.question_type,
+    stimulus: row.stimulus,
     prompt: row.prompt,
     options: row.options,
+    exhibit: row.exhibit && exhibitSchema.safeParse(row.exhibit).success ? exhibitSchema.parse(row.exhibit) : null,
+    optionFigures: row.option_figures && optionFiguresSchema.safeParse(row.option_figures).success ? optionFiguresSchema.parse(row.option_figures) : null,
     correctAnswer: row.correct_answer,
     explanation: row.explanation,
     difficulty: row.difficulty,
@@ -157,4 +164,12 @@ export async function getQuestionById(id: string): Promise<AdminQuestion | null>
   const { data, error } = await supabase.from("questions").select(QUESTION_FIELDS).eq("id", id).maybeSingle();
   if (error || !data) return null;
   return toAdminQuestion(data);
+}
+
+/** Every topic name already in use, for the question form's suggestions — reusing one keeps accuracy grouped. */
+export async function listSubtypes(): Promise<string[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase.from("questions").select("subtype").not("subtype", "is", null).limit(1000);
+  if (error || !data) return [];
+  return [...new Set(data.map((row) => row.subtype as string))].sort();
 }

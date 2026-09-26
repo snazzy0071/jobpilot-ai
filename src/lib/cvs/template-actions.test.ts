@@ -5,6 +5,7 @@ vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/cvs/queries", () => ({ getCvEditorData: vi.fn() }));
 vi.mock("@/lib/entitlements/service", () => ({
   requireUsageAllowed: vi.fn(),
+  getLimit: vi.fn(async () => null),
   releaseUsage: vi.fn(),
   EntitlementError: class EntitlementError extends Error {},
 }));

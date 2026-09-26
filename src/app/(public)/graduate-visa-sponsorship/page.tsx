@@ -32,8 +32,8 @@ const FACTS = [
   },
   {
     icon: Building2,
-    title: "Five major sectors",
-    description: "Consulting, banking & finance, law, technology, and public sector.",
+    title: "Sourced entries only",
+    description: "Only schemes checked against the employer's own information are listed.",
   },
   {
     icon: RefreshCw,
@@ -111,7 +111,12 @@ export default async function GraduateVisaSponsorshipPage() {
           </>
         }
         description="A sourced breakdown of major UK graduate schemes, so you can focus on programmes that can actually sponsor you."
-        actions={<Button size="lg" variant="gradient" render={<a href="#schemes">See the schemes</a>} />}
+        actions={
+          <>
+            <Button size="lg" variant="gradient" render={<a href="#schemes">See the schemes</a>} />
+            <Button size="lg" variant="outline" render={<Link href="/graduate-schemes">Browse all graduate schemes</Link>} />
+          </>
+        }
         visual={<SchemeStatusPreview />}
         footer={
           <div className="mx-auto grid max-w-4xl gap-6 sm:grid-cols-3">

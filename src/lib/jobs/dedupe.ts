@@ -3,12 +3,9 @@ import type { createAdminClient } from "@/lib/supabase/admin";
 import type { NormalizedJobInput } from "@/lib/jobs/types";
 
 /**
- * A job is treated as "the same real-world listing" as another when
- * title/company/location all match after normalization — not a hard DB
- * uniqueness constraint (migration 0060's own comment on
- * `duplicate_of_job_id` explains why: two different real openings can
- * legitimately share all three), so this key is only ever used for an
- * application-level lookup, never a unique index.
+ * A job is treated as "the same real-world listing" as another when company/title/location all match after
+ * normalization — not a hard DB uniqueness constraint (two different real openings can legitimately share all three),
+ * so this key is only an application-level lookup, never a unique index.
  */
 export function duplicateLookupKey(job: {
   companyNameNormalized: string;
@@ -18,45 +15,33 @@ export function duplicateLookupKey(job: {
   return `${job.companyNameNormalized}||${job.titleNormalized}||${job.locationNormalized ?? ""}`;
 }
 
+// The batch is sent as three arrays in one RPC body (not as URL filters), so this only bounds the request size.
+const LOOKUP_CHUNK = 250;
+
 /**
- * One bounded query for a whole batch instead of one lookup per job —
- * fetches every currently-visible, not-already-a-duplicate job whose
- * company name matches any job in this batch (a broad prefilter, since
- * `.in()` on a single column is safe and well-tested, unlike building an
- * `.or()` filter string by hand — same reasoning
- * src/lib/sponsors/queries.ts gives for avoiding that), then narrows to
- * an exact title+location match in application code. Safe at the batch
- * sizes a single sync run produces (bounded by maxPages *
- * resultsPerPage in each adapter's sync.ts, at most a few hundred rows).
+ * For a batch of incoming jobs, which already have a still-visible original (any source)? One set-based query per
+ * chunk (migration 0102's find_visible_job_duplicates) — no URL-length limit, no 1,000-row cap. Returns
+ * duplicateLookupKey -> the original's id. A lookup that fails is an error, not "no duplicates": treating a database
+ * failure as "nothing is a duplicate" would silently publish every duplicate in the batch.
  */
 export async function buildDuplicateLookup(
   supabase: ReturnType<typeof createAdminClient>,
   jobs: NormalizedJobInput[],
 ): Promise<Map<string, string>> {
-  const companyNames = [...new Set(jobs.map((job) => job.companyNameNormalized))];
-  if (companyNames.length === 0) return new Map();
-
-  const { data, error } = await supabase
-    .from("jobs")
-    .select("id, company_name_normalized, title_normalized, location_normalized")
-    .eq("is_active", true)
-    .is("duplicate_of_job_id", null)
-    .in("company_name_normalized", companyNames);
-  if (error || !data) return new Map();
-
   const lookup = new Map<string, string>();
-  for (const row of data) {
-    const key = duplicateLookupKey({
-      companyNameNormalized: row.company_name_normalized,
-      titleNormalized: row.title_normalized,
-      locationNormalized: row.location_normalized,
+
+  for (let start = 0; start < jobs.length; start += LOOKUP_CHUNK) {
+    const part = jobs.slice(start, start + LOOKUP_CHUNK);
+    const { data, error } = await supabase.rpc("find_visible_job_duplicates", {
+      p_company: part.map((job) => job.companyNameNormalized),
+      p_title: part.map((job) => job.titleNormalized),
+      // A job with no location carries a null element; the function compares with "is not distinct from".
+      p_location: part.map((job) => job.locationNormalized),
     });
-    // First match wins — if more than one existing row somehow shares a
-    // key, this links to whichever the query happens to return first
-    // rather than picking one "more correctly"; a real ambiguity like
-    // that is a data-quality question for a human, not something worth
-    // guessing about here.
-    if (!lookup.has(key)) lookup.set(key, row.id);
+    if (error) throw new Error(`Couldn't check for duplicate jobs: ${error.message}`);
+    for (const row of data ?? []) {
+      lookup.set(duplicateLookupKey(part[row.pos - 1]), row.original_id);
+    }
   }
   return lookup;
 }

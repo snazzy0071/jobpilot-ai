@@ -1,6 +1,7 @@
 import type { ReedJobResult } from "@/lib/jobs/adapters/reed/client";
 import type { NormalizedJobInput } from "@/lib/jobs/types";
 import { normalizeForMatch } from "@/lib/jobs/normalize";
+import { cleanFeedText, safeHttpUrl } from "@/lib/jobs/text";
 
 /**
  * Reed gives dates as "dd/MM/yyyy" (UK format), not ISO 8601 like
@@ -9,7 +10,7 @@ import { normalizeForMatch } from "@/lib/jobs/normalize";
  * for anything that doesn't parse cleanly rather than guessing, same
  * "don't fabricate" reasoning as leaving a field out entirely.
  */
-function parseReedDate(value: string | undefined): string | null {
+export function parseReedDate(value: string | undefined): string | null {
   if (!value) return null;
   const match = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(value.trim());
   if (!match) return null;
@@ -35,33 +36,33 @@ function parseReedDate(value: string | undefined): string | null {
  * null.
  */
 export function normalizeReedJob(raw: ReedJobResult): { job: NormalizedJobInput } | { error: string } {
-  const title = raw.jobTitle?.trim();
-  if (!title) return { error: `Reed job ${raw.jobId}: missing jobTitle.` };
+  const id = raw?.jobId === undefined || raw?.jobId === null ? "" : String(raw.jobId).trim();
+  if (!id) return { error: "Reed job without a jobId." };
 
-  const companyName = raw.employerName?.trim();
-  if (!companyName) return { error: `Reed job ${raw.jobId}: missing employerName.` };
+  const title = cleanFeedText(raw.jobTitle).replace(/\s+/g, " ");
+  if (!title) return { error: `Reed job ${id}: missing jobTitle.` };
 
-  const url = raw.jobUrl?.trim();
-  if (!url) return { error: `Reed job ${raw.jobId}: missing jobUrl.` };
+  const companyName = cleanFeedText(raw.employerName).replace(/\s+/g, " ");
+  if (!companyName) return { error: `Reed job ${id}: missing employerName.` };
 
-  const description = raw.jobDescription?.trim();
-  if (!description) return { error: `Reed job ${raw.jobId}: missing jobDescription.` };
+  const url = safeHttpUrl(raw.jobUrl);
+  if (!url) return { error: `Reed job ${id}: missing or invalid jobUrl.` };
 
-  const location = raw.locationName?.trim() || null;
+  const description = cleanFeedText(raw.jobDescription);
+  if (!description) return { error: `Reed job ${id}: missing jobDescription.` };
+
+  const location = cleanFeedText(raw.locationName).replace(/\s+/g, " ") || null;
 
   const postedAt = parseReedDate(raw.date);
   let expiresAt = parseReedDate(raw.expirationDate);
-  // migration 0059's jobs table requires expires_at >= posted_at when
-  // both are set. A batch upsert is one statement — a single row
-  // violating that check would fail the entire sync, not just that
-  // row — so an inconsistent pair from the source is treated as "no
-  // real expiry" rather than crashing the batch or silently reordering
-  // the source's own dates.
+  // The jobs table requires expires_at >= posted_at when both are set. A batch upsert is one statement — a single row
+  // violating that check would fail the entire sync, not just that row — so an inconsistent pair from the source is
+  // treated as "no real expiry" rather than crashing the batch or silently reordering the source's own dates.
   if (postedAt && expiresAt && expiresAt < postedAt) expiresAt = null;
 
   return {
     job: {
-      externalId: String(raw.jobId),
+      externalId: id.slice(0, 300),
       title: title.slice(0, 300),
       titleNormalized: normalizeForMatch(title).slice(0, 300),
       companyName: companyName.slice(0, 300),
@@ -69,7 +70,7 @@ export function normalizeReedJob(raw: ReedJobResult): { job: NormalizedJobInput 
       location: location ? location.slice(0, 200) : null,
       locationNormalized: location ? normalizeForMatch(location).slice(0, 200) : null,
       description: description.slice(0, 50000),
-      url: url.slice(0, 2000),
+      url,
       postedAt,
       expiresAt,
     },

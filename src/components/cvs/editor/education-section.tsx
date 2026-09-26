@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AutosaveStatus } from "@/components/cvs/editor/autosave-status";
 import { useAutosave } from "@/components/cvs/editor/use-autosave";
+import { dropEndDateWhenOngoing } from "@/lib/cvs/save-status";
 import { SectionList, type DragHandleProps } from "@/components/cvs/editor/section-list";
 import { DeleteRowButton } from "@/components/cvs/editor/delete-row-button";
 import { useCvPreview } from "@/components/cvs/editor/preview-context";
@@ -28,12 +29,16 @@ function EducationForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [rowId, setRowId] = useState<string | null>(initial?.id ?? null);
   const [isCurrent, setIsCurrent] = useState(initial?.isCurrent ?? false);
-  const { setLiveEducation } = useCvPreview();
-  const rowKey = initial?.id ?? "new";
+  const { setLiveEducation, rekeyLiveEducation } = useCvPreview();
+  // The row's real id once it has one (it is inserted by its first save), so the live preview edit follows the row.
+  const rowKey = rowId ?? "new";
 
   const { status, errorMessage, scheduleSave, flush } = useAutosave(saveEducation, {
     onSaved: (id) => {
-      if (id) setRowId(id);
+      if (id) {
+        rekeyLiveEducation("new", id);
+        setRowId(id);
+      }
     },
   });
 
@@ -41,7 +46,7 @@ function EducationForm({
     if (!formRef.current) return null;
     const formData = new FormData(formRef.current);
     if (rowId) formData.set("id", rowId);
-    return formData;
+    return dropEndDateWhenOngoing(formData, "isCurrent");
   }
 
   function handleChange() {

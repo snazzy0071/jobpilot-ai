@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { parseRedirectParam } from "@/lib/auth/safe-redirect";
 import { resolvePostAuthPath } from "@/lib/auth/role-redirect";
 import { sendWelcomeEmailOnce } from "@/lib/auth/welcome-email";
+import { enrollByVerifiedDomain } from "@/lib/institutions/enrollment/domain";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
@@ -25,6 +26,7 @@ export async function GET(request: NextRequest) {
       if (type === "signup" && data.user?.email) {
         await sendWelcomeEmailOnce(data.user.id, data.user.email, (data.user.user_metadata?.full_name as string | undefined) ?? null);
       }
+      if (type === "signup" && data.user) await enrollByVerifiedDomain(data.user.id);
       const { data: profile } = data.user
         ? await supabase.from("profiles").select("role").eq("id", data.user.id).single()
         : { data: null };

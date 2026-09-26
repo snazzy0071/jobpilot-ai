@@ -46,7 +46,8 @@ export default async function QuickScanResultPage({ params }: { params: Promise<
               </div>
             </div>
             <p className="text-sm text-muted-foreground">
-              <span className="sr-only">{result.overallScore} </span>/ 100 match with this job description
+              <span className="sr-only">{result.overallScore} </span>
+              {result.hasJobDescription ? "/ 100 match with this job description" : "/ 100 general ATS-readiness"}
             </p>
           </div>
           <p className="text-sm">{result.summary}</p>

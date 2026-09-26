@@ -61,7 +61,9 @@ export function FreeAtsCheckerForm() {
         <div className="flex flex-col gap-4">
           <div className="flex items-baseline gap-2">
             <span className={`text-4xl font-semibold ${scoreTone(result.overallScore)}`}>{result.overallScore}</span>
-            <span className="text-sm text-muted-foreground">/ 100 match with this job description</span>
+            <span className="text-sm text-muted-foreground">
+              {result.hasJobDescription ? "/ 100 match with this job description" : "/ 100 general ATS-readiness"}
+            </span>
           </div>
           <p className="text-sm">{result.summary}</p>
 
@@ -159,14 +161,13 @@ export function FreeAtsCheckerForm() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="jobDescription">Job description</Label>
+          <Label htmlFor="jobDescription">Job description (optional)</Label>
           <Textarea
             id="jobDescription"
             name="jobDescription"
-            required
             rows={8}
             maxLength={20000}
-            placeholder="Paste the full job listing here..."
+            placeholder="Paste the full job listing here for a job-matched score — or leave it blank for a general ATS-readiness check."
           />
         </div>
 

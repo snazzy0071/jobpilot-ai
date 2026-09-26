@@ -1,63 +1,68 @@
-// Types for the practice-taking flow (src/lib/test-prep/practice/
-// actions.ts) — distinct from src/lib/test-prep/types.ts's own
-// `Question`/`TestSession`/`TestAnswer`, which describe the *stored*
-// shape. These describe what a Server Action actually hands back to
-// the client at each step.
+// Types for the practice-taking flow (src/lib/test-prep/practice/actions.ts) — what a Server Action hands back to the
+// client at each step. Distinct from src/lib/test-prep/types.ts, which describes the stored shapes.
 
-/** `expiresAt` is the server's own deadline snapshot (migration 0070) — the client seeds its countdown display from this, never from the pack's own `timeLimitSeconds` prop, so the displayed clock can't drift from what the server will actually enforce. */
-export type StartSessionResult = { error: string } | { sessionId: string; totalQuestions: number; expiresAt: string | null };
+import type { Question, TestSessionMode } from "@/lib/test-prep/types";
 
-/**
- * The one place `correctAnswer`/`explanation` are ever sent to the
- * client for a specific question — and only *after* that question has
- * actually been answered (submitAnswer grades it server-side, through
- * the service-role client, before this is built — see that function's
- * own comment). The practice engine accumulates one of these per
- * answered question in local state; that's also what the results
- * screen replays, so completing a session never needs a second
- * privileged fetch of the same data.
- *
- * `{ expired: true }` is the third, distinct outcome: the session's own
- * `expires_at` (set once at start, never client-supplied) had already
- * passed when this submission arrived, so nothing was graded or stored
- * — a late answer is rejected outright, not silently accepted. The
- * client's only correct reaction is to finish the session immediately.
- */
-export type SubmitAnswerResult =
-  | { error: string }
-  | { expired: true }
-  | {
-      questionId: string;
-      selectedAnswer: string | null;
-      isCorrect: boolean | null;
-      correctAnswer: string | null;
-      explanation: string | null;
-    };
-
-/** The one graded-and-stored shape of `SubmitAnswerResult` — what the practice engine actually keeps, one per answered question, keyed by `questionId`. Shared with `src/lib/test-prep/practice/summary.ts`, which is what turns a map of these into a session summary. */
-export type AnsweredState = Extract<SubmitAnswerResult, { questionId: string }>;
+/** Set when the plan doesn't include Test Prep — the UI shows the upgrade prompt instead of a generic error. */
+export type ActionError = { error: string; locked?: true };
 
 /**
- * `startedAt`/`completedAt` are both real server timestamps (the
- * former stored once at `startTestSession`, migration 0070's own
- * `started_at`; the latter set the moment this session actually
- * finished) — the session-summary screen derives duration from these
- * rather than anything client-clocked, same "server is the timing
- * authority" reasoning `expires_at` already established. Everything
- * else in the summary (accuracy, subtype breakdown, wrong-answer
- * explanations, recommended retry areas) is derived client-side from
- * data the practice engine already holds in full — the pack's own
- * `questions` (subtype/difficulty) plus the `answers` map it
- * accumulated during the session (correctness/explanations) — so this
- * result never needs to duplicate that with a second privileged fetch.
+ * The one place `correctAnswer`/`explanation` are ever sent to the client for a specific question. In practice mode that
+ * is right after the question is answered; in timed mode it is only in the review returned when the session is finished,
+ * so a timed attempt never reveals an answer while the clock is running (the server doesn't send it, not merely hides it).
  */
-export type CompleteSessionResult =
-  | { error: string }
-  | {
-      correctCount: number;
-      answeredCount: number;
-      totalQuestions: number;
-      score: number;
-      startedAt: string;
-      completedAt: string;
-    };
+export type AnsweredState = {
+  questionId: string;
+  selectedAnswer: string | null;
+  isCorrect: boolean | null;
+  correctAnswer: string | null;
+  explanation: string | null;
+};
+
+/** A timed-mode answer that was stored but is deliberately not graded on screen yet. */
+export type SavedAnswer = { questionId: string; selectedAnswer: string | null; saved: true };
+
+export type SubmitAnswerResult = ActionError | { expired: true } | AnsweredState | SavedAnswer;
+
+export function isAnsweredState(result: SubmitAnswerResult): result is AnsweredState {
+  return "isCorrect" in result;
+}
+
+export type StartedSession = {
+  sessionId: string;
+  mode: TestSessionMode;
+  totalQuestions: number;
+  /** The server's own deadline (migration 0070) for a timed session, null otherwise. The client's countdown is only a display of this. */
+  expiresAt: string | null;
+  /** The exact questions this session serves, in order (test_session_questions). */
+  questions: Question[];
+  /** Answers already given, when an in-progress session is resumed (the daily five). Practice-mode feedback. */
+  answers: AnsweredState[];
+  /** Answers already stored in a resumed timed session: selected only, never graded. */
+  savedAnswers: SavedAnswer[];
+};
+
+export type StartSessionResult = ActionError | StartedSession;
+
+export type SessionResult = {
+  correctCount: number;
+  answeredCount: number;
+  totalQuestions: number;
+  score: number;
+  startedAt: string;
+  completedAt: string;
+};
+
+/** Everything the results screen needs, in one round trip: the score and, for every question, the answer key and explanation. */
+export type CompleteSessionResult = ActionError | (SessionResult & { questions: Question[]; answers: AnsweredState[] });
+
+export type SessionReviewMeta = {
+  sessionId: string;
+  mode: TestSessionMode;
+  isDaily: boolean;
+  focusSubtype: string | null;
+  packName: string | null;
+  expiresAt: string | null;
+};
+
+export type SessionReview = ActionError | (SessionResult & { questions: Question[]; answers: AnsweredState[]; meta: SessionReviewMeta });

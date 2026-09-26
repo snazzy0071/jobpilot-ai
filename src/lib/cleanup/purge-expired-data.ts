@@ -72,11 +72,35 @@ export async function purgeExpiredInstitutionInvites(supabase: ReturnType<typeof
   return data?.length ?? 0;
 }
 
+// email_send_logs: a delivery log holding recipient ADDRESSES. Useful for troubleshooting a missing email for a few months, not
+// forever (GDPR storage limitation), so anything older than 13 months goes.
+const EMAIL_LOG_RETENTION_DAYS = 400;
+
+export async function purgeOldEmailSendLogs(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
+  const cutoff = new Date(Date.now() - EMAIL_LOG_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from("email_send_logs").delete().lt("created_at", cutoff).select("id");
+  if (error) throw new Error(`Couldn't purge old email send logs: ${error.message}`);
+  return data?.length ?? 0;
+}
+
+// stripe_webhook_failures: error text from failed webhook deliveries. Only RESOLVED failures older than 90 days are removed; an
+// unresolved one is still an open problem and stays until it is fixed.
+const WEBHOOK_FAILURE_RETENTION_DAYS = 90;
+
+export async function purgeResolvedWebhookFailures(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
+  const cutoff = new Date(Date.now() - WEBHOOK_FAILURE_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from("stripe_webhook_failures").delete().not("resolved_at", "is", null).lt("resolved_at", cutoff).select("id");
+  if (error) throw new Error(`Couldn't purge resolved webhook failures: ${error.message}`);
+  return data?.length ?? 0;
+}
+
 export type PurgeExpiredDataResult = {
   quickScanResultsPurged: number;
   anonymousRateLimitsPurged: number;
   aiRateLimitWindowsPurged: number;
   institutionInvitesPurged: number;
+  emailSendLogsPurged: number;
+  webhookFailuresPurged: number;
   errors: string[];
 };
 
@@ -116,5 +140,8 @@ export async function purgeExpiredData(): Promise<PurgeExpiredDataResult> {
   const aiRateLimitWindowsPurged = await run("ai_rate_limit_windows", () => purgeStaleAiRateLimitWindows(supabase));
   const institutionInvitesPurged = await run("institution_invites", () => purgeExpiredInstitutionInvites(supabase));
 
-  return { quickScanResultsPurged, anonymousRateLimitsPurged, aiRateLimitWindowsPurged, institutionInvitesPurged, errors };
+  const emailSendLogsPurged = await run("email_send_logs", () => purgeOldEmailSendLogs(supabase));
+  const webhookFailuresPurged = await run("stripe_webhook_failures", () => purgeResolvedWebhookFailures(supabase));
+
+  return { quickScanResultsPurged, anonymousRateLimitsPurged, aiRateLimitWindowsPurged, institutionInvitesPurged, emailSendLogsPurged, webhookFailuresPurged, errors };
 }

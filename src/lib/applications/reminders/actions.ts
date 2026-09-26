@@ -53,6 +53,7 @@ export async function createReminder(formData: FormData): Promise<ReminderAction
 
   if (error || !data) return { error: "Couldn't save that reminder — try again." };
 
+  revalidatePath("/dashboard/applications");
   revalidatePath(`/dashboard/applications/${parsed.data.applicationId}/edit`);
   return {
     reminder: {
@@ -93,6 +94,7 @@ export async function completeReminder(
   if (error) return { error: "Couldn't update that reminder — try again." };
 
   revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/applications/[id]/edit", "page");
   return { success: "Marked done." };
 }
 
@@ -110,5 +112,6 @@ export async function deleteReminder(
   if (error) return { error: "Couldn't delete that reminder — try again." };
 
   revalidatePath("/dashboard/applications");
+  revalidatePath("/dashboard/applications/[id]/edit", "page");
   return { success: "Deleted." };
 }

@@ -7,6 +7,7 @@ import { getStripeClient } from "@/lib/stripe/client";
 import { getVoiceTopupPriceId } from "@/lib/stripe/prices";
 import { resolveStripeCustomerId } from "@/lib/stripe/customer";
 import { siteConfig } from "@/config/site";
+import { isSafeRelativePath } from "@/lib/auth/safe-redirect";
 import { VOICE_TOPUP_CREDITS } from "@/lib/interviews/topup-config";
 
 export type VoiceTopupResult = { error: string } | void;
@@ -53,13 +54,21 @@ export async function purchaseVoiceTopup(
   const customerId = await resolveStripeCustomerId(stripe, user.id, user.email);
   const { periodStart } = getCurrentCalendarPeriod();
 
+  // `returnPath` arrives as a Server Action argument, which a caller can set to anything: only a same-site path is used, and the
+  // outcome flag is added as a real query parameter (Stripe would otherwise be told to send the buyer to an attacker's address).
+  const returnUrl = (outcome: "success" | "canceled") => {
+    const url = new URL(isSafeRelativePath(returnPath) ? returnPath : "/dashboard/settings?tab=billing", siteConfig.domain);
+    url.searchParams.set("topup", outcome);
+    return url.toString();
+  };
+
   const session = await stripe.checkout.sessions.create({
     mode: "payment",
     customer: customerId,
     line_items: [{ price: priceId, quantity: 1 }],
     client_reference_id: user.id,
-    success_url: `${siteConfig.domain}${returnPath}?topup=success`,
-    cancel_url: `${siteConfig.domain}${returnPath}?topup=canceled`,
+    success_url: returnUrl("success"),
+    cancel_url: returnUrl("canceled"),
     metadata: {
       supabase_user_id: user.id,
       kind: "voice_topup",

@@ -6,10 +6,15 @@ import {
   getSponsorMatchesForJobs,
   getJobMatchesForCv,
   getSavedJobIds,
+  getTrackedApplicationIds,
+  getJobFeedStatus,
 } from "@/lib/jobs/queries";
+import type { JobSponsorMatch } from "@/lib/jobs/sponsor-match";
 import { JOB_SORTS, type JobSearchFilters, type JobSort } from "@/lib/jobs/types";
 import { JobFeedFilters } from "@/components/jobs/job-feed-filters";
 import { JobFeedResults } from "@/components/jobs/job-feed-results";
+import { JobFeedStatusNotice } from "@/components/jobs/job-feed-status";
+import { JobsSectionNav } from "@/components/jobs/jobs-section-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -33,11 +38,9 @@ export default async function JobFeedPage({ searchParams }: { searchParams: Prom
   const user = await requireUser();
   const params = await searchParams;
 
-  const [cvs, sources] = await Promise.all([listCvs(user.id), listJobSources()]);
-  // Only a CV with a real current version can actually be matched
-  // against (src/lib/jobs/matching/actions.ts needs a saved version to
-  // build CV text from) — an archived CV or one with no version yet
-  // isn't a valid pick here.
+  const [cvs, sources, feedStatus] = await Promise.all([listCvs(user.id), listJobSources(), getJobFeedStatus()]);
+  // Only a CV with a real current version can actually be matched against (src/lib/jobs/matching/actions.ts builds CV
+  // text from a saved version) — an archived CV or one with no version yet isn't a valid pick here.
   const selectableCvs = cvs.filter((cv) => !cv.isArchived && cv.currentVersionId);
   const selectedCv = params.cv ? selectableCvs.find((cv) => cv.id === params.cv) : undefined;
 
@@ -60,20 +63,31 @@ export default async function JobFeedPage({ searchParams }: { searchParams: Prom
   const result = await searchJobs(filters);
 
   const jobIds = result.results.map((job) => job.id);
-  const [sponsorMatches, jobMatches, savedJobIds] = await Promise.all([
-    getSponsorMatchesForJobs(result.results),
+  const [sponsorLookup, jobMatches, savedJobIds, trackedApplicationIds] = await Promise.all([
+    getSponsorMatchesForJobs(result.results).then(
+      (matches) => ({ matches, failed: false }),
+      (err) => {
+        console.error("Job feed sponsor cross-check failed:", err);
+        return { matches: new Map<string, JobSponsorMatch>(), failed: true };
+      },
+    ),
     selectedCv?.currentVersionId ? getJobMatchesForCv(jobIds, selectedCv.currentVersionId) : Promise.resolve(new Map()),
     getSavedJobIds(jobIds),
+    getTrackedApplicationIds(jobIds),
   ]);
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="font-heading text-2xl font-semibold tracking-tight">Job Feed</h1>
         <p className="mt-1 text-muted-foreground">
           Jobs synced from Adzuna and Reed, searched locally — no live call to either happens while you browse.
         </p>
       </div>
+
+      <JobsSectionNav active="feed" />
+
+      <JobFeedStatusNotice status={feedStatus} />
 
       <JobFeedFilters
         sources={sources}
@@ -93,9 +107,12 @@ export default async function JobFeedPage({ searchParams }: { searchParams: Prom
       <JobFeedResults
         result={result}
         sources={sources}
-        sponsorMatches={sponsorMatches}
+        sponsorMatches={sponsorLookup.matches}
+        sponsorCheckFailed={sponsorLookup.failed}
         jobMatches={jobMatches}
         savedJobIds={savedJobIds}
+        trackedApplicationIds={trackedApplicationIds}
+        feedHasJobs={feedStatus.totalVisible > 0}
         cvId={selectedCv?.id ?? null}
         searchParams={params}
       />

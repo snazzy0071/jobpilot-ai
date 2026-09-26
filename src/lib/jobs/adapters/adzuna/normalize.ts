@@ -1,44 +1,38 @@
 import type { AdzunaJobResult } from "@/lib/jobs/adapters/adzuna/client";
 import type { NormalizedJobInput } from "@/lib/jobs/types";
 import { normalizeForMatch } from "@/lib/jobs/normalize";
+import { cleanFeedText, safeHttpUrl, safePostedAt } from "@/lib/jobs/text";
 
 /**
- * Maps one raw Adzuna result onto migration 0059's `jobs` shape. Adzuna
- * gives no expiry for a listing, so `expiresAt` is always null here —
- * never guessed at a default TTL, same "don't fabricate a freshness
- * signal that isn't real" reasoning as that migration's own header
- * comment on `posted_at`.
+ * Maps one raw Adzuna result onto the jobs table's shape. Adzuna gives no expiry for a listing, so `expiresAt` is
+ * always null here — never guessed at a default TTL (a job that stops appearing is retired by the maintenance sweep's
+ * last_seen_at rule instead).
  *
- * Returns an error string instead of throwing when a result is missing
- * a field this schema requires (title/company/url/description) — one
- * malformed listing from an external feed shouldn't abort an entire
- * sync run, same "report per-row, skip, keep going" approach the
- * graduate schemes CSV importer uses.
+ * Returns an error string instead of throwing when a result is missing a field the table requires — one malformed
+ * listing from an external feed must not abort a whole run, and (because a batch upsert is one statement) must never
+ * reach the database where its check constraint would fail every other row with it.
  */
 export function normalizeAdzunaJob(raw: AdzunaJobResult): { job: NormalizedJobInput } | { error: string } {
-  const title = raw.title?.trim();
-  if (!title) return { error: `Adzuna job ${raw.id}: missing title.` };
+  const id = raw?.id === undefined || raw?.id === null ? "" : String(raw.id).trim();
+  if (!id) return { error: "Adzuna job without an id." };
 
-  const companyName = raw.company?.display_name?.trim();
-  if (!companyName) return { error: `Adzuna job ${raw.id}: missing company name.` };
+  const title = cleanFeedText(raw.title).replace(/\s+/g, " ");
+  if (!title) return { error: `Adzuna job ${id}: missing title.` };
 
-  const url = raw.redirect_url?.trim();
-  if (!url) return { error: `Adzuna job ${raw.id}: missing redirect_url.` };
+  const companyName = cleanFeedText(raw.company?.display_name).replace(/\s+/g, " ");
+  if (!companyName) return { error: `Adzuna job ${id}: missing company name.` };
 
-  const description = raw.description?.trim();
-  if (!description) return { error: `Adzuna job ${raw.id}: missing description.` };
+  const url = safeHttpUrl(raw.redirect_url);
+  if (!url) return { error: `Adzuna job ${id}: missing or invalid redirect_url.` };
 
-  const location = raw.location?.display_name?.trim() || null;
+  const description = cleanFeedText(raw.description);
+  if (!description) return { error: `Adzuna job ${id}: missing description.` };
 
-  // Adzuna's `created` is already ISO 8601 — passed through as-is
-  // rather than reformatted, so an unexpected value fails validation at
-  // the DB boundary (a timestamptz column) instead of being silently
-  // coerced into something wrong here.
-  const postedAt = raw.created?.trim() || null;
+  const location = cleanFeedText(raw.location?.display_name).replace(/\s+/g, " ") || null;
 
   return {
     job: {
-      externalId: raw.id,
+      externalId: id.slice(0, 300),
       title: title.slice(0, 300),
       titleNormalized: normalizeForMatch(title).slice(0, 300),
       companyName: companyName.slice(0, 300),
@@ -46,8 +40,8 @@ export function normalizeAdzunaJob(raw: AdzunaJobResult): { job: NormalizedJobIn
       location: location ? location.slice(0, 200) : null,
       locationNormalized: location ? normalizeForMatch(location).slice(0, 200) : null,
       description: description.slice(0, 50000),
-      url: url.slice(0, 2000),
-      postedAt,
+      url,
+      postedAt: safePostedAt(raw.created),
       expiresAt: null,
     },
   };

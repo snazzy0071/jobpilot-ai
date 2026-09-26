@@ -51,7 +51,7 @@ export function TemplateRenderer({
     return (
       <TemplateThumbnailFrame backgroundImage={backgroundImage}>
         <div className={CV_FONT_CLASS_NAMES} data-cv-template={resolvedSlug}>
-          <CvDocument data={data} design={design} mode="flow" />
+          <CvDocument data={{ ...data, staticLinks: true }} design={design} mode="flow" />
         </div>
       </TemplateThumbnailFrame>
     );

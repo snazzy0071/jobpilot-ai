@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { exhibitSchema, optionFiguresSchema } from "@/lib/test-prep/exhibit";
 import type { TestType, QuestionPack, Question, PracticeProgress } from "@/lib/test-prep/types";
 
 // Every function here reads through the anon-respecting client
@@ -11,7 +12,8 @@ import type { TestType, QuestionPack, Question, PracticeProgress } from "@/lib/t
 
 const TEST_TYPE_FIELDS = "id, slug, name, description, is_active";
 const QUESTION_PACK_FIELDS = "id, test_type_id, slug, name, description, sector_style, time_limit_seconds, is_active";
-const QUESTION_FIELDS = "id, question_pack_id, question_type, prompt, options, difficulty, subtype, display_order, is_active";
+export const QUESTION_FIELDS =
+  "id, question_pack_id, question_type, stimulus, prompt, options, exhibit, option_figures, difficulty, subtype, display_order, is_active";
 
 type TestTypeRow = { id: string; slug: string; name: string; description: string | null; is_active: boolean };
 
@@ -43,25 +45,34 @@ function toQuestionPack(row: QuestionPackRow): QuestionPack {
   };
 }
 
-type QuestionRow = {
+export type QuestionRow = {
   id: string;
   question_pack_id: string;
   question_type: Question["questionType"];
+  stimulus: string | null;
   prompt: string;
   options: string[];
+  exhibit: unknown;
+  option_figures: unknown;
   difficulty: Question["difficulty"];
   subtype: string | null;
   display_order: number;
   is_active: boolean;
 };
 
-function toQuestion(row: QuestionRow): Question {
+/** A stored exhibit is validated on the way out too: a malformed row must show as a question without a picture, never crash the practice screen. */
+export function toQuestion(row: QuestionRow): Question {
+  const exhibit = row.exhibit ? exhibitSchema.safeParse(row.exhibit) : null;
+  const figures = row.option_figures ? optionFiguresSchema.safeParse(row.option_figures) : null;
   return {
     id: row.id,
     questionPackId: row.question_pack_id,
     questionType: row.question_type,
+    stimulus: row.stimulus,
     prompt: row.prompt,
     options: row.options,
+    exhibit: exhibit?.success ? exhibit.data : null,
+    optionFigures: figures?.success ? figures.data : null,
     difficulty: row.difficulty,
     subtype: row.subtype,
     displayOrder: row.display_order,
@@ -159,4 +170,15 @@ export async function listPracticeProgress(userId: string): Promise<PracticeProg
     bestScore: row.best_score,
     lastPracticedAt: row.last_practiced_at,
   }));
+}
+
+/** Active question count per active pack (migration 0109's test_prep_pack_counts), for the catalogue. */
+export async function getPackQuestionCounts(): Promise<Map<string, number>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("test_prep_pack_counts");
+  if (error) {
+    console.error("getPackQuestionCounts failed:", error.message);
+    return new Map();
+  }
+  return new Map(((data ?? []) as { question_pack_id: string; question_count: number | string }[]).map((row) => [row.question_pack_id, Number(row.question_count)]));
 }

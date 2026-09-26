@@ -10,7 +10,14 @@ export type AuditEntityType =
   | "institution_member"
   | "admin_role"
   | "admin_user_role"
-  | "app_settings";
+  | "app_settings"
+  | "sponsor_sync"
+  | "test_prep"
+  | "graduate_scheme"
+  | "advice_guide"
+  | "blog_post"
+  | "comparison_page"
+  | "lead";
 
 /**
  * Call this *after* the real privileged action has already succeeded,

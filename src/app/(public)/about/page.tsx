@@ -23,6 +23,7 @@ import { StaggerContainer } from "@/components/motion/stagger-container";
 import { StaggerItem } from "@/components/motion/stagger-item";
 import { siteConfig } from "@/config/site";
 import { TOOLS } from "@/config/tools";
+import { JsonLd } from "@/components/seo/json-ld";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
@@ -183,6 +184,7 @@ export default function AboutPage() {
         </Reveal>
       </Section>
 
+      <JsonLd data={{ "@context": "https://schema.org", "@type": "AboutPage", name: `About ${siteConfig.name}`, url: `${siteConfig.domain}/about`, isPartOf: { "@id": `${siteConfig.domain}/#website` }, about: { "@id": `${siteConfig.domain}/#organization` } }} />
       <CtaSection title="See what one workspace feels like" description="Create a free account. No card required.">
         <Button size="lg" variant="secondary" render={<Link href="/signup">Create free account</Link>} />
         <Button

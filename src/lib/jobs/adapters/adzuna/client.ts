@@ -1,14 +1,11 @@
 import "server-only";
 import { getAdzunaEnv } from "@/lib/jobs/adapters/adzuna/env";
-import { readResponseWithCap, exceedsDeclaredLength } from "@/lib/net/response-cap";
+import { fetchFeedJson, requireResultsArray } from "@/lib/jobs/adapters/feed-fetch";
+import { JobFeedError } from "@/lib/jobs/feed-error";
 
 const ADZUNA_BASE_URL = "https://api.adzuna.com/v1/api/jobs";
 /** Adzuna's own per-page ceiling for the search endpoint. */
 const MAX_RESULTS_PER_PAGE = 50;
-const REQUEST_TIMEOUT_MS = 15_000;
-// Generous for a page of up to 50 job listings with descriptions —
-// same ceiling src/lib/net/safe-fetch.ts uses for a whole web page.
-const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
 
 export type AdzunaSearchParams = {
   /** Free-text keywords (Adzuna's `what`). */
@@ -21,14 +18,11 @@ export type AdzunaSearchParams = {
 };
 
 /**
- * Adzuna's own response shape — every field beyond `id`/`title`/
- * `redirect_url` is optional here even where their docs imply it's
- * always present, since this is unverified against a live account
- * (no Adzuna credentials in this environment) and a normalizer that
- * assumes too much would crash on the first listing that doesn't match.
+ * Adzuna's own response shape — every field beyond `id` is optional here even where their docs imply it's always
+ * present: the normalizer rejects a listing that lacks what the jobs table requires, one listing at a time.
  */
 export type AdzunaJobResult = {
-  id: string;
+  id: string | number;
   title?: string;
   description?: string;
   created?: string;
@@ -37,51 +31,29 @@ export type AdzunaJobResult = {
   location?: { display_name?: string };
 };
 
-type AdzunaSearchResponse = {
-  results?: AdzunaJobResult[];
-  count?: number;
-};
-
 /**
- * One page of the UK ("gb") job search. Credentials come from
- * getAdzunaEnv() — process.env read server-side only, never accepted as
- * a parameter here, so there's no call shape that could route a client-
- * supplied key through this function by mistake.
+ * One page of the UK ("gb") job search, newest first. Credentials come from getAdzunaEnv() — process.env read
+ * server-side only, never a parameter here, so no call shape can route a client-supplied key through this function.
  */
-export async function fetchAdzunaJobsPage(params: AdzunaSearchParams = {}): Promise<{
-  results: AdzunaJobResult[];
-  count: number;
-}> {
-  const { ADZUNA_APP_ID, ADZUNA_APP_KEY } = getAdzunaEnv();
+export async function fetchAdzunaJobsPage(params: AdzunaSearchParams = {}): Promise<{ results: AdzunaJobResult[] }> {
+  let credentials;
+  try {
+    credentials = getAdzunaEnv();
+  } catch (err) {
+    throw new JobFeedError("not_configured", err instanceof Error ? err.message : "Adzuna isn't configured.");
+  }
   const page = Math.max(1, params.page ?? 1);
   const resultsPerPage = Math.min(MAX_RESULTS_PER_PAGE, Math.max(1, params.resultsPerPage ?? MAX_RESULTS_PER_PAGE));
 
   const url = new URL(`${ADZUNA_BASE_URL}/gb/search/${page}`);
-  url.searchParams.set("app_id", ADZUNA_APP_ID);
-  url.searchParams.set("app_key", ADZUNA_APP_KEY);
+  url.searchParams.set("app_id", credentials.ADZUNA_APP_ID);
+  url.searchParams.set("app_key", credentials.ADZUNA_APP_KEY);
   url.searchParams.set("results_per_page", String(resultsPerPage));
+  url.searchParams.set("sort_by", "date");
   url.searchParams.set("content-type", "application/json");
   if (params.keywords) url.searchParams.set("what", params.keywords);
   if (params.location) url.searchParams.set("where", params.location);
 
-  const response = await fetch(url, { method: "GET", signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
-  if (!response.ok) {
-    // Adzuna's own error body sometimes has useful detail (e.g. "Invalid
-    // app_id or app_key") — surfaced in the thrown message, but never
-    // the request URL itself, which carries the credentials as query
-    // params.
-    const body = await response.text().catch(() => "");
-    throw new Error(`Adzuna search failed (${response.status}): ${body.slice(0, 300)}`);
-  }
-
-  if (exceedsDeclaredLength(response, MAX_RESPONSE_BYTES)) {
-    throw new Error("Adzuna search response declared an implausibly large body — refusing to read it.");
-  }
-  const body = await readResponseWithCap(response, MAX_RESPONSE_BYTES);
-  if (body === null) {
-    throw new Error("Adzuna search response was larger than expected — refusing to read it.");
-  }
-
-  const data = JSON.parse(body.toString("utf-8")) as AdzunaSearchResponse;
-  return { results: data.results ?? [], count: data.count ?? 0 };
+  const data = await fetchFeedJson("Adzuna", url, { method: "GET" });
+  return { results: requireResultsArray("Adzuna", data) as AdzunaJobResult[] };
 }

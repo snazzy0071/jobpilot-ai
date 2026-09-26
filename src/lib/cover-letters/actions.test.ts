@@ -8,8 +8,14 @@ vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
 // revalidatePath needs a real Next.js request-rendering context
 // (App Router's static-generation store) that plain Vitest has no
 // reason to provide — a no-op here, same as every other Next-runtime-
-// only API this session's integration tests stub out.
+// only API this session's integration tests stub out. redirect() is
+// mocked the same way (a plain vi.fn(), not the real throwing
+// implementation) so a successful generateCoverLetter call returns
+// normally instead of throwing NEXT_REDIRECT — the test asserts on the
+// mock's call args instead of a caught exception, same pattern as
+// src/lib/cvs/template-actions.test.ts.
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 
 const CV_ID = "11111111-1111-1111-8111-111111111111";
 
@@ -95,9 +101,12 @@ describe("generateCoverLetter", () => {
     (createClient as ReturnType<typeof vi.fn>).mockResolvedValue(stubSupabase(log));
 
     const { generateCoverLetter } = await import("@/lib/cover-letters/actions");
-    const result = await generateCoverLetter(generateForm());
+    const { redirect } = await import("next/navigation");
+    await generateCoverLetter(generateForm());
 
-    expect(result).toEqual({ coverLetterId: "cover_letters-1" });
+    // A successful generate redirects straight to the new letter's editor, server-side — not a value the client
+    // then has to `router.push` itself (see generateCoverLetter's own doc comment for why that distinction matters).
+    expect(redirect).toHaveBeenCalledWith("/dashboard/cover-letters/cover_letters-1");
     const paragraphsInsert = log.find((entry) => entry.table === "cover_letter_paragraphs");
     const paragraphs = paragraphsInsert?.payload as { content: string; display_order: number }[];
     expect(paragraphs).toHaveLength(3);

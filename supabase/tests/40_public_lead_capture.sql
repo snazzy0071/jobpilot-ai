@@ -1,9 +1,6 @@
--- Public lead-capture tables (newsletter, contact, demo, partner
--- inquiries): anonymous INSERT must work (that's the entire point of a
--- public form) while SELECT stays denied to everyone but the
--- service-role client — "anyone can submit, nobody but future admin
--- tooling can read submissions back" per each table's own migration
--- comment (0011-0014).
+-- Public lead-capture tables (newsletter, contact, demo, partner inquiries): since migration 0124 anonymous INSERT is DENIED (the form
+-- actions write with the service role after their per-IP rate limit and validation, so the database API cannot be used to skip them),
+-- and SELECT stays denied to everyone but admins and the service role.
 
 begin;
 
@@ -14,27 +11,31 @@ select tests.clear_authentication();
 
 select tests.authenticate_as_anon();
 
-select lives_ok(
+select throws_ok(
   $$insert into public.contact_messages (name, email, subject, message) values ('Test Name', 'test@test.local', 'Subject', 'Message body.')$$,
-  'anon CAN insert into contact_messages (public lead-capture form)'
+  '42501',
+  'anon can NOT insert into contact_messages directly (migration 0124: the form actions write with the service role after their rate limit)'
 );
 select is((select count(*)::int from public.contact_messages where email = 'test@test.local'), 0, 'anon cannot read contact_messages back');
 
-select lives_ok(
+select throws_ok(
   $$insert into public.demo_requests (institution_name, contact_name, email) values ('Test Institution', 'Test Contact', 'demo@test.local')$$,
-  'anon CAN insert into demo_requests (public lead-capture form)'
+  '42501',
+  'anon can NOT insert into demo_requests directly (migration 0124: the form actions write with the service role after their rate limit)'
 );
 select is((select count(*)::int from public.demo_requests where email = 'demo@test.local'), 0, 'anon cannot read demo_requests back');
 
-select lives_ok(
+select throws_ok(
   $$insert into public.partner_inquiries (organisation_name, contact_name, email, partnership_type, message) values ('Test Org', 'Test Contact', 'partner@test.local', 'Other', 'Inquiry message.')$$,
-  'anon CAN insert into partner_inquiries (public lead-capture form)'
+  '42501',
+  'anon can NOT insert into partner_inquiries directly (migration 0124: the form actions write with the service role after their rate limit)'
 );
 select is((select count(*)::int from public.partner_inquiries where email = 'partner@test.local'), 0, 'anon cannot read partner_inquiries back');
 
-select lives_ok(
+select throws_ok(
   $$insert into public.newsletter_subscribers (email, consent_source) values ('newsletter@test.local', 'newsletter_page')$$,
-  'anon CAN insert into newsletter_subscribers (public lead-capture form)'
+  '42501',
+  'anon can NOT insert into newsletter_subscribers directly (migration 0124: the form actions write with the service role after their rate limit)'
 );
 select is((select count(*)::int from public.newsletter_subscribers where email = 'newsletter@test.local'), 0, 'anon cannot read newsletter_subscribers back');
 

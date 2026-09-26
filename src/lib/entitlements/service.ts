@@ -2,6 +2,9 @@ import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentSubscription } from "@/lib/billing/queries";
+import { statusGrantsPlan } from "@/lib/billing/subscription-state";
+import { getInstitutionLicencePlan } from "@/lib/institutions/licence-access";
+import { institutionPlanWins } from "@/lib/institutions/licence";
 import type { FeatureKey, MeteredKey, UsageCheck } from "@/lib/entitlements/types";
 
 /**
@@ -39,10 +42,15 @@ import type { FeatureKey, MeteredKey, UsageCheck } from "@/lib/entitlements/type
 // period instead of cutting access off at the first missed payment.
 // Anything else (canceled, incomplete, incomplete_expired — mapped to
 // canceled in src/lib/billing/sync.ts) falls back to Free.
-const ENTITLED_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+export type PlanSource = "subscription" | "institution" | "free";
 
 export type ResolvedEntitlements = {
   planSlug: string;
+  /** Display name of the plan in force. */
+  planName: string;
+  /** Where the plan in force comes from: the person's own subscription (paid or granted), their institution's licence, or nothing (Free). */
+  source: PlanSource;
   entitlements: Record<string, unknown>;
 };
 
@@ -67,13 +75,24 @@ async function getFreeEntitlements(): Promise<Record<string, unknown>> {
  * is built on top of it.
  */
 export async function getEntitlements(userId: string): Promise<ResolvedEntitlements> {
-  const subscription = await getCurrentSubscription(userId);
+  const [subscription, licence] = await Promise.all([getCurrentSubscription(userId), getInstitutionLicencePlan(userId)]);
 
-  if (subscription && ENTITLED_STATUSES.has(subscription.status)) {
-    return { planSlug: subscription.planSlug, entitlements: subscription.entitlements };
+  const personal =
+    subscription && statusGrantsPlan(subscription.status)
+      ? { planSlug: subscription.planSlug, planName: subscription.planName, entitlements: subscription.entitlements }
+      : { planSlug: "free", planName: "Free", entitlements: null as Record<string, unknown> | null };
+
+  // A member of an institution with a licence in force gets that plan when it is better than their own (see licence-access.ts).
+  if (licence && institutionPlanWins(personal.planSlug, licence.planSlug)) {
+    return { planSlug: licence.planSlug, planName: licence.planName, source: "institution", entitlements: licence.entitlements };
   }
 
-  return { planSlug: "free", entitlements: await getFreeEntitlements() };
+  return {
+    planSlug: personal.planSlug,
+    planName: personal.planName,
+    source: personal.planSlug === "free" ? "free" : "subscription",
+    entitlements: personal.entitlements ?? (await getFreeEntitlements()),
+  };
 }
 
 export async function hasFeature(userId: string, key: FeatureKey): Promise<boolean> {
@@ -132,7 +151,7 @@ export function getCurrentCalendarPeriod(): { periodStart: string; periodEnd: st
  * credits, not "trust the client" — under-granting capacity is always
  * the safe direction for a limit check.
  */
-async function getVoiceTopupCredits(userId: string): Promise<number> {
+export async function getVoiceTopupCredits(userId: string): Promise<number> {
   const { periodStart } = getCurrentCalendarPeriod();
   const supabase = await createClient();
   const { data, error } = await supabase

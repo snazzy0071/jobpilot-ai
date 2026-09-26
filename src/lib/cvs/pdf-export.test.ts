@@ -26,3 +26,15 @@ describe("resolveRenderOrigin", () => {
     expect(resolveRenderOrigin("not a url")).toBe("https://jobpilotai.com");
   });
 });
+
+describe("isTransientNavigationError", () => {
+  it("retries only when the browser page went away, never for a real rendering problem", async () => {
+    const { isTransientNavigationError } = await import("@/lib/cvs/pdf-export");
+    expect(isTransientNavigationError(new Error("Navigating frame was detached"))).toBe(true);
+    expect(isTransientNavigationError(new Error("boom", { cause: new Error("LifecycleWatcher disposed") }))).toBe(true);
+    expect(isTransientNavigationError(new Error("Protocol error: Target closed"))).toBe(true);
+    expect(isTransientNavigationError(new Error("Print page responded with 404"))).toBe(false);
+    expect(isTransientNavigationError(new Error("The print page didn't say which template/version it rendered."))).toBe(false);
+    expect(isTransientNavigationError("not an error")).toBe(false);
+  });
+});

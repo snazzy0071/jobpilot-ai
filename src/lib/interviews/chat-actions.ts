@@ -252,6 +252,10 @@ export async function submitInterviewAnswer(
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
   const supabase = await createClient();
+  // Captured here rather than read off `parsed.data` inside persistCandidateReply below — narrowing on `parsed.success`
+  // doesn't carry into a nested function.
+  const { answerText: replyText, durationSeconds: replyDurationSeconds } = parsed.data;
+
   const session = await getSessionForChat(supabase, user.id, sessionId);
   if (!session) return { error: "That interview couldn't be found." };
   if (session.status !== "in_progress") return { error: "This interview has already ended." };
@@ -266,24 +270,32 @@ export async function submitInterviewAnswer(
   const currentQuestionId = lastInterviewerTurn.questionId;
 
   let nextIndex = await nextSequenceIndex(supabase, sessionId);
-  const candidateTurn = await insertTranscriptTurn(supabase, {
-    sessionId,
-    userId: user.id,
-    questionId: currentQuestionId,
-    speaker: "candidate",
-    content: parsed.data.answerText,
-    sequenceIndex: nextIndex,
-  });
-  if (!candidateTurn) return { error: "Couldn't save that answer — try again." };
-  await appendAnswer(supabase, {
-    questionId: currentQuestionId,
-    userId: user.id,
-    replyText: parsed.data.answerText,
-    durationSeconds: parsed.data.durationSeconds,
-  });
-  nextIndex += 1;
 
-  const newTurns: InterviewTranscriptTurn[] = [toTurn(candidateTurn, "candidate")];
+  // The candidate's reply is only persisted once the interviewer's next move has actually succeeded (or, on the hard
+  // question ceiling below, once there's no AI decision to wait for). Persisting it first — as this used to — meant
+  // any failed AI call (a rate limit, a provider outage) left an orphaned reply in the transcript and the answer
+  // text, which the candidate's natural retry then duplicated: a corrupted transcript and a doubled answer for the
+  // scorer. Nothing here is saved on a failed turn, so retrying is always safe.
+  async function persistCandidateReply(): Promise<InterviewTranscriptTurn | null> {
+    const inserted = await insertTranscriptTurn(supabase, {
+      sessionId,
+      userId: user.id,
+      questionId: currentQuestionId,
+      speaker: "candidate",
+      content: replyText,
+      sequenceIndex: nextIndex,
+    });
+    if (!inserted) return null;
+    await appendAnswer(supabase, {
+      questionId: currentQuestionId,
+      userId: user.id,
+      replyText,
+      durationSeconds: replyDurationSeconds,
+    });
+    nextIndex += 1;
+    return toTurn(inserted, "candidate");
+  }
+
   const primaryQuestionCount = await countPrimaryQuestions(supabase, sessionId);
 
   const { data: currentQuestionRow } = await supabase
@@ -295,6 +307,9 @@ export async function submitInterviewAnswer(
 
   // Hard ceiling — force conclude with no AI call once the max is reached.
   if (primaryQuestionCount >= MAX_QUESTIONS) {
+    const savedReply = await persistCandidateReply();
+    if (!savedReply) return { error: "Couldn't save that answer — try again." };
+    const newTurns: InterviewTranscriptTurn[] = [savedReply];
     const closing = "That's a great place to stop — thank you for your thoughtful answers, that concludes this mock interview.";
     const closingTurn = await insertTranscriptTurn(supabase, {
       sessionId,
@@ -334,7 +349,10 @@ export async function submitInterviewAnswer(
           difficulty: session.difficulty,
           cvText: session.cvTextSnapshot,
           focusCompetencies: session.focusCompetencies,
-          transcript: formatTranscriptForPrompt([...transcriptSoFar, toTurn(candidateTurn, "candidate")]),
+          transcript: formatTranscriptForPrompt([
+            ...transcriptSoFar,
+            { id: "pending-reply", speaker: "candidate", content: replyText, questionId: currentQuestionId, sequenceIndex: nextIndex },
+          ]),
           questionsAskedSoFar: primaryQuestionCount,
           canConclude,
           mustAdvance,
@@ -345,6 +363,10 @@ export async function submitInterviewAnswer(
   } catch (err) {
     return { error: safeErrorMessage(err) };
   }
+
+  const candidateTurn = await persistCandidateReply();
+  if (!candidateTurn) return { error: "Couldn't save that answer — try again." };
+  const newTurns: InterviewTranscriptTurn[] = [candidateTurn];
 
   // Defense in depth — never fully trust the model for hard limits it was only asked, not forced, to respect.
   let action = result.action;

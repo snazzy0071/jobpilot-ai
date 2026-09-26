@@ -27,7 +27,7 @@ export function FeatureCard({
   index?: number;
 }) {
   const card = (
-    <Card variant={href ? "feature" : "plain"} className="h-full">
+    <Card variant={href ? "feature" : "plain"} className={href ? "card-ring h-full" : "h-full"}>
       <CardHeader>
         <div className="mb-2 flex items-start justify-between">
           <CardIcon icon={icon} />

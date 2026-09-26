@@ -12,6 +12,7 @@
     "test:watch": "vitest",
     "test:e2e": "node --env-file=.env.local scripts/run-e2e.mjs",
     "test:e2e:mocked": "node --env-file=.env.local scripts/run-e2e-mocked.mjs",
+    "test:e2e:billing": "node --env-file=.env.local scripts/run-e2e-billing.mjs",
     "supabase:check": "node --env-file=.env.local scripts/check-supabase.mjs",
     "sponsors:import": "node --env-file=.env.local scripts/import-sponsors.mjs",
     "admin:promote": "node --env-file=.env.local scripts/promote-admin.mjs",

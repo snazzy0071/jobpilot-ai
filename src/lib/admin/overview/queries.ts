@@ -1,6 +1,7 @@
 import "server-only";
 import { z } from "zod";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { deriveSponsorSyncState } from "@/lib/admin/sponsors/sync-state";
 import type {
   AdminOverview,
   BillingOverview,
@@ -47,6 +48,7 @@ const snapshotSchema = z.object({
       annual_price_pence: num,
       status: z.string(),
       billing_cycle: z.string().nullable(),
+      stripe_billed: z.boolean().catch(false),
       count: num,
     }),
   ),
@@ -96,12 +98,12 @@ function sumWindow(points: DailyPoint[]): WindowTotals {
   );
 }
 
-function summariseBilling(
+export function summariseBilling(
   rows: z.infer<typeof snapshotSchema>["subscriptions"],
   events: Record<string, number>,
 ): BillingOverview {
   const byPlan = new Map<string, SubscriptionPlanRow>();
-  const overall = { activePaid: 0, trialing: 0, pastDue: 0, incomplete: 0, canceled: 0, mrrPence: 0 };
+  const overall = { activePaid: 0, complimentary: 0, trialing: 0, pastDue: 0, incomplete: 0, canceled: 0, mrrPence: 0 };
 
   for (const row of rows) {
     const plan =
@@ -111,7 +113,10 @@ function summariseBilling(
 
     if (row.status === "active") {
       plan.active += row.count;
-      if (isPaid) {
+      if (isPaid && !row.stripe_billed) {
+        // On a paid plan but nothing is being charged (an access code or a complimentary grant): not revenue.
+        overall.complimentary += row.count;
+      } else if (isPaid) {
         const monthly = row.billing_cycle === "annual" ? Math.round(row.annual_price_pence / 12) : row.monthly_price_pence;
         plan.mrrPence += monthly * row.count;
         overall.activePaid += row.count;
@@ -204,10 +209,16 @@ async function getSponsorSync(): Promise<SponsorSync> {
       .from("sponsor_sync_status")
       .select("completed_at, sponsor_count, added_count, reactivated_count, deactivated_count")
       .maybeSingle(),
-    admin.from("sponsor_imports").select("status, error_message").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+    admin.from("sponsor_imports").select("status, started_at, error_message").order("started_at", { ascending: false }).limit(1).maybeSingle(),
   ]);
   return {
-    state: syncState(latest?.status ?? null, status?.completed_at ?? null),
+    // The sponsor register syncs daily but is only republished on working days, so it has its own (36h) staleness
+    // window and stuck-run detection — shared with the /admin/sponsors page so the two can't disagree.
+    state: deriveSponsorSyncState({
+      latestStatus: latest?.status ?? null,
+      latestStartedAt: latest?.started_at ?? null,
+      lastCompletedAt: status?.completed_at ?? null,
+    }),
     lastCompletedAt: status?.completed_at ?? null,
     sponsorCount: status?.sponsor_count ?? null,
     added: status?.added_count ?? null,
@@ -295,9 +306,10 @@ const EMPTY_SNAPSHOT = snapshotSchema.parse({
  */
 export async function getAdminOverview(): Promise<{ overview: AdminOverview; loadError: string | null }> {
   const admin = createAdminClient();
-  const [dailyResult, snapshotResult, jobSources, sponsors, recentFailures] = await Promise.all([
+  const [dailyResult, snapshotResult, breakdownResult, jobSources, sponsors, recentFailures] = await Promise.all([
     admin.rpc("admin_overview_daily", { p_days: CHART_DAYS * 2 }),
     admin.rpc("admin_overview_snapshot"),
+    admin.rpc("admin_subscription_breakdown"),
     getJobSources(),
     getSponsorSync(),
     getRecentFailures(8),
@@ -340,6 +352,20 @@ export async function getAdminOverview(): Promise<{ overview: AdminOverview; loa
     }
   }
 
+  // Subscriptions come from their own function (migration 0122) because it knows which ones Stripe actually bills.
+  let subscriptions = snapshot.subscriptions.map((row) => ({ ...row, stripe_billed: false }));
+  if (breakdownResult.error) {
+    errors.push(`subscriptions (${breakdownResult.error.message})`);
+    subscriptions = [];
+  } else {
+    const parsed = snapshotSchema.shape.subscriptions.safeParse(breakdownResult.data);
+    if (parsed.success) subscriptions = parsed.data;
+    else {
+      errors.push("subscriptions (unexpected response shape)");
+      subscriptions = [];
+    }
+  }
+
   const daily = allDaily.slice(-CHART_DAYS);
   const previousDaily = allDaily.slice(0, Math.max(0, allDaily.length - CHART_DAYS));
   const current = sumWindow(daily);
@@ -376,7 +402,7 @@ export async function getAdminOverview(): Promise<{ overview: AdminOverview; loa
       active7d: snapshot.active_users.d7,
       active30d: snapshot.active_users.d30,
     },
-    billing: summariseBilling(snapshot.subscriptions, snapshot.billing_events_30d),
+    billing: summariseBilling(subscriptions, snapshot.billing_events_30d),
     ai: {
       calls30d: current.aiCalls,
       failed30d: current.aiFailed,
@@ -404,5 +430,5 @@ export async function getAdminOverview(): Promise<{ overview: AdminOverview; loa
     recentFailures,
   };
 
-  return { overview, loadError: errors.length > 0 ? `Some figures couldn't be loaded: ${errors.join("; ")}. Have migrations 0090 and 0091 been applied?` : null };
+  return { overview, loadError: errors.length > 0 ? `Some figures couldn't be loaded: ${errors.join("; ")}. Have migrations 0090, 0091 and 0122 been applied?` : null };
 }

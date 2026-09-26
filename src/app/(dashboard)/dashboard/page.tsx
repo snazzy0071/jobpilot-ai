@@ -8,10 +8,13 @@ import {
   UserCircleIcon,
   FlameIcon,
   MailIcon,
+  CalendarClockIcon,
+  ClipboardCheckIcon,
 } from "lucide-react";
 import { requireOnboardedUser } from "@/lib/auth/session";
 import { getAllToolAccessStates } from "@/lib/entitlements/tool-access";
-import { getDashboardOverview } from "@/lib/dashboard/overview";
+import { getDashboardOverview, STRONG_MATCH_SCORE } from "@/lib/dashboard/overview";
+import { deadlineLabel } from "@/lib/dashboard/deadlines";
 import { listCvs } from "@/lib/cvs/queries";
 import { listCoverLetters } from "@/lib/cover-letters/queries";
 import { listInterviewSessions } from "@/lib/interviews/queries";
@@ -23,7 +26,9 @@ import { DailyAtsActionCard } from "@/components/dashboard/daily-ats-action-card
 import { DailyPracticeCard } from "@/components/test-prep/daily-practice-card";
 import {
   ApplicationsByStageCard,
+  DeadlinesCard,
   InterviewsCard,
+  JobMatchesCard,
   NextActionsCard,
   OverviewMetricCard,
   PlanUsageCard,
@@ -61,7 +66,7 @@ export default async function DashboardPage() {
     getDashboardOverview(user.id),
   ]);
 
-  const { funnel, applications, savedJobs, preferences, testPrep, planSlug } = overview;
+  const { funnel, applications, savedJobs, preferences, testPrep, planSlug, jobMatches, deadlines, recentScans, recentTestSessions } = overview;
 
   const accessByToolSlug = new Map(accessStates.map((state) => [state.toolSlug, state]));
   const activeCvs = cvs.filter((cv) => !cv.isArchived);
@@ -70,7 +75,10 @@ export default async function DashboardPage() {
   const completedInterviews = interviewSessions.filter((session) => session.status === "completed");
   const openInterview = interviewSessions.find((session) => session.status === "in_progress") ?? null;
   const inProgressCount = interviewSessions.filter((session) => session.status === "in_progress").length;
-  const hasAtsScan = latestScoredCv !== null;
+  // The most recent scan the user actually ran (any source), else the score stored on a CV.
+  const latestScan = recentScans[0] ?? null;
+  const latestAtsScore = latestScan?.score ?? latestScoredCv?.atsScore ?? null;
+  const hasAtsScan = latestAtsScore !== null;
   const atInterviewStage = funnel.byStage.find((stage) => stage.status === "interview")?.currentCount ?? 0;
   const appliedCount = funnel.byStage.find((stage) => stage.status === "applied")?.currentCount ?? 0;
 
@@ -108,7 +116,7 @@ export default async function DashboardPage() {
     cv: { value: String(activeCvs.length), unit: activeCvs.length === 1 ? "CV" : "CVs" },
     "cover-letter": { value: String(coverLetters.length), unit: coverLetters.length === 1 ? "letter" : "letters" },
     ...(completedInterviews.length > 0 && { interview: { value: String(completedInterviews.length), unit: "done" } }),
-    ...(latestScoredCv?.atsScore != null && { ats: { value: String(latestScoredCv.atsScore), unit: "/100" } }),
+    ...(latestAtsScore !== null && { ats: { value: String(latestAtsScore), unit: "/100" } }),
     ...(linkedinDrafts.length > 0 && { linkedin: { value: String(linkedinDrafts.length), unit: linkedinDrafts.length === 1 ? "draft" : "drafts" } }),
   };
 
@@ -126,10 +134,15 @@ export default async function DashboardPage() {
   // most valuable first, capped so the card stays a short list.
   const weakRecommendation = testPrep.recommendations.find((rec) => rec.kind === "weak_subtype");
   const nextActions: NextAction[] = [];
+  const nextDeadline = deadlines[0];
+  if (nextDeadline && nextDeadline.daysLeft <= 7) nextActions.push({ icon: CalendarClockIcon, title: `${deadlineLabel(nextDeadline.daysLeft)}: ${nextDeadline.title}`, description: nextDeadline.kind === "scheme" ? "A graduate scheme you can apply for is closing." : "A deadline on an application you have not sent yet.", href: nextDeadline.href });
   if (openInterview) nextActions.push({ icon: MessagesSquareIcon, title: `Finish your ${openInterview.role} interview`, description: "Pick up the practice session you left open.", href: `/dashboard/interview/${openInterview.id}` });
+  const bestMatch = jobMatches.top[0];
+  if (bestMatch && bestMatch.score >= STRONG_MATCH_SCORE) nextActions.push({ icon: ClipboardCheckIcon, title: `Review your ${bestMatch.score}% match: ${bestMatch.title}`, description: `${bestMatch.company} — a strong fit for your CV.`, href: "/dashboard/jobs" });
   if (activeCvs.length === 0) nextActions.push({ icon: FileTextIcon, title: "Build your first CV", description: "A UK-standard template, ready in minutes.", href: "/dashboard/cvs" });
   if (activeCvs.length > 0 && !hasAtsScan) nextActions.push({ icon: ScanSearchIcon, title: "Run an ATS scan on your CV", description: "See what a recruiter's filter would catch.", href: "/dashboard/ats-scanner" });
   if (completion.some((item) => !item.done)) nextActions.push({ icon: UserCircleIcon, title: "Complete your profile", description: "Better preferences mean better job matches.", href: "/dashboard/settings" });
+  if (activeCvs.length > 0 && jobMatches.scored === 0) nextActions.push({ icon: TargetIcon, title: "Score a job against your CV", description: "See how well you match a real listing.", href: "/dashboard/jobs" });
   if (savedJobs.total === 0) nextActions.push({ icon: TargetIcon, title: "Save your first roles", description: "Browse live UK listings scored against your CV.", href: "/dashboard/jobs" });
   if (funnel.totalApplications === 0) nextActions.push({ icon: BriefcaseIcon, title: "Track an application", description: "Follow it from wishlist to offer.", href: "/dashboard/applications/new" });
   if (weakRecommendation && weakRecommendation.kind === "weak_subtype") nextActions.push({ icon: FlameIcon, title: `Drill ${weakRecommendation.subtype}`, description: `${weakRecommendation.accuracy}% accuracy so far — your weakest area.`, href: "/dashboard/test-prep" });
@@ -145,6 +158,8 @@ export default async function DashboardPage() {
     ...interviewSessions.map((session) => ({ id: `iv-${session.id}`, icon: MessagesSquareIcon, title: `${session.status === "completed" ? "Completed" : "Started"} interview · ${session.role}`, detail: session.company ?? "Practice session", at: session.createdAt, href: `/dashboard/interview/${session.id}` })),
     ...applications.map((application) => ({ id: `app-${application.id}`, icon: BriefcaseIcon, title: `${application.jobTitle} · ${application.companyName}`, detail: `Application · ${application.status}`, at: application.updatedAt, href: `/dashboard/applications/${application.id}/edit` })),
     ...savedJobs.latest.map((job) => ({ id: `sj-${job.id}`, icon: TargetIcon, title: `Saved ${job.jobTitle}`, detail: job.companyName, at: job.createdAt, href: "/dashboard/jobs" })),
+    ...recentScans.map((scan) => ({ id: `ats-${scan.id}`, icon: ScanSearchIcon, title: "ATS scan", detail: `Score ${scan.score}/100`, at: scan.at, href: "/dashboard/ats-scanner" })),
+    ...recentTestSessions.map((session) => ({ id: `ts-${session.id}`, icon: FlameIcon, title: "Test prep session", detail: `Scored ${session.score}%`, at: session.at, href: "/dashboard/test-prep/progress" })),
     ...linkedinDrafts.map((draft) => ({ id: `li-${draft.id}`, icon: IdCardIcon, title: draft.title, detail: `LinkedIn · ${draft.targetRole}`, at: draft.updatedAt, href: `/dashboard/linkedin/${draft.id}` })),
   ]
     .filter((entry) => Boolean(entry.at))
@@ -153,7 +168,7 @@ export default async function DashboardPage() {
 
   // ---- test prep accuracy
   const accuracies = testPrep.accuracyHistory.map((point) => point.accuracy);
-  const averageAccuracy = accuracies.length > 0 ? Math.round(accuracies.reduce((sum, value) => sum + value, 0) / accuracies.length) : null;
+  const overallAccuracy = testPrep.totals.accuracy;
   const bestAccuracy = accuracies.length > 0 ? Math.max(...accuracies) : null;
 
   // ---- welcome copy: the "your interview's still open" nudge the
@@ -188,10 +203,10 @@ export default async function DashboardPage() {
           <OverviewMetricCard
             icon={ScanSearchIcon}
             label="Latest ATS score"
-            value={latestScoredCv?.atsScore ?? null}
+            value={latestAtsScore}
             suffix="/100"
             empty="Not scanned yet"
-            caption={latestScoredCv ? latestScoredCv.title : "Scan a CV to see your score"}
+            caption={latestScan ? `Scanned ${daysAgoLabel(latestScan.at)}` : latestScoredCv ? latestScoredCv.title : "Scan a CV to see your score"}
             href="/dashboard/ats-scanner"
           />
         </StaggerItem>
@@ -244,10 +259,16 @@ export default async function DashboardPage() {
         <SponsorActivityCard funnel={funnel} />
         <TestPrepInsightCard
           sessionCount={testPrep.accuracyHistory.length}
-          averageAccuracy={averageAccuracy}
+          overallAccuracy={overallAccuracy}
+          answerCount={testPrep.totals.answers}
           bestAccuracy={bestAccuracy}
           weakArea={weakRecommendation && weakRecommendation.kind === "weak_subtype" ? weakRecommendation.subtype : null}
         />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <JobMatchesCard scored={jobMatches.scored} strong={jobMatches.strong} top={jobMatches.top} strongThreshold={STRONG_MATCH_SCORE} />
+        <DeadlinesCard items={deadlines} />
       </div>
 
       <DailyPracticeCard />

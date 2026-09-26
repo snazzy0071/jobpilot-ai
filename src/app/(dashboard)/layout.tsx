@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { requireOnboardedUser, getImpersonationStatus } from "@/lib/auth/session";
+import { getEntitlements } from "@/lib/entitlements/service";
 import { getAppSettings } from "@/lib/admin/settings/queries";
 import { DashboardSidebar, DASHBOARD_NAV_ITEMS } from "@/components/layout/dashboard-sidebar";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -28,7 +29,8 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, profile } = await requireOnboardedUser();
-  const plan = profile?.plan ?? "free";
+  // The plan actually in force (own subscription, or the better of it and the institution licence) — profiles.plan is only a legacy free/paid flag.
+  const { planSlug: plan } = await getEntitlements(user.id);
   const { announcementActive, announcementMessage } = await getAppSettings();
   // See src/lib/auth/impersonation.ts — when active, `user`/`profile`
   // above are already the impersonation TARGET's own (requireOnboardedUser()

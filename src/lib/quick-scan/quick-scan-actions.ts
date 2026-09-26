@@ -16,6 +16,19 @@ const MAX_FIXES_SHOWN = 3;
 const IMPORTANCE_RANK: Record<"high" | "medium" | "low", number> = { high: 0, medium: 1, low: 2 };
 const PRIORITY_RANK: Record<"high" | "medium" | "low", number> = { high: 0, medium: 1, low: 2 };
 
+// atsScanPrompt (shared with the authenticated scanner) is written around comparing a CV to a specific job
+// description — every dimension it scores, and matchedKeywords/missingKeywords especially, assume one is there.
+// The job description is optional here, so a caller who skips it still gets a coherent result: this stands in for
+// it, telling the model plainly that there's no real role to match keywords against, so it falls back to general
+// ATS-readiness and professional CV quality instead of inventing a job it was never given.
+const NO_JOB_DESCRIPTION_PLACEHOLDER =
+  "No specific job description was provided for this scan. Don't invent one or assume a particular role — score " +
+  "and review this CV on general ATS-readiness and professional CV quality instead: clear, standard section " +
+  "headings; consistent, unambiguous dates; complete contact details; a real, specific summary and experience " +
+  "bullets (not generic filler); no formatting an ATS parser would choke on. For matchedKeywords/missingKeywords, " +
+  "use widely-expected professional CV terms (skills, tools, qualifications a reader would look for) rather than " +
+  "job-specific ones, since there is no job description to draw them from.";
+
 export type QuickScanResult =
   | { error: string }
   // Deliberately "same scoring core, reduced output": no structure/
@@ -131,7 +144,7 @@ export async function runQuickScan(formData: FormData): Promise<QuickScanResult>
       {
         ...toPromptCallOptions(atsScanPrompt, {
           cvText: parsed.document.text,
-          jobDescription: parsedFields.data.jobDescription,
+          jobDescription: parsedFields.data.jobDescription ?? NO_JOB_DESCRIPTION_PLACEHOLDER,
         }),
         schema: atsScanSchema,
       },
@@ -152,6 +165,7 @@ export async function runQuickScan(formData: FormData): Promise<QuickScanResult>
         .sort((a, b) => PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority])
         .slice(0, MAX_FIXES_SHOWN)
         .map((fix) => fix.message),
+      hasJobDescription: parsedFields.data.jobDescription !== undefined,
     };
 
     let resultToken: string | null = null;

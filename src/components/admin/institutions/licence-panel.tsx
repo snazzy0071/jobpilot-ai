@@ -9,7 +9,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createInstitutionLicence, deactivateInstitutionLicence } from "@/lib/admin/institutions/actions";
+import { createInstitutionLicence, deactivateInstitutionLicence, updateInstitutionLicence } from "@/lib/admin/institutions/actions";
+import { LICENCE_STATE_LABELS } from "@/lib/institutions/licence";
 import type { AdminInstitutionLicenceDetail } from "@/lib/admin/institutions/types";
 
 function formatDate(iso: string | null): string {
@@ -39,6 +40,50 @@ function DeactivateButton({ licenceId }: { licenceId: string }) {
       {pending ? <Loader2Icon className="size-4 animate-spin" /> : null}
       Deactivate licence
     </Button>
+  );
+}
+
+function EditLicenceForm({ licence, seatsUsed }: { licence: AdminInstitutionLicenceDetail; seatsUsed: number }) {
+  const router = useRouter();
+  const [submitting, setSubmitting] = useState(false);
+  const [notice, setNotice] = useState<{ error: boolean; text: string } | null>(null);
+
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    setNotice(null);
+    const result = await updateInstitutionLicence(new FormData(event.currentTarget));
+    setSubmitting(false);
+    if (result && "error" in result) {
+      setNotice({ error: true, text: result.error });
+      return;
+    }
+    setNotice({ error: false, text: "Licence updated." });
+    router.refresh();
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-3" aria-label="Edit licence">
+      <input type="hidden" name="licenceId" value={licence.id} />
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="lic-edit-seats">Seat count ({seatsUsed} in use)</Label>
+          <Input id="lic-edit-seats" name="seatCount" type="number" min={Math.max(1, seatsUsed)} defaultValue={licence.seatCount} required />
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="lic-edit-expires">Expires (blank = never)</Label>
+          <Input id="lic-edit-expires" name="expiresAt" type="date" defaultValue={licence.expiresAt ? licence.expiresAt.slice(0, 10) : ""} />
+        </div>
+      </div>
+      {notice && (
+        <p className={notice.error ? "flex items-center gap-1.5 text-sm text-destructive" : "text-sm text-muted-foreground"} role={notice.error ? "alert" : "status"}>
+          {notice.error && <AlertCircleIcon className="size-4 shrink-0" />} {notice.text}
+        </p>
+      )}
+      <Button type="submit" variant="outline" disabled={submitting} className="self-start">
+        {submitting ? "Saving…" : "Save licence changes"}
+      </Button>
+    </form>
   );
 }
 
@@ -113,10 +158,12 @@ export function LicencePanel({
   institutionId,
   licence,
   plans,
+  seatsUsed,
 }: {
   institutionId: string;
   licence: AdminInstitutionLicenceDetail | null;
   plans: { id: string; name: string }[];
+  seatsUsed: number;
 }) {
   return (
     <Card className="gap-4 p-6">
@@ -127,11 +174,13 @@ export function LicencePanel({
             <p className="text-sm">
               {licence.planName} · {licence.seatCount} seats
             </p>
-            <Badge variant="tinted">Active</Badge>
+            <Badge variant={licence.state === "active" ? "tinted" : "secondary"} data-testid="licence-state">{LICENCE_STATE_LABELS[licence.state]}</Badge>
           </div>
           <p className="text-xs text-muted-foreground">
             {formatDate(licence.startsAt)} – {formatDate(licence.expiresAt)}
           </p>
+          {licence.state === "expired" && <p className="text-sm text-destructive" role="status">This licence has expired: no seats can be added and members have lost the plan it provided. Extend the expiry to renew it.</p>}
+          <EditLicenceForm licence={licence} seatsUsed={seatsUsed} />
           <DeactivateButton licenceId={licence.id} />
         </>
       ) : (

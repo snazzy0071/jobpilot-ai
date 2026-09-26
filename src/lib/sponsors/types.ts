@@ -60,6 +60,10 @@ export type SponsorListItem = {
   routes: string[];
   aliases: SponsorAlias[];
   sourceDate: string;
+  /** False for a sponsor that has dropped off the register — its page still resolves, marked as removed. */
+  isActive: boolean;
+  /** Source date of the sync that removed it; null while active. */
+  removedOn: string | null;
 };
 
 /** One row in the search/city results list — lighter than SponsorListItem (no routes/aliases fetched per row in a paginated list; the company page fetches those on demand). */

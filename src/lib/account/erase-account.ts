@@ -75,7 +75,7 @@ export async function eraseUserAccount(userId: string): Promise<EraseAccountResu
 
   const { data: subscription } = await admin
     .from("subscriptions")
-    .select("stripe_subscription_id, status")
+    .select("stripe_subscription_id, stripe_customer_id, status")
     .eq("user_id", userId)
     .maybeSingle();
 
@@ -110,5 +110,43 @@ export async function eraseUserAccount(userId: string): Promise<EraseAccountResu
 
   if (email) await sendAccountDeletedEmail(email);
 
+  // Personal data that is keyed by the email ADDRESS rather than the account, so the cascade above does not reach it. Best-effort
+  // and after the account is gone: a failure here is logged, never reported as a failed erasure.
+  if (email) await eraseEmailKeyedRecords(admin, email);
+  if (subscription?.stripe_customer_id) await deleteStripeCustomer(subscription.stripe_customer_id);
+
   return { erasedEmail: email };
+}
+
+/**
+ * Removes what we hold against the email address itself: the newsletter subscription, contact-form messages, demo and partner
+ * requests, and the log of emails we sent to it (recipient addresses), including the deletion confirmation just sent. Matching is
+ * exact on the address (as stored and lower-cased), never a pattern, so another person's rows can't be caught by an address that
+ * contains wildcard characters. Anonymous quick-scan results hold no address (only a hash used for the monthly cap), and the admin
+ * audit log keeps the acting administrator's address by design (see docs/DATA_RETENTION.md).
+ */
+export async function eraseEmailKeyedRecords(admin: ReturnType<typeof createAdminClient>, email: string): Promise<void> {
+  const variants = [...new Set([email, email.toLowerCase()])];
+  const targets: [string, string][] = [
+    ["newsletter_subscribers", "email"],
+    ["contact_messages", "email"],
+    ["demo_requests", "email"],
+    ["partner_inquiries", "email"],
+    ["email_send_logs", "recipient"],
+  ];
+  for (const [table, column] of targets) {
+    const { error } = await admin.from(table).delete().in(column, variants);
+    if (error) console.error(`eraseEmailKeyedRecords: couldn't clear ${table}: ${error.message}`);
+  }
+}
+
+/** Deletes the person's Stripe customer record (their email and name at Stripe). Stripe keeps invoices and payments it must retain for tax; this only removes the customer profile. */
+async function deleteStripeCustomer(customerId: string): Promise<void> {
+  try {
+    await getStripeClient().customers.del(customerId);
+  } catch (err) {
+    // Not configured here, or already gone at Stripe: nothing more to do. Anything else is logged for follow-up.
+    const alreadyGone = err instanceof Stripe.errors.StripeInvalidRequestError && err.code === "resource_missing";
+    if (!alreadyGone && !(err instanceof Error && err.message.includes("isn't configured"))) console.error("eraseUserAccount: couldn't delete the Stripe customer:", err);
+  }
 }

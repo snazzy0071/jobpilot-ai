@@ -86,3 +86,8 @@ export const logisticsStepSchema = z.object({
     .max(2100, "Enter a valid year"),
   visaSponsorshipPreference: z.enum(VISA_SPONSORSHIP_PREFERENCES, "Choose an option"),
 });
+
+/** An element id for an industry's checkbox. The labels contain spaces and "&" ("Finance & Banking"), which are not valid in an id and break the label association, leaving the checkbox with no accessible name. */
+export function industryFieldId(industry: string): string {
+  return `industry-${industry.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")}`;
+}

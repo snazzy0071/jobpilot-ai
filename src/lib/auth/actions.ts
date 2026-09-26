@@ -1,6 +1,8 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { GRAD_SCHEME_METADATA_KEY, parseSchemeSlug } from "@/lib/graduate-schemes/signup-context";
+import { findPublishedScheme } from "@/lib/graduate-schemes/signup-server";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -11,7 +13,7 @@ import { getAppSettings } from "@/lib/admin/settings/queries";
 import {
   consumePasswordResetRateLimit,
   consumeResendConfirmationRateLimit,
-  consumeSignInRateLimit,
+  consumeSignInRateLimit, consumeSignInAccountRateLimit,
   consumeSignUpRateLimit,
   AUTH_RATE_LIMIT_MESSAGE,
 } from "@/lib/auth/rate-limit";
@@ -48,6 +50,10 @@ export async function signInWithPassword(
   }
 
   const { email, password, redirectTo } = parsed.data;
+
+  if (!(await consumeSignInAccountRateLimit(email))) {
+    return { error: AUTH_RATE_LIMIT_MESSAGE };
+  }
 
   const supabase = await createClient();
   const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
@@ -91,7 +97,8 @@ export async function signUpWithPassword(
 
   const parsed = signUpSchema.safeParse({
     mode: formData.get("mode"),
-    accessCode: formData.get("accessCode"),
+    // Absent (not just empty) in Subscribe mode, where the field isn't rendered: FormData.get() gives null, which the schema rejects.
+    accessCode: formData.get("accessCode") || undefined,
     fullName: formData.get("fullName"),
     email: formData.get("email"),
     password: formData.get("password"),
@@ -128,6 +135,11 @@ export async function signUpWithPassword(
     }
   }
 
+  // Scheme-specific signup (/signup?from=grad&scheme=<slug>): only kept when it names a real, published scheme; an ordinary
+  // signup posts neither field and is completely unaffected.
+  const schemeSlug = formData.get("from") === "grad" ? parseSchemeSlug(formData.get("scheme")) : null;
+  const gradScheme = await findPublishedScheme(schemeSlug);
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -137,6 +149,7 @@ export async function signUpWithPassword(
         full_name: fullName,
         date_of_birth: dateOfBirth,
         newsletter_opt_in: newsletterOptIn,
+        ...(gradScheme ? { [GRAD_SCHEME_METADATA_KEY]: gradScheme.slug } : {}),
       },
       emailRedirectTo: `${publicEnv.NEXT_PUBLIC_SITE_URL}/auth/confirm?next=/signup/verified`,
     },

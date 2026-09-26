@@ -11,8 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AiRewritePanel } from "@/components/cvs/editor/ai-rewrite-panel";
+import { AutosaveStatus } from "@/components/cvs/editor/autosave-status";
+import { useAutosave } from "@/components/cvs/editor/use-autosave";
+import { VersionHistoryDialog } from "@/components/cvs/editor/version-history-dialog";
 import { CopyTextButton } from "@/components/linkedin/copy-text-button";
 import { regenerateLinkedinDraft, deleteLinkedinDraft } from "@/lib/linkedin/actions";
+import { saveLinkedinAbout, saveLinkedinBullet, saveLinkedinHeadline, restoreLinkedinDraftVersion } from "@/lib/linkedin/edit-actions";
 import {
   regenerateLinkedinAbout,
   resolveLinkedinAboutRewrite,
@@ -29,7 +33,9 @@ import {
   type LinkedinKeywordTerm,
   type LinkedinKeywordImportance,
 } from "@/lib/linkedin/types";
-import type { LinkedinProfileDraftDetail, LinkedinExperienceBulletItem } from "@/lib/linkedin/types";
+import type { LinkedinProfileDraftDetail, LinkedinExperienceBulletItem, LinkedinDraftVersionSummary } from "@/lib/linkedin/types";
+
+const NETWORK_ERROR_MESSAGE = "Couldn't reach the server — check your connection and try again.";
 
 const HEADLINE_VARIANT_LABELS = { concise: "Concise", narrative: "Narrative", keywordDense: "Keyword-dense" } as const;
 
@@ -100,7 +106,59 @@ function KeywordCoverageSection({
   );
 }
 
-function BeforeAfter({ label, before, after }: { label: string; before: string; after: string }) {
+type EditResult = { error: string } | { success: string } | void;
+
+/** A text field whose edits are saved automatically (debounced) through a real Server Action, with the same Saving/Saved/error indicator the CV editor uses. */
+function AutosavedField({
+  action,
+  fixed,
+  name,
+  value,
+  onValueChange,
+  ariaLabel,
+  multiline = true,
+  rows = 3,
+  maxLength,
+}: {
+  action: (prevState: EditResult, formData: FormData) => Promise<EditResult>;
+  /** Hidden identifiers sent with every save (draftId / bulletId). */
+  fixed: Record<string, string>;
+  name: string;
+  value: string;
+  onValueChange: (value: string) => void;
+  ariaLabel: string;
+  multiline?: boolean;
+  rows?: number;
+  maxLength: number;
+}) {
+  const { status, errorMessage, scheduleSave } = useAutosave(action);
+
+  function handleChange(next: string) {
+    onValueChange(next);
+    const formData = new FormData();
+    for (const [key, fixedValue] of Object.entries(fixed)) formData.set(key, fixedValue);
+    formData.set(name, next);
+    scheduleSave(formData);
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      {multiline ? (
+        <Textarea aria-label={ariaLabel} rows={rows} maxLength={maxLength} value={value} onChange={(event) => handleChange(event.target.value)} />
+      ) : (
+        <Input aria-label={ariaLabel} maxLength={maxLength} value={value} onChange={(event) => handleChange(event.target.value)} />
+      )}
+      <div className="flex items-center justify-between gap-2">
+        <AutosaveStatus status={status} errorMessage={errorMessage} />
+        <p className="ml-auto text-xs text-muted-foreground">
+          {value.length} / {maxLength}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function BeforeAfter({ label, before, after, afterEditor }: { label: string; before: string; after: string; afterEditor?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex items-center justify-between gap-2">
@@ -114,7 +172,7 @@ function BeforeAfter({ label, before, after }: { label: string; before: string; 
         </div>
         <div className="flex flex-col gap-1">
           <p className="text-xs font-medium tracking-wide text-primary uppercase">After</p>
-          <p className="text-sm whitespace-pre-wrap">{after}</p>
+          {afterEditor ?? <p className="text-sm whitespace-pre-wrap">{after}</p>}
         </div>
       </div>
     </div>
@@ -135,7 +193,21 @@ function ExperienceBulletRow({
   return (
     <div className="flex flex-col gap-2 rounded-lg border p-3">
       <div className="flex items-start justify-between gap-2">
-        <p className="text-sm">• {content}</p>
+        <div className="flex-1">
+          <AutosavedField
+            action={saveLinkedinBullet}
+            fixed={{ bulletId: bullet.id }}
+            name="content"
+            value={content}
+            onValueChange={(next) => {
+              setContent(next);
+              onAccepted(bullet.id, next);
+            }}
+            ariaLabel="Experience bullet"
+            rows={2}
+            maxLength={300}
+          />
+        </div>
         <CopyTextButton content={content} label="Copy" />
       </div>
       <AiRewritePanel
@@ -166,10 +238,11 @@ function ExperienceBulletRow({
  * LinkedIn API integration to apply through, only Copy buttons for
  * pasting the rewrite back in by hand.
  */
-export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDetail }) {
+export function LinkedinDraftDetail({ draft, versions }: { draft: LinkedinProfileDraftDetail; versions: LinkedinDraftVersionSummary[] }) {
   const router = useRouter();
 
   const [about, setAbout] = useState(draft.optimizedAbout);
+  const [selectedHeadline, setSelectedHeadline] = useState(draft.selectedHeadline ?? "");
   const [bullets, setBullets] = useState(draft.experienceBullets);
 
   const [editing, setEditing] = useState(false);
@@ -189,7 +262,16 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
     setError(null);
     setRegenerating(true);
     const formData = new FormData(event.currentTarget);
-    const result = await regenerateLinkedinDraft(undefined, formData);
+    let result: Awaited<ReturnType<typeof regenerateLinkedinDraft>>;
+    try {
+      result = await regenerateLinkedinDraft(undefined, formData);
+    } catch {
+      // A dropped connection rejects the Server Action call itself — without this the button stayed on
+      // "Regenerating…" forever.
+      setRegenerating(false);
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
     setRegenerating(false);
 
     if (result && "error" in result) {
@@ -210,13 +292,33 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
     setDeleting(true);
     const formData = new FormData();
     formData.set("draftId", draft.id);
-    const result = await deleteLinkedinDraft(undefined, formData);
+    let result: Awaited<ReturnType<typeof deleteLinkedinDraft>>;
+    try {
+      result = await deleteLinkedinDraft(undefined, formData);
+    } catch {
+      setDeleting(false);
+      setError(NETWORK_ERROR_MESSAGE);
+      return;
+    }
     if (result && "error" in result) {
       setDeleting(false);
       setError(result.error);
       return;
     }
     router.push("/dashboard/linkedin");
+  }
+
+  // Choosing a variant saves right away (there's no typing to debounce).
+  async function saveChosenHeadline(headline: string) {
+    const formData = new FormData();
+    formData.set("draftId", draft.id);
+    formData.set("headline", headline);
+    try {
+      const result = await saveLinkedinHeadline(undefined, formData);
+      if (result && "error" in result) setError(result.error);
+    } catch {
+      setError("Couldn't reach the server, so that choice isn't saved yet — try again.");
+    }
   }
 
   function handleBulletAccepted(bulletId: string, content: string) {
@@ -229,10 +331,25 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
   // stale. Headline variants never change via Accept/Reject (no review
   // flow exists for them), so they're a constant input here, not a
   // dependency that needs tracking.
+  // The headline counts only once the user has *chosen* one (a variant, or their own edit of it) — until then their
+  // as-pasted headline stands. Counting all three variants would credit a keyword that only appears in a variant
+  // nobody is using.
   const afterText = useMemo(() => {
-    const headlineText = draft.optimizedHeadlineVariants ? Object.values(draft.optimizedHeadlineVariants).join("\n") : "";
+    const headlineText = selectedHeadline.trim() !== "" ? selectedHeadline : draft.currentHeadline;
     return [headlineText, about ?? "", ...bullets.map((bullet) => bullet.content)].join("\n");
-  }, [draft.optimizedHeadlineVariants, about, bullets]);
+  }, [selectedHeadline, draft.currentHeadline, about, bullets]);
+
+  // Newest first; the draft itself is always the current state, so it heads the list and isn't restorable.
+  const historyEntries = [
+    { id: "current", versionNumber: versions.length + 1, label: "Current draft", isCurrent: true, createdAt: draft.updatedAt },
+    ...versions.map((version, index) => ({
+      id: version.id,
+      versionNumber: versions.length - index,
+      label: version.label,
+      isCurrent: false,
+      createdAt: version.createdAt,
+    })),
+  ];
 
   const keywordCoverageAfter = useMemo(
     () => computeLinkedinKeywordCoverage(draft.keywordTerms, afterText),
@@ -247,7 +364,8 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
             {targetRole} · {LINKEDIN_TARGET_SENIORITY_LABELS[targetSeniority]}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <VersionHistoryDialog versions={historyEntries} restore={restoreLinkedinDraftVersion} containerIdField="draftId" containerId={draft.id} />
           <Button type="button" variant="outline" size="sm" onClick={() => setEditing((value) => !value)}>
             <PencilIcon /> {editing ? "Cancel" : "Edit & regenerate all"}
           </Button>
@@ -291,6 +409,7 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
               <Select
                 name="targetSeniority"
                 value={targetSeniority}
+                items={LINKEDIN_TARGET_SENIORITY_LABELS}
                 onValueChange={(value) => value && setTargetSeniority(value as LinkedinTargetSeniority)}
               >
                 <SelectTrigger id="edit-seniority" className="w-full">
@@ -356,9 +475,41 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
                   <div key={variant} className="flex flex-col gap-2 rounded-md border bg-muted/30 p-3">
                     <p className="text-xs font-medium tracking-wide text-primary uppercase">{HEADLINE_VARIANT_LABELS[variant]}</p>
                     <p className="flex-1 text-sm whitespace-pre-wrap">{draft.optimizedHeadlineVariants![variant]}</p>
-                    <CopyTextButton content={draft.optimizedHeadlineVariants![variant]} label="Copy" />
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={selectedHeadline === draft.optimizedHeadlineVariants![variant] ? "secondary" : "outline"}
+                        aria-label={
+                          selectedHeadline === draft.optimizedHeadlineVariants![variant]
+                            ? `The ${HEADLINE_VARIANT_LABELS[variant]} headline is in use`
+                            : `Use the ${HEADLINE_VARIANT_LABELS[variant]} headline`
+                        }
+                        onClick={() => {
+                          const chosen = draft.optimizedHeadlineVariants![variant];
+                          setSelectedHeadline(chosen);
+                          void saveChosenHeadline(chosen);
+                        }}
+                      >
+                        {selectedHeadline === draft.optimizedHeadlineVariants![variant] ? "In use" : "Use this headline"}
+                      </Button>
+                      <CopyTextButton content={draft.optimizedHeadlineVariants![variant]} label="Copy" />
+                    </div>
                   </div>
                 ))}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Your headline — choose a variant, then edit freely</p>
+                <AutosavedField
+                  action={saveLinkedinHeadline}
+                  fixed={{ draftId: draft.id }}
+                  name="headline"
+                  value={selectedHeadline}
+                  onValueChange={setSelectedHeadline}
+                  ariaLabel="Your headline"
+                  multiline={false}
+                  maxLength={220}
+                />
               </div>
             </div>
           )}
@@ -367,7 +518,23 @@ export function LinkedinDraftDetail({ draft }: { draft: LinkedinProfileDraftDeta
 
           {about && (
             <div className="flex flex-col gap-3">
-              <BeforeAfter label="About" before={draft.currentAbout} after={about} />
+              <BeforeAfter
+                label="About"
+                before={draft.currentAbout}
+                after={about}
+                afterEditor={
+                  <AutosavedField
+                    action={saveLinkedinAbout}
+                    fixed={{ draftId: draft.id }}
+                    name="about"
+                    value={about}
+                    onValueChange={setAbout}
+                    ariaLabel="Your About section"
+                    rows={8}
+                    maxLength={2600}
+                  />
+                }
+              />
               <AiRewritePanel
                 getValue={() => about}
                 rewrite={(currentAboutValue) => regenerateLinkedinAbout({ draftId: draft.id, currentAbout: currentAboutValue })}

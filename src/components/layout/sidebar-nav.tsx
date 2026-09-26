@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Users, FileText, Mail, ScanSearch, MessagesSquare, IdCard, Settings, GraduationCap, Briefcase, ClipboardList, ListChecks, Armchair, ShieldCheck, Palette, BarChart3, KeyRound, Building2, Sparkles, Shield, History, Activity, Send } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Mail, ScanSearch, MessagesSquare, IdCard, Settings, GraduationCap, Briefcase, ClipboardList, ListChecks, Armchair, ShieldCheck, Palette, BarChart3, KeyRound, Building2, Sparkles, Shield, History, Activity, Send, CalendarClock, BookOpen, Scale, Globe, CreditCard } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Icon *components* aren't serializable across the Server -> Client
@@ -37,6 +37,11 @@ const SIDEBAR_ICONS = {
   history: History,
   activity: Activity,
   send: Send,
+  globe: Globe,
+  "credit-card": CreditCard,
+  "calendar-clock": CalendarClock,
+  "book-open": BookOpen,
+  scale: Scale,
 } as const;
 
 export type SidebarIconKey = keyof typeof SIDEBAR_ICONS;

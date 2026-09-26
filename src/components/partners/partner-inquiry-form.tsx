@@ -20,11 +20,12 @@ export function PartnerInquiryForm() {
     submitPartnerInquiry,
     undefined,
   );
+  const kept = state && "error" in state ? state.values : undefined;
 
   if (state && "success" in state) {
     return (
       <div className="rounded-lg border p-6 text-center">
-        <p className="font-medium">{state.success}</p>
+        <p role="status" className="font-medium">{state.success}</p>
       </div>
     );
   }
@@ -34,22 +35,22 @@ export function PartnerInquiryForm() {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor="organisationName">Organisation name</Label>
-          <Input id="organisationName" name="organisationName" type="text" required />
+          <Input id="organisationName" name="organisationName" defaultValue={kept?.organisationName} type="text" required />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="contactName">Your name</Label>
-          <Input id="contactName" name="contactName" type="text" required autoComplete="name" />
+          <Input id="contactName" name="contactName" defaultValue={kept?.contactName} type="text" required autoComplete="name" />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="flex flex-col gap-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" required autoComplete="email" />
+          <Input id="email" name="email" defaultValue={kept?.email} type="email" required autoComplete="email" />
         </div>
         <div className="flex flex-col gap-2">
           <Label htmlFor="partnershipType">Partnership type</Label>
-          <Select name="partnershipType" defaultValue={PARTNERSHIP_TYPES[0]}>
+          <Select name="partnershipType" defaultValue={kept?.partnershipType ?? PARTNERSHIP_TYPES[0]}>
             <SelectTrigger id="partnershipType" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -66,10 +67,10 @@ export function PartnerInquiryForm() {
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="message">Tell us about the partnership you have in mind</Label>
-        <Textarea id="message" name="message" required rows={5} minLength={10} />
+        <Textarea id="message" name="message" defaultValue={kept?.message} required rows={5} minLength={10} />
       </div>
 
-      {state && "error" in state ? <p className="text-sm text-destructive">{state.error}</p> : null}
+      {state && "error" in state ? <p role="alert" className="text-sm text-destructive">{state.error}</p> : null}
 
       <Button type="submit" size="lg" disabled={pending}>
         {pending ? "Sending..." : "Submit inquiry"}

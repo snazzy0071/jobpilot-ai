@@ -34,6 +34,9 @@ export function CvSaveProvider({ children }: { children: ReactNode }) {
   const [sources, setSources] = useState<ReadonlyMap<string, SourceState>>(() => new Map());
   const flushers = useRef(new Map<string, Flusher>());
   const inFlight = useRef(new Set<Promise<unknown>>());
+  // Calls to track() under one key overlap (a drag emits a reorder for every neighbour it passes). Only the latest call
+  // decides that key's status: an earlier one finishing must not flip the header to "Saved" while a newer save is running.
+  const latestCall = useRef(new Map<string, number>());
 
   const report = useCallback((key: string, status: SaveStatus, message: string | null = null) => {
     setSources((current) => {
@@ -66,20 +69,25 @@ export function CvSaveProvider({ children }: { children: ReactNode }) {
 
   const track = useCallback(
     async <T extends ActionResult>(key: string, run: () => Promise<T>): Promise<T | { error: string }> => {
+      const call = (latestCall.current.get(key) ?? 0) + 1;
+      latestCall.current.set(key, call);
+      const isLatest = () => latestCall.current.get(key) === call;
       report(key, "saving");
       const promise = callAction(run);
       inFlight.current.add(promise);
       try {
         const result = await promise;
-        if (result && typeof result === "object" && "error" in result) {
-          report(key, "error", result.error);
-        } else {
-          report(key, "saved");
+        if (isLatest()) {
+          if (result && typeof result === "object" && "error" in result) {
+            report(key, "error", result.error);
+          } else {
+            report(key, "saved");
+          }
         }
         return result;
       } catch (error) {
         const message = error instanceof Error ? error.message : "Couldn't save your changes.";
-        report(key, "error", message);
+        if (isLatest()) report(key, "error", message);
         return { error: message };
       } finally {
         inFlight.current.delete(promise);

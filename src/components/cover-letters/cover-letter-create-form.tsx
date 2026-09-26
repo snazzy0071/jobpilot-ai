@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Loader2Icon, AlertCircleIcon, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -28,7 +27,6 @@ import {
 import type { CvListItem } from "@/lib/cvs/types";
 
 export function CoverLetterCreateForm({ cvs }: { cvs: CvListItem[] }) {
-  const router = useRouter();
   const eligibleCvs = cvs.filter((cv) => !cv.isArchived && cv.currentVersionId);
 
   const [cvId, setCvId] = useState(eligibleCvs[0]?.id ?? "");
@@ -85,16 +83,12 @@ export function CoverLetterCreateForm({ cvs }: { cvs: CvListItem[] }) {
 
     const formData = new FormData(event.currentTarget);
     setLoading(true);
+    // On success this never returns — generateCoverLetter redirects server-side once the letter is saved (see its
+    // own doc comment), so the only response actually handled here is an error one. Stay in the loading state
+    // through the redirect: the editor page is the real destination, not a second state this form renders.
     const response = await generateCoverLetter(formData);
-
-    if ("error" in response) {
-      setLoading(false);
-      setError(response.error);
-      return;
-    }
-    // Stay in the loading state through the redirect — the editor page
-    // is the real destination, not a second state this form renders.
-    router.push(`/dashboard/cover-letters/${response.coverLetterId}`);
+    setLoading(false);
+    setError(response.error);
   }
 
   if (eligibleCvs.length === 0) {

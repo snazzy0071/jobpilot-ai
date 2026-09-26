@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { PaletteIcon } from "lucide-react";
 import { useCvPreview } from "@/components/cvs/editor/preview-context";
+import { useTemplateLimit } from "@/components/cvs/templates/template-limit-context";
+import { isTemplateAllowed } from "@/lib/cvs/template-access";
 import { TemplateCard } from "@/components/cvs/templates/template-card";
 import { TemplatePreviewPanel } from "@/components/cvs/templates/template-preview-panel";
 import { CV_TEMPLATE_SAMPLE_DATA } from "@/components/cvs/templates/sample-data";
@@ -75,6 +77,7 @@ export function TemplatePickerDialog({
   const [sidebarFilter, setSidebarFilter] = useState<SidebarFilter>(ALL);
   const [previewSlug, setPreviewSlug] = useState<CvTemplate | null>(null);
   const { preview, selectTemplate: selectLiveTemplate } = useCvPreview();
+  const templateLimit = useTemplateLimit();
   // The live template, so the ring and check move the instant a choice is made rather than after the save round trip.
   const activeTemplate = preview.template || currentTemplate;
 
@@ -165,6 +168,7 @@ export function TemplatePickerDialog({
               data={previewData}
               usingSample={!hasOwnContent}
               current={previewTemplate.slug === activeTemplate}
+              locked={previewTemplate.slug !== activeTemplate && !isTemplateAllowed(previewTemplate.slug, templateLimit)}
               position={previewIndex + 1}
               total={browsable.length}
               onBack={() => setPreviewSlug(null)}
@@ -251,6 +255,7 @@ export function TemplatePickerDialog({
                     template={t}
                     current={t.slug === activeTemplate}
                     onPreview={() => setPreviewSlug(t.slug)}
+                    locked={t.slug !== activeTemplate && !isTemplateAllowed(t.slug, templateLimit)}
                     onUse={() => selectTemplate(t.slug)}
                   />
                 ))}

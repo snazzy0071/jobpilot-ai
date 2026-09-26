@@ -37,6 +37,7 @@ function ChannelBadge({ icon: Icon, label, status }: { icon: typeof Mail; label:
 
 function ReminderRow({ reminder, onChanged }: { reminder: ApplicationReminder; onChanged: (updated: ApplicationReminder | null) => void }) {
   const [pending, setPending] = useState(false);
+  const [rowError, setRowError] = useState<string | null>(null);
 
   async function handleComplete() {
     setPending(true);
@@ -45,9 +46,10 @@ function ReminderRow({ reminder, onChanged }: { reminder: ApplicationReminder; o
     const result = await completeReminder(undefined, formData);
     setPending(false);
     if (result && "error" in result) {
-      window.alert(result.error);
+      setRowError(result.error);
       return;
     }
+    setRowError(null);
     onChanged({ ...reminder, completedAt: new Date().toISOString() });
   }
 
@@ -59,7 +61,7 @@ function ReminderRow({ reminder, onChanged }: { reminder: ApplicationReminder; o
     const result = await deleteReminder(undefined, formData);
     setPending(false);
     if (result && "error" in result) {
-      window.alert(result.error);
+      setRowError(result.error);
       return;
     }
     onChanged(null);
@@ -73,7 +75,7 @@ function ReminderRow({ reminder, onChanged }: { reminder: ApplicationReminder; o
   const overdue = !reminder.completedAt && new Date(reminder.remindAt).getTime() < nowMs;
 
   return (
-    <Card className={`gap-2 p-3 ${reminder.completedAt ? "opacity-60" : ""}`}>
+    <Card className={`gap-2 p-3 ${reminder.completedAt ? "opacity-60" : ""}`} data-testid="reminder-row">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-medium">{reminder.message}</p>
@@ -103,6 +105,11 @@ function ReminderRow({ reminder, onChanged }: { reminder: ApplicationReminder; o
         )}
       </div>
       {reminder.emailError && <p className="text-xs text-destructive">Email failed: {reminder.emailError}</p>}
+      {rowError && (
+        <p className="text-xs text-destructive" role="alert">
+          {rowError}
+        </p>
+      )}
     </Card>
   );
 }
@@ -136,6 +143,14 @@ export function ApplicationReminders({ applicationId, reminders: initialReminder
     setLoading(true);
 
     const formData = new FormData(event.currentTarget);
+    // The input holds the person's LOCAL date and time; send the absolute instant so the server never has to guess a zone.
+    const localTime = new Date(remindAt);
+    if (Number.isNaN(localTime.getTime())) {
+      setLoading(false);
+      setError("Enter a valid date and time.");
+      return;
+    }
+    formData.set("remindAt", localTime.toISOString());
     const result = await createReminder(formData);
     setLoading(false);
 

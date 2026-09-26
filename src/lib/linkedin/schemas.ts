@@ -61,3 +61,25 @@ export const resolveLinkedinExperienceBulletRewriteSchema = z.object({
   rewriteId: z.string().uuid(),
   status: z.enum(["accepted", "rejected"]),
 });
+
+// Manual edits of the optimised text — autosaved, so plain FormData like the CV/cover-letter autosave forms.
+export const saveLinkedinAboutSchema = z.object({
+  draftId: z.string().uuid(),
+  about: z.string().trim().min(1, "The About section can't be empty.").max(2600, "LinkedIn About sections are at most 2,600 characters."),
+});
+
+export const saveLinkedinBulletSchema = z.object({
+  bulletId: z.string().uuid(),
+  content: z.string().trim().min(1, "A bullet can't be empty.").max(300, "Keep each bullet to 300 characters or fewer."),
+});
+
+export const saveLinkedinHeadlineSchema = z.object({
+  draftId: z.string().uuid(),
+  // Empty clears the choice.
+  headline: z.string().trim().max(220, "LinkedIn headlines are at most 220 characters."),
+});
+
+export const restoreLinkedinDraftVersionSchema = z.object({
+  draftId: z.string().uuid(),
+  versionId: z.string().uuid(),
+});

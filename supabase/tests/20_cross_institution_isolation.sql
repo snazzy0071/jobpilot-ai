@@ -15,7 +15,7 @@
 
 begin;
 
-select plan(31);
+select plan(32);
 
 -- ---------------------------------------------------------------------
 -- Fixtures
@@ -84,7 +84,8 @@ select tests.clear_authentication();
 -- ---------------------------------------------------------------------
 
 select tests.authenticate_as('aa222222-2222-2222-2222-222222222222');
-select tests.assert_select_visible('public.institution_members', 'user_id', 'aa111111-1111-1111-1111-111111111111', 'a regular member can see a fellow member''s roster row in their own institution');
+select tests.assert_select_denied('public.institution_members', 'user_id', 'aa111111-1111-1111-1111-111111111111', 'a regular member cannot see a fellow member''s roster row (migration 0119: members see only their own row)');
+select tests.assert_select_visible('public.institution_members', 'user_id', 'aa222222-2222-2222-2222-222222222222', 'a regular member can see their own membership row');
 select tests.assert_select_denied('public.institution_members', 'user_id', 'bb111111-1111-1111-1111-111111111111', 'a regular member cannot see another institution''s roster row');
 select tests.clear_authentication();
 

@@ -24,6 +24,7 @@ const POSTED_WITHIN_OPTIONS = [
 ] as const;
 
 const SORT_OPTIONS = [
+  { value: "relevance", label: "Most relevant" },
   { value: "newest", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
   { value: "company_az", label: "Company (A–Z)" },
@@ -74,7 +75,7 @@ export function JobFeedFilters({
   const [location, setLocation] = useState(defaultValues?.location ?? "");
   const [sourceId, setSourceId] = useState(defaultValues?.sourceId ?? ALL_SOURCES);
   const [postedWithin, setPostedWithin] = useState(defaultValues?.postedWithinDays ?? ANY_TIME);
-  const [sort, setSort] = useState(defaultValues?.sort ?? "newest");
+  const [sort, setSort] = useState(defaultValues?.sort ?? "relevance");
   const [sponsorOnly, setSponsorOnly] = useState(defaultValues?.sponsorOnly ?? false);
   const [cvId, setCvId] = useState(defaultValues?.cvId ?? NO_CV);
   const [minScore, setMinScore] = useState(defaultValues?.minScore ?? ANY_SCORE);
@@ -86,7 +87,7 @@ export function JobFeedFilters({
     if (location.trim()) params.set("location", location.trim());
     if (sourceId !== ALL_SOURCES) params.set("source", sourceId);
     if (postedWithin !== ANY_TIME) params.set("posted", postedWithin);
-    if (sort !== "newest") params.set("sort", sort);
+    if (sort !== "relevance") params.set("sort", sort);
     if (sponsorOnly) params.set("sponsorOnly", "1");
     if (cvId !== NO_CV) {
       params.set("cv", cvId);

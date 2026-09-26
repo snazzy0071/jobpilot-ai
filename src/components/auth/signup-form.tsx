@@ -11,7 +11,7 @@ import { useTodayIsoDate } from "@/lib/hooks/use-today-iso-date";
 
 type SignupMode = "subscribe" | "access_code";
 
-export function SignupForm() {
+export function SignupForm({ schemeSlug }: { schemeSlug?: string } = {}) {
   const [mode, setMode] = useState<SignupMode>("subscribe");
   const today = useTodayIsoDate();
   const [state, formAction, pending] = useActionState<AuthResult, FormData>(
@@ -28,6 +28,12 @@ export function SignupForm() {
         </TabsList>
       </Tabs>
       <input type="hidden" name="mode" value={mode} />
+      {schemeSlug && (
+        <>
+          <input type="hidden" name="from" value="grad" />
+          <input type="hidden" name="scheme" value={schemeSlug} />
+        </>
+      )}
 
       {mode === "access_code" && (
         <div className="flex flex-col gap-2">

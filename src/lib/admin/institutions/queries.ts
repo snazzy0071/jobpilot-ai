@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { licenceState } from "@/lib/institutions/licence";
 import type { AdminInstitutionListItem, AdminInstitutionDetail } from "@/lib/admin/institutions/types";
 
 function firstOf<T>(value: T[] | T | null | undefined): T | undefined {
@@ -28,7 +29,7 @@ export async function listAdminInstitutions(): Promise<AdminInstitutionListItem[
   const [{ data: institutions }, { data: members }, { data: licences }] = await Promise.all([
     supabase.from("institutions").select("id, name, slug, created_at").order("name"),
     supabase.from("institution_members").select("institution_id"),
-    supabase.from("institution_licences").select("institution_id").eq("is_active", true),
+    supabase.from("institution_licences").select("institution_id, starts_at, expires_at, is_active").eq("is_active", true),
   ]);
   if (!institutions) return [];
 
@@ -36,7 +37,9 @@ export async function listAdminInstitutions(): Promise<AdminInstitutionListItem[
   for (const member of members ?? []) {
     memberCounts.set(member.institution_id, (memberCounts.get(member.institution_id) ?? 0) + 1);
   }
-  const activeLicenceInstitutionIds = new Set((licences ?? []).map((licence) => licence.institution_id));
+  const activeLicenceInstitutionIds = new Set(
+    (licences ?? []).filter((licence) => licenceState({ isActive: licence.is_active, startsAt: licence.starts_at, expiresAt: licence.expires_at }) === "active").map((licence) => licence.institution_id),
+  );
 
   return institutions.map((institution) => ({
     id: institution.id,
@@ -55,7 +58,7 @@ export async function getAdminInstitutionDetail(id: string): Promise<AdminInstit
   const { data: institution } = await supabase.from("institutions").select("id, name, slug, created_at").eq("id", id).maybeSingle();
   if (!institution) return null;
 
-  const [{ data: licenceRow }, { data: adminMembers }] = await Promise.all([
+  const [{ data: licenceRow }, { data: adminMembers }, { data: domainRows }, { count: memberCount }, { count: pendingCount }] = await Promise.all([
     supabase
       .from("institution_licences")
       .select("id, seat_count, starts_at, expires_at, is_active, plans(name)")
@@ -63,6 +66,9 @@ export async function getAdminInstitutionDetail(id: string): Promise<AdminInstit
       .eq("is_active", true)
       .maybeSingle(),
     supabase.from("institution_members").select("user_id").eq("institution_id", id).eq("role", "admin"),
+    supabase.from("institution_domains").select("id, domain, is_verified, created_at").eq("institution_id", id).order("created_at"),
+    supabase.from("institution_members").select("id", { count: "exact", head: true }).eq("institution_id", id),
+    supabase.from("institution_invites").select("id", { count: "exact", head: true }).eq("institution_id", id).is("accepted_at", null).gt("expires_at", new Date().toISOString()),
   ]);
 
   const admin = createAdminClient();
@@ -94,8 +100,11 @@ export async function getAdminInstitutionDetail(id: string): Promise<AdminInstit
           startsAt: licenceRow.starts_at,
           expiresAt: licenceRow.expires_at,
           isActive: licenceRow.is_active,
+          state: licenceState({ isActive: licenceRow.is_active, startsAt: licenceRow.starts_at, expiresAt: licenceRow.expires_at }),
         }
       : null,
     admins,
+    domains: (domainRows ?? []).map((row) => ({ id: row.id, domain: row.domain, isVerified: row.is_verified, createdAt: row.created_at })),
+    seatsUsed: (memberCount ?? 0) + (pendingCount ?? 0),
   };
 }

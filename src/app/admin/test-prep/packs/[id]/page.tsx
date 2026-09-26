@@ -24,9 +24,12 @@ export default async function QuestionPackQuestionsPage({ params }: { params: Pr
           <h1 className="font-heading text-2xl font-semibold tracking-tight">{pack.name}</h1>
           <p className="mt-1 text-muted-foreground">{pack.description ?? "Questions in this pack."}</p>
         </div>
-        <Button render={<Link href={`/admin/test-prep/questions/new?packId=${id}`} />}>
-          <Plus className="size-4" /> Add question
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" render={<Link href={`/admin/test-prep/packs/${id}/import`}>Import JSON</Link>} />
+          <Button render={<Link href={`/admin/test-prep/questions/new?packId=${id}`} />}>
+            <Plus className="size-4" /> Add question
+          </Button>
+        </div>
       </div>
 
       <QuestionAdminList questions={questions} />

@@ -6,6 +6,7 @@ import {
   CAREER_STAGES,
   CAREER_STAGE_LABELS,
   INDUSTRY_OPTIONS,
+  industryFieldId,
   PRIMARY_GOALS,
   PRIMARY_GOAL_LABELS,
   VISA_SPONSORSHIP_LABELS,
@@ -99,12 +100,12 @@ export function CareerPreferencesForm({
           {INDUSTRY_OPTIONS.map((industry) => (
             <div key={industry} className="flex items-center gap-2">
               <Checkbox
-                id={`industry-${industry}`}
+                id={industryFieldId(industry)}
                 name="industries"
                 value={industry}
                 defaultChecked={defaultIndustries.includes(industry)}
               />
-              <Label htmlFor={`industry-${industry}`} className="text-sm font-normal">
+              <Label htmlFor={industryFieldId(industry)} className="text-sm font-normal">
                 {industry}
               </Label>
             </div>

@@ -1,6 +1,7 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { licenceState } from "@/lib/institutions/licence";
 import type {
   AdminInstitutionMember,
   AdminInstitutionInvite,
@@ -17,6 +18,8 @@ const EMPTY_ANALYTICS: InstitutionAnalytics = {
   interviewsCompleted: 0,
   applicationsTracked: 0,
   testSessionsCompleted: 0,
+  suppressed: false,
+  minCohort: 5,
 };
 
 function firstOf<T>(value: T[] | T | null | undefined): T | undefined {
@@ -69,6 +72,7 @@ export async function getInstitutionOverview(institutionId: string): Promise<Ins
         startsAt: licenceRow.starts_at,
         expiresAt: licenceRow.expires_at,
         isActive: licenceRow.is_active,
+        state: licenceState({ isActive: licenceRow.is_active, startsAt: licenceRow.starts_at, expiresAt: licenceRow.expires_at }),
       }
     : null;
 
@@ -86,7 +90,8 @@ export async function getInstitutionOverview(institutionId: string): Promise<Ins
     memberCount,
     pendingInviteCount,
     seatsUsed: adminCount + memberCount + pendingInviteCount,
-    seatsTotal: licence?.seatCount ?? null,
+    // Seats exist only while the licence is in force — an expired or not-yet-started one grants none.
+    seatsTotal: licence?.state === "active" ? licence.seatCount : null,
   };
 }
 
@@ -109,6 +114,7 @@ export async function getActiveLicence(institutionId: string): Promise<Instituti
     startsAt: data.starts_at,
     expiresAt: data.expires_at,
     isActive: data.is_active,
+    state: licenceState({ isActive: data.is_active, startsAt: data.starts_at, expiresAt: data.expires_at }),
   };
 }
 
@@ -203,5 +209,15 @@ export async function getInstitutionAnalytics(institutionId: string): Promise<In
     interviewsCompleted: data.interviewsCompleted ?? 0,
     applicationsTracked: data.applicationsTracked ?? 0,
     testSessionsCompleted: data.testSessionsCompleted ?? 0,
+    suppressed: data.suppressed === true,
+    minCohort: data.minCohort ?? 5,
   };
+}
+
+/** This institution's claimed email domains — RLS lets only its own admins (and JobPilot admins) read them. */
+export async function listInstitutionDomains(institutionId: string): Promise<{ id: string; domain: string; isVerified: boolean; createdAt: string }[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("institution_domains").select("id, domain, is_verified, created_at").eq("institution_id", institutionId).order("created_at");
+  if (error || !data) return [];
+  return data.map((row) => ({ id: row.id, domain: row.domain, isVerified: row.is_verified, createdAt: row.created_at }));
 }

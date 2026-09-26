@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/admin/permissions";
 import { logAdminAction } from "@/lib/admin/audit/log";
 import { isSeatCapacityError } from "@/lib/institutions/errors";
-import { createInstitutionSchema, createLicenceSchema, licenceIdSchema, addInstitutionAdminSchema } from "@/lib/admin/institutions/schemas";
+import { createInstitutionSchema, createLicenceSchema, licenceIdSchema, addInstitutionAdminSchema, updateLicenceSchema, domainVerificationSchema } from "@/lib/admin/institutions/schemas";
 
 const LIST_USERS_PAGE_SIZE = 1000;
 const MAX_LIST_USERS_PAGES = 20;
@@ -172,4 +172,74 @@ export async function addInstitutionAdmin(formData: FormData) {
   });
 
   revalidatePath(`/admin/institutions/${parsed.data.institutionId}`);
+}
+
+/**
+ * Changes an active licence's seat count and expiry (renewal = a later expiry). The seat count can't drop below the seats already
+ * in use (members + pending invites) — that would leave the institution over its allowance with no way to tell who to remove.
+ */
+export async function updateInstitutionLicence(formData: FormData) {
+  const { user: actingAdmin } = await requirePermission("manage_institutions");
+
+  const parsed = updateLicenceSchema.safeParse({
+    licenceId: formData.get("licenceId"),
+    seatCount: formData.get("seatCount"),
+    expiresAt: formData.get("expiresAt"),
+  });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { data: licence } = await supabase.from("institution_licences").select("institution_id, is_active").eq("id", parsed.data.licenceId).maybeSingle();
+  if (!licence) return { error: "That licence couldn't be found." };
+  if (!licence.is_active) return { error: "That licence is deactivated — create a new one instead." };
+
+  const [{ count: members }, { count: pending }] = await Promise.all([
+    supabase.from("institution_members").select("id", { count: "exact", head: true }).eq("institution_id", licence.institution_id),
+    supabase.from("institution_invites").select("id", { count: "exact", head: true }).eq("institution_id", licence.institution_id).is("accepted_at", null).gt("expires_at", new Date().toISOString()),
+  ]);
+  const used = (members ?? 0) + (pending ?? 0);
+  if (parsed.data.seatCount < used) return { error: `${used} seats are already in use — remove members or invites before reducing below that.` };
+
+  const { error } = await supabase
+    .from("institution_licences")
+    .update({ seat_count: parsed.data.seatCount, expires_at: parsed.data.expiresAt })
+    .eq("id", parsed.data.licenceId);
+  if (error) return { error: "Couldn't update that licence — try again." };
+
+  await logAdminAction({
+    actorId: actingAdmin.id,
+    actorEmail: actingAdmin.email ?? null,
+    action: "institution_licence.update",
+    entityType: "institution_licence",
+    entityId: licence.institution_id,
+    metadata: { seatCount: parsed.data.seatCount, expiresAt: parsed.data.expiresAt },
+  });
+
+  revalidatePath(`/admin/institutions/${licence.institution_id}`);
+}
+
+/** Verifying is what lets people with a confirmed address at the domain join automatically — so it is JobPilot-only and audit-logged. */
+export async function setInstitutionDomainVerified(formData: FormData) {
+  const { user: actingAdmin } = await requirePermission("manage_institutions");
+
+  const parsed = domainVerificationSchema.safeParse({ domainId: formData.get("domainId"), verified: formData.get("verified") });
+  if (!parsed.success) return { error: "Invalid request." };
+
+  const supabase = await createClient();
+  const { data: domain } = await supabase.from("institution_domains").select("institution_id, domain").eq("id", parsed.data.domainId).maybeSingle();
+  if (!domain) return { error: "That domain couldn't be found." };
+
+  const { error } = await supabase.from("institution_domains").update({ is_verified: parsed.data.verified }).eq("id", parsed.data.domainId);
+  if (error) return { error: "Couldn't update that domain — try again." };
+
+  await logAdminAction({
+    actorId: actingAdmin.id,
+    actorEmail: actingAdmin.email ?? null,
+    action: parsed.data.verified ? "institution_domain.verify" : "institution_domain.unverify",
+    entityType: "institution",
+    entityId: domain.institution_id,
+    metadata: { domain: domain.domain },
+  });
+
+  revalidatePath(`/admin/institutions/${domain.institution_id}`);
 }

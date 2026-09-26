@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/lib/auth/session";
+import { consumeRateLimit } from "@/lib/ai/rate-limit";
 import { parseDocument, MAX_FILE_SIZE_BYTES } from "@/lib/files/parse-document";
 import { isSameOriginRequest } from "@/lib/security/same-origin";
 
@@ -40,7 +41,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Forbidden." }, { status: 403 });
   }
 
-  await requireUser();
+  // Refuse an obviously oversized body before reading any of it (the size check below runs only after the whole upload is in memory).
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_FILE_SIZE_BYTES + 1024 * 1024) {
+    return NextResponse.json({ error: "That file is too large — the limit is 10MB." }, { status: 413 });
+  }
+
+  const user = await requireUser();
+  if (!(await consumeRateLimit(user.id, "file_parse")).allowed) {
+    return NextResponse.json({ error: "You're uploading too quickly — wait a moment and try again." }, { status: 429 });
+  }
 
   let formData: FormData;
   try {

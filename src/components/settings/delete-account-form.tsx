@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FormMessage } from "@/components/settings/form-message";
 
-export function DeleteAccountForm() {
+export function DeleteAccountForm({ requiresPassword = false }: { requiresPassword?: boolean }) {
   const [state, formAction, pending] = useActionState<SettingsResult, FormData>(
     deleteAccount,
     undefined,
@@ -27,6 +27,14 @@ export function DeleteAccountForm() {
         </Label>
         <Input id="confirmation" name="confirmation" type="text" required autoComplete="off" />
       </div>
+
+      {requiresPassword && (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="currentPasswordForDelete">Current password</Label>
+          <Input id="currentPasswordForDelete" name="currentPassword" type="password" required autoComplete="current-password" />
+          <p className="text-xs text-muted-foreground">We ask for this to confirm it&apos;s really you.</p>
+        </div>
+      )}
 
       <FormMessage state={state} />
 

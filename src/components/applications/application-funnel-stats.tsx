@@ -54,8 +54,9 @@ export function ApplicationFunnelStats({ analytics }: { analytics: ApplicationFu
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatTile label="Total applications" value={analytics.totalApplications.toLocaleString()} />
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <StatTile label="Total applications" value={analytics.totalApplications.toLocaleString()} caption={`${analytics.activeCount} in flight`} />
+        <StatTile label="Applied in the last 30 days" value={analytics.appliedLast30Days.toLocaleString()} />
         <StatTile
           label="Interview rate"
           value={analytics.interviewRate !== null ? `${analytics.interviewRate}%` : "—"}
@@ -89,11 +90,23 @@ export function ApplicationFunnelStats({ analytics }: { analytics: ApplicationFu
         </Card>
       </div>
 
+      <div className="grid gap-4 sm:grid-cols-2">
+        <StatTile
+          label="Median days from Applied to first Interview"
+          value={analytics.medianDaysToInterview.value !== null ? `${analytics.medianDaysToInterview.value}` : "—"}
+          caption={analytics.medianDaysToInterview.sampleSize > 0 ? `across ${analytics.medianDaysToInterview.sampleSize} application${analytics.medianDaysToInterview.sampleSize === 1 ? "" : "s"}` : "no interviews yet"}
+        />
+        <StatTile
+          label="Median days from Applied to first Offer"
+          value={analytics.medianDaysToOffer.value !== null ? `${analytics.medianDaysToOffer.value}` : "—"}
+          caption={analytics.medianDaysToOffer.sampleSize > 0 ? `across ${analytics.medianDaysToOffer.sampleSize} application${analytics.medianDaysToOffer.sampleSize === 1 ? "" : "s"}` : "no offers yet"}
+        />
+      </div>
+
       <Card className="gap-4 p-6">
         <p className="text-sm font-medium">Conversion funnel</p>
         <p className="text-xs text-muted-foreground">
-          Based on every application that has ever reached each stage (src/lib/applications/analytics.ts) — not just where it
-          sits today.
+          Based on every application that has ever reached each stage, not just where it sits today.
         </p>
         <div className="flex flex-col gap-3">
           {analytics.stageConversions.map((conversion) => (

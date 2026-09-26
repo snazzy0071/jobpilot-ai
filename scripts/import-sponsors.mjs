@@ -9,7 +9,7 @@
 //   - Header is exactly: Organisation Name,Town/City,County,Type &
 //     Rating,Route — five columns, always, no exceptions found. This
 //     script refuses to proceed if that's no longer true (see
-//     validateHeader below) rather than silently misreading a changed
+//     validateHeader in sponsor-register-parser.mjs) rather than silently misreading a changed
 //     format.
 //   - "Type & Rating" is one of at least 9 distinct real values —
 //     "Worker (A rating)", "Temporary Worker (A rating)", "Worker (B
@@ -18,7 +18,7 @@
 //     variants of several of those — not the two ("A rating"/"A rating
 //     (provisional)") this app's own search filter UI assumes. This is
 //     bucketed into the four values migration 0050's sponsor_rating enum
-//     actually has (bucketRating, below), with the verbatim original
+//     actually has (bucketRating in sponsor-register-parser.mjs), with the verbatim original
 //     text always kept alongside as rating_raw.
 //   - "Route" has at least 17 distinct real values — five separate
 //     Global Business Mobility *sub*-routes alone ("Global Business
@@ -53,7 +53,7 @@
 //     name in one cell — " PINAL DAYA, T/A LONDIS", "HAH Hospitality
 //     Limited t/a Indian Affair Ancoats", "Ian Tappin t/a Lovat House
 //     Residential Care Home", all real rows. splitLegalAndTradingName
-//     (below) pulls both halves out and writes them as sponsor_aliases
+//     (sponsor-register-parser.mjs) pulls both halves out and writes them as sponsor_aliases
 //     rows (migration 0053) — company_name/company_name_normalized
 //     themselves are never rewritten or split, only added to, so a
 //     "Londis"-style trading-name search has something real to match
@@ -94,24 +94,20 @@
 //   --dry-run       Parse, validate, and aggregate as normal, but never
 //                    write to the database — prints what would have
 //                    happened. No sponsor_imports row is created.
-//   --force         Import even if a *completed* import already exists
-//                    for the resolved source date (the rare case where
-//                    gov.uk republishes a corrected file under the same
-//                    date). Without this flag, that case exits early
-//                    rather than doing ~140k rows of work for nothing —
-//                    migration 0050's own partial unique index would
-//                    reject it at the very end regardless, this just
-//                    fails fast instead.
 //
-// No scheduler is wired up here — this is the importer itself; running
-// it on a schedule (a weekly cron, a GitHub Action, a Vercel Cron job)
-// is a deployment decision for whoever operates this, not something a
-// script file can set up on its own.
+//   A source date that already has a completed import is skipped (exit 0, nothing written): migration 0050 allows one
+//   completed import per source date, so a re-run could never be recorded as completed anyway. The Home Office
+//   republishes under a new date, which is what the next run picks up.
+//
+// The daily run is .github/workflows/sponsors-sync.yml (03:00 UTC, also workflow_dispatch — the admin page's "Run
+// sync now" dispatches it). This script is what it runs; the CSV parsing/aggregation lives in
+// sponsor-register-parser.mjs so it can be unit-tested. After a completed sync it refreshes the statistics views.
 
 import { createClient } from "@supabase/supabase-js";
+import { aggregateRows, extractSourceDate, parseCsv, validateHeader, bestRating } from "./sponsor-register-parser.mjs";
 
 const PUBLICATION_PAGE_URL = "https://www.gov.uk/government/publications/register-of-licensed-sponsors-workers";
-const EXPECTED_HEADER = ["Organisation Name", "Town/City", "County", "Type & Rating", "Route"];
+
 const FETCH_TIMEOUT_MS = 120_000;
 const UPSERT_BATCH_SIZE = 1000;
 // Real files run ~140k rows. Anything drastically smaller is far more
@@ -126,13 +122,12 @@ const MIN_EXPECTED_ROWS = 50_000;
 // ---------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const args = { url: null, file: null, dryRun: false, force: false };
+  const args = { url: null, file: null, dryRun: false };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--url") args.url = argv[++i];
     else if (arg === "--file") args.file = argv[++i];
     else if (arg === "--dry-run") args.dryRun = true;
-    else if (arg === "--force") args.force = true;
     else {
       console.error(`Unrecognised argument: ${arg}`);
       process.exit(1);
@@ -141,146 +136,11 @@ function parseArgs(argv) {
   return args;
 }
 
-// ---------------------------------------------------------------------
-// RFC4180 CSV parsing — quoted fields (organisation names routinely
-// contain commas, e.g. "PINAL DAYA, T/A LONDIS", always properly
-// quoted in the real file), doubled-quote escaping, \r\n and \n line
-// endings. Verified directly against the real register, not assumed.
-// ---------------------------------------------------------------------
-
-function parseCsv(input) {
-  const rows = [];
-  let row = [];
-  let field = "";
-  let inQuotes = false;
-  let i = 0;
-  const len = input.length;
-
-  while (i < len) {
-    const ch = input[i];
-    if (inQuotes) {
-      if (ch === '"') {
-        if (input[i + 1] === '"') {
-          field += '"';
-          i += 2;
-        } else {
-          inQuotes = false;
-          i++;
-        }
-      } else {
-        field += ch;
-        i++;
-      }
-      continue;
-    }
-
-    if (ch === '"') {
-      inQuotes = true;
-      i++;
-    } else if (ch === ",") {
-      row.push(field);
-      field = "";
-      i++;
-    } else if (ch === "\r") {
-      i++;
-    } else if (ch === "\n") {
-      row.push(field);
-      rows.push(row);
-      row = [];
-      field = "";
-      i++;
-    } else {
-      field += ch;
-      i++;
-    }
-  }
-
-  if (field.length > 0 || row.length > 0) {
-    row.push(field);
-    rows.push(row);
-  }
-  // A trailing blank line parses as one empty-string field — not a real
-  // data row.
-  return rows.filter((r) => !(r.length === 1 && r[0] === ""));
-}
-
-// ---------------------------------------------------------------------
-// Normalization
-// ---------------------------------------------------------------------
-
-function collapseWhitespace(value) {
-  return value.replace(/\s+/g, " ").trim();
-}
-
-function normalizeForMatch(value) {
-  return collapseWhitespace(value).toLowerCase();
-}
-
-/**
- * Buckets a real "Type & Rating" cell (e.g. "Worker (A rating)",
- * "Temporary Worker (A (SME+))", "Worker (UK Expansion Worker:
- * Provisional )") into migration 0050's four sponsor_rating values.
- * Deliberately simple, deterministic substring rules, checked in a
- * specific order — "B rating" is checked first since a value could in
- * principle contain both "B" and "A"-looking substrings, and
- * "provisional" is checked before the generic "A rating" case since
- * every real provisional variant seen also contains "rating" or "A".
- * Anything unrecognised falls back to 'other' rather than throwing —
- * gov.uk can introduce a new variant between register publications, and
- * a single unrecognised label should never abort an otherwise-good
- * import.
- */
-function bucketRating(raw) {
-  const value = raw.toLowerCase();
-  if (value.includes("b rating")) return "b_rating";
-  if (value.includes("provisional")) return "a_rating_provisional";
-  if (value.includes("a rating") || value.includes("(a ") || value.includes("(a(")) return "a_rating";
-  return "other";
-}
-
-const RATING_RANK = { a_rating: 0, a_rating_provisional: 1, other: 2, b_rating: 3 };
-
-/**
- * Splits a real "legal T/A trading" cell into its two halves — e.g.
- * " PINAL DAYA, T/A LONDIS" -> { legalName: "PINAL DAYA", tradingName:
- * "LONDIS" }, "HAH Hospitality Limited t/a Indian Affair Ancoats" ->
- * { legalName: "HAH Hospitality Limited", tradingName: "Indian Affair
- * Ancoats" } — both real rows checked in the live register. Trailing/
- * leading punctuation left over from the split (the comma before "T/A"
- * in the first real example above) is trimmed off each half. Returns
- * null for the common case (no "T/A"/"trading as" found) — most
- * organisation names don't need splitting, and this never invents a
- * trading name that isn't actually printed in the cell.
- */
-function splitLegalAndTradingName(companyName) {
-  const match = companyName.match(/^(.+?)\s+(?:t\/a|trading\s+as)\s+(.+)$/i);
-  if (!match) return null;
-
-  const legalName = match[1].replace(/[,;:\-–]+$/, "").trim();
-  const tradingName = match[2].replace(/^[,;:\-–]+/, "").trim();
-  if (!legalName || !tradingName) return null;
-
-  return { legalName, tradingName };
-}
-
-/** Picks the best (lowest-rank) rating across a sponsor's own route entries — see this file's header comment for why rating is per-route, not per-company. */
-function bestRating(entries) {
-  return entries.reduce((best, entry) => (RATING_RANK[entry.rating] < RATING_RANK[best.rating] ? entry : best));
-}
 
 // ---------------------------------------------------------------------
 // Source discovery
 // ---------------------------------------------------------------------
 
-/** Extracts the source date embedded in every real filename seen (e.g. "..._Web_Register_-_2026-09-14.csv") — the Home Office's own "as of" date, not whenever this script happens to run. Falls back to today (UTC) with a loud warning if a future filename ever stops following this pattern, rather than failing the whole import over a cosmetic detail. */
-function extractSourceDate(url) {
-  const match = url.match(/(\d{4}-\d{2}-\d{2})\.csv(?:[?#]|$)/i);
-  if (match) return match[1];
-
-  const today = new Date().toISOString().slice(0, 10);
-  console.warn(`Warning: couldn't find a YYYY-MM-DD date in the filename (${url}) — using today's date (${today}) instead.`);
-  return today;
-}
 
 async function discoverCsvUrl() {
   console.log(`Discovering current register URL from ${PUBLICATION_PAGE_URL} ...`);
@@ -319,100 +179,6 @@ async function fetchCsvText(url) {
   return response.text();
 }
 
-// ---------------------------------------------------------------------
-// Parsing + aggregation
-// ---------------------------------------------------------------------
-
-function validateHeader(headerRow) {
-  const normalized = headerRow.map((cell) => cell.trim());
-  const matches = normalized.length === EXPECTED_HEADER.length && normalized.every((cell, i) => cell === EXPECTED_HEADER[i]);
-  if (!matches) {
-    throw new Error(
-      `Unexpected CSV header — expected [${EXPECTED_HEADER.join(", ")}], got [${normalized.join(", ")}]. The register's format may have changed; this importer needs updating before it can trust the data.`,
-    );
-  }
-}
-
-/**
- * Parses and aggregates every row into one entry per (company, town/
- * city) — the same identity migration 0049's unique constraint uses —
- * with each entry's own deduplicated set of (route, rating) pairs, plus
- * any legal-vs-trading-name aliases splitLegalAndTradingName finds in
- * the organisation name (migration 0053) — never rewriting the name
- * itself, only adding to it. Rows with no organisation name are skipped
- * (none existed in the real file checked, but a blank name can't
- * identify a company either way).
- */
-function aggregateRows(rows) {
-  const sponsors = new Map();
-  let skippedBlankName = 0;
-
-  for (const row of rows) {
-    if (row.length < 5) continue;
-    const [orgRaw, townRaw, countyRaw, ratingRawCell, routeRaw] = row;
-
-    const companyName = collapseWhitespace(orgRaw);
-    if (!companyName) {
-      skippedBlankName++;
-      continue;
-    }
-    const townCity = collapseWhitespace(townRaw) || null;
-    const county = collapseWhitespace(countyRaw) || null;
-    const route = collapseWhitespace(routeRaw);
-    const ratingRaw = collapseWhitespace(ratingRawCell);
-    const rating = bucketRating(ratingRaw);
-
-    const companyNameNormalized = normalizeForMatch(companyName);
-    const townCityNormalized = townCity ? normalizeForMatch(townCity) : null;
-    const key = `${companyNameNormalized}||${townCityNormalized ?? ""}`;
-
-    let sponsor = sponsors.get(key);
-    if (!sponsor) {
-      sponsor = { companyName, companyNameNormalized, townCity, townCityNormalized, county, routes: new Map(), aliases: new Map() };
-      sponsors.set(key, sponsor);
-    }
-    // A later row's original casing/county wins — later rows in a real
-    // gov.uk file are no more or less authoritative than earlier ones,
-    // this just needs a deterministic rule and "last one wins" is the
-    // simplest that doesn't silently prefer stale-looking data.
-    sponsor.companyName = companyName;
-    if (county) sponsor.county = county;
-
-    if (route) {
-      const routeKey = `${route}||${rating}`;
-      sponsor.routes.set(routeKey, { route, rating, ratingRaw });
-    }
-
-    // Never touches companyName/companyNameNormalized themselves — this
-    // only ever *adds* alias entries alongside the untouched original,
-    // recomputed from whichever row's name just won above so the split
-    // stays in sync with it.
-    const split = splitLegalAndTradingName(sponsor.companyName);
-    sponsor.aliases.clear();
-    if (split) {
-      const legalNormalized = normalizeForMatch(split.legalName);
-      const tradingNormalized = normalizeForMatch(split.tradingName);
-      sponsor.aliases.set(`legal_name||${legalNormalized}`, { aliasType: "legal_name", aliasName: split.legalName, aliasNameNormalized: legalNormalized });
-      sponsor.aliases.set(`trading_as||${tradingNormalized}`, { aliasType: "trading_as", aliasName: split.tradingName, aliasNameNormalized: tradingNormalized });
-    }
-  }
-
-  // A sponsor whose every raw row had a blank Route cell has no route
-  // to compute a summary rating from at all (bestRating requires at
-  // least one) — none existed in the real file checked, but dropping
-  // these here (rather than crashing on an empty reduce, or inventing a
-  // fake rating) keeps that a graceful, counted skip instead of an
-  // importer-wide failure over a handful of unusable rows.
-  let skippedNoRoute = 0;
-  for (const [key, sponsor] of sponsors) {
-    if (sponsor.routes.size === 0) {
-      sponsors.delete(key);
-      skippedNoRoute++;
-    }
-  }
-
-  return { sponsors, skippedBlankName, skippedNoRoute };
-}
 
 // ---------------------------------------------------------------------
 // Database writes
@@ -436,21 +202,27 @@ function chunk(array, size) {
  * client-side, the same way every other lookup in this file already
  * builds its keys.
  */
-async function snapshotExistingSponsors(supabase, sponsors) {
+async function snapshotExistingSponsors(supabase) {
+  // Reads the whole table in stable, id-ordered pages rather than filtering by name. The earlier version asked
+  // PostgREST for `company_name_normalized IN (<1,000 names>)`, which is a GET whose query string overflows the
+  // server's URL limit ("Bad Request") — found the first time this ever ran against a real register. Paging by id
+  // has no such limit and stays correct at any size (a full daily run reads ~128 pages of 1,000).
   const existing = new Map();
-  const normalizedNames = [...new Set([...sponsors.values()].map((s) => s.companyNameNormalized))];
+  const PAGE = 1000;
 
-  for (const batch of chunk(normalizedNames, UPSERT_BATCH_SIZE)) {
+  for (let from = 0; ; from += PAGE) {
     const { data, error } = await supabase
       .from("sponsors")
       .select("id, company_name_normalized, town_city_normalized, is_active")
-      .in("company_name_normalized", batch);
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
     if (error) throw new Error(`Snapshotting existing sponsors failed: ${error.message}`);
 
     for (const row of data) {
       const key = `${row.company_name_normalized}||${row.town_city_normalized ?? ""}`;
       existing.set(key, { id: row.id, isActive: row.is_active });
     }
+    if (data.length < PAGE) break;
   }
 
   return existing;
@@ -495,13 +267,13 @@ async function upsertSponsors(supabase, sponsors, importId, sourceDate) {
   return sponsorIdByKey;
 }
 
-async function upsertRoutes(supabase, sponsors, sponsorIdByKey) {
+async function upsertRoutes(supabase, sponsors, sponsorIdByKey, importId) {
   const routeRows = [];
   for (const [key, sponsor] of sponsors) {
     const sponsorId = sponsorIdByKey.get(key);
     if (!sponsorId) continue; // Shouldn't happen — every key was just upserted — but never crash the whole run over one missing id.
     for (const { route, rating, ratingRaw } of sponsor.routes.values()) {
-      routeRows.push({ sponsor_id: sponsorId, route, rating, rating_raw: ratingRaw });
+      routeRows.push({ sponsor_id: sponsorId, route, rating, rating_raw: ratingRaw, last_seen_import_id: importId });
     }
   }
 
@@ -517,13 +289,19 @@ async function upsertRoutes(supabase, sponsors, sponsorIdByKey) {
   return routeRows.length;
 }
 
-async function upsertAliases(supabase, sponsors, sponsorIdByKey) {
+async function upsertAliases(supabase, sponsors, sponsorIdByKey, importId) {
   const aliasRows = [];
   for (const [key, sponsor] of sponsors) {
     const sponsorId = sponsorIdByKey.get(key);
     if (!sponsorId) continue; // Shouldn't happen — every key was just upserted — but never crash the whole run over one missing id.
     for (const { aliasType, aliasName, aliasNameNormalized } of sponsor.aliases.values()) {
-      aliasRows.push({ sponsor_id: sponsorId, alias_type: aliasType, alias_name: aliasName, alias_name_normalized: aliasNameNormalized });
+      aliasRows.push({
+        sponsor_id: sponsorId,
+        alias_type: aliasType,
+        alias_name: aliasName,
+        alias_name_normalized: aliasNameNormalized,
+        last_seen_import_id: importId,
+      });
     }
   }
 
@@ -625,19 +403,17 @@ async function main() {
   }
 
   // ---- Guard against re-importing the same source date ----
-  if (!args.force) {
-    const { data: existing, error } = await supabase
-      .from("sponsor_imports")
-      .select("id, completed_at")
-      .eq("source_date", sourceDate)
-      .eq("status", "completed")
-      .maybeSingle();
-    if (error) throw new Error(`Checking for an existing import failed: ${error.message}`);
-    if (existing) {
-      console.log(`\nA completed import for ${sourceDate} already exists (id ${existing.id}, completed ${existing.completed_at}).`);
-      console.log("Nothing to do — pass --force to re-import this date anyway.");
-      return;
-    }
+  const { data: existing, error } = await supabase
+    .from("sponsor_imports")
+    .select("id, completed_at")
+    .eq("source_date", sourceDate)
+    .eq("status", "completed")
+    .maybeSingle();
+  if (error) throw new Error(`Checking for an existing import failed: ${error.message}`);
+  if (existing) {
+    console.log(`\nA completed import for ${sourceDate} already exists (id ${existing.id}, completed ${existing.completed_at}).`);
+    console.log("Nothing to do.");
+    return;
   }
 
   // ---- Create the import row ----
@@ -652,16 +428,16 @@ async function main() {
 
   try {
     console.log("Snapshotting existing sponsors (for added/reactivated detection)...");
-    const existingSnapshot = await snapshotExistingSponsors(supabase, sponsors);
+    const existingSnapshot = await snapshotExistingSponsors(supabase);
 
     console.log("Upserting sponsors...");
     const sponsorIdByKey = await upsertSponsors(supabase, sponsors, importId, sourceDate);
 
     console.log("Upserting sponsor routes...");
-    const routeCount = await upsertRoutes(supabase, sponsors, sponsorIdByKey);
+    const routeCount = await upsertRoutes(supabase, sponsors, sponsorIdByKey, importId);
 
     console.log("Upserting sponsor aliases...");
-    const aliasCount = await upsertAliases(supabase, sponsors, sponsorIdByKey);
+    const aliasCount = await upsertAliases(supabase, sponsors, sponsorIdByKey, importId);
 
     // Compare the pre-upsert snapshot against what was just written: no
     // prior row at all -> newly added; a prior row that existed but was
@@ -684,6 +460,15 @@ async function main() {
       }
     }
 
+    // A sponsor that's still on the register but lost a route/alias must lose it here too (migration 0094) — the
+    // upserts above can only ever add. Done for the sponsors this run saw, after all upserts, before completing.
+    console.log("Removing routes/aliases that dropped off the register...");
+    const { data: pruned, error: pruneError } = await supabase.rpc("prune_stale_sponsor_children", { p_import_id: importId });
+    if (pruneError) throw new Error(`Pruning stale routes/aliases failed: ${pruneError.message}`);
+    const routesRemoved = Number(pruned?.[0]?.routes_removed ?? 0);
+    const aliasesRemoved = Number(pruned?.[0]?.aliases_removed ?? 0);
+    console.log(`  routes removed: ${routesRemoved}, aliases removed: ${aliasesRemoved}`);
+
     console.log("Deactivating sponsors no longer on the register...");
     const deactivatedRows = await deactivateMissingSponsors(supabase, importId);
     for (const row of deactivatedRows) {
@@ -704,10 +489,22 @@ async function main() {
         added_count: addedCount,
         reactivated_count: reactivatedCount,
         deactivated_count: deactivatedRows.length,
+        routes_removed_count: routesRemoved,
+        aliases_removed_count: aliasesRemoved,
         completed_at: new Date().toISOString(),
       })
       .eq("id", importId);
     if (completeError) throw new Error(`Marking the import completed failed: ${completeError.message}`);
+
+    // The statistics/city/route counts are materialized views (migration 0097) that only change when the register
+    // does. The data is already correct and the import recorded as completed, so a failed refresh doesn't mark the
+    // import failed — it fails the process (red workflow run) so the stale counts get noticed and fixed.
+    console.log("Refreshing statistics views...");
+    const { error: refreshError } = await supabase.rpc("refresh_sponsor_stats");
+    if (refreshError) {
+      console.error(`Refreshing statistics views failed: ${refreshError.message}`);
+      process.exitCode = 1;
+    }
 
     console.log(
       `\nDone. ${sponsorIdByKey.size} sponsors, ${routeCount} routes, ${aliasCount} aliases (${addedCount} added, ${reactivatedCount} reactivated, ${deactivatedRows.length} deactivated).`,

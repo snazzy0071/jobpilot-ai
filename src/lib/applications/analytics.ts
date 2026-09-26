@@ -36,11 +36,18 @@ export type ApplicationSponsorSplitEntry = {
 
 export type ApplicationFunnelAnalytics = {
   totalApplications: number;
+  /** Currently in flight: Applied, Interview or Offer. */
+  activeCount: number;
+  /** Applications first moved to Applied within the last 30 days. */
+  appliedLast30Days: number;
+  /** Median days from first Applied to first Interview / Offer, over applications that reached both; null when none did (sampleSize says how many). */
+  medianDaysToInterview: { value: number | null; sampleSize: number };
+  medianDaysToOffer: { value: number | null; sampleSize: number };
   /** In APPLICATION_STATUSES order (Wishlist → Withdrawn). */
   byStage: ApplicationFunnelStage[];
   /** The three adjacent pairs in the core progression funnel — wishlist→applied, applied→interview, interview→offer. Rejected/Withdrawn are exits, not further funnel stages, so they're not part of this chain (they still appear in byStage). */
   stageConversions: ApplicationStageConversion[];
-  /** Ever reached Interview ÷ ever reached Applied — the standard "did applying lead to an interview" rate. Null with no applications reached yet. */
+  /** Applications that reached both Applied and Interview ÷ those that reached Applied — "did applying lead to an interview". Null until something has been applied to. */
   interviewRate: number | null;
   /** Ever reached Offer ÷ ever reached Applied. Null with no applications reached yet. */
   offerRate: number | null;
@@ -58,6 +65,37 @@ const FUNNEL_PAIRS: [ApplicationStatus, ApplicationStatus][] = [
 
 const SPONSOR_SPLIT_ORDER: (JobSponsorMatchStatus | "not_checked")[] = ["confirmed_sponsor", "unconfirmed", "not_found", "not_checked"];
 
+/** Median of a list of numbers, or null for an empty list. Pure, exported for tests. */
+export function median(values: number[]): number | null {
+  if (values.length === 0) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+/** For each application, the time it FIRST reached each status; days between two of them for those that reached both. Pure, exported for tests. */
+export function daysBetweenFirstReaches(
+  history: { application_id: string; to_status: string; changed_at: string }[],
+  from: ApplicationStatus,
+  to: ApplicationStatus,
+): number[] {
+  const firstReached = new Map<string, Map<string, number>>();
+  for (const row of history) {
+    const perApplication = firstReached.get(row.application_id) ?? new Map<string, number>();
+    const time = new Date(row.changed_at).getTime();
+    const existing = perApplication.get(row.to_status);
+    if (existing === undefined || time < existing) perApplication.set(row.to_status, time);
+    firstReached.set(row.application_id, perApplication);
+  }
+  const days: number[] = [];
+  for (const reached of firstReached.values()) {
+    const start = reached.get(from);
+    const end = reached.get(to);
+    if (start !== undefined && end !== undefined && end >= start) days.push((end - start) / 86_400_000);
+  }
+  return days;
+}
+
 function percentage(count: number, total: number): number {
   return total > 0 ? Math.round((count / total) * 100) : 0;
 }
@@ -67,7 +105,7 @@ export async function getApplicationFunnelAnalytics(userId: string): Promise<App
 
   const [{ data: applicationRows }, { data: historyRows }] = await Promise.all([
     supabase.from("applications").select("status, sponsor_status, match_score").eq("user_id", userId),
-    supabase.from("application_status_history").select("application_id, to_status").eq("user_id", userId),
+    supabase.from("application_status_history").select("application_id, to_status, changed_at").eq("user_id", userId),
   ]);
 
   const applications = (applicationRows ?? []) as {
@@ -100,14 +138,19 @@ export async function getApplicationFunnelAnalytics(userId: string): Promise<App
   }));
 
   const stageConversions: ApplicationStageConversion[] = FUNNEL_PAIRS.map(([from, to]) => {
-    const fromCount = everReached.get(from)?.size ?? 0;
-    const toCount = everReached.get(to)?.size ?? 0;
+    // Only applications that reached BOTH stages count as converting — one that skipped straight to `to` never went
+    // through `from`, and counting it would push a rate past 100%.
+    const fromSet = everReached.get(from) ?? new Set<string>();
+    const fromCount = fromSet.size;
+    const toCount = [...(everReached.get(to) ?? [])].filter((id) => fromSet.has(id)).length;
     return { from, to, fromCount, toCount, rate: fromCount > 0 ? Math.round((toCount / fromCount) * 100) : null };
   });
 
-  const appliedCount = everReached.get("applied")?.size ?? 0;
-  const interviewRate = appliedCount > 0 ? Math.round(((everReached.get("interview")?.size ?? 0) / appliedCount) * 100) : null;
-  const offerRate = appliedCount > 0 ? Math.round(((everReached.get("offer")?.size ?? 0) / appliedCount) * 100) : null;
+  const everApplied = everReached.get("applied") ?? new Set<string>();
+  const appliedCount = everApplied.size;
+  const reachedAfterApplied = (status: ApplicationStatus) => [...(everReached.get(status) ?? [])].filter((id) => everApplied.has(id)).length;
+  const interviewRate = appliedCount > 0 ? Math.round((reachedAfterApplied("interview") / appliedCount) * 100) : null;
+  const offerRate = appliedCount > 0 ? Math.round((reachedAfterApplied("offer") / appliedCount) * 100) : null;
 
   const sponsorCounts = new Map<JobSponsorMatchStatus | "not_checked", number>();
   for (const application of applications) {
@@ -125,5 +168,21 @@ export async function getApplicationFunnelAnalytics(userId: string): Promise<App
     sampleSize: scores.length,
   };
 
-  return { totalApplications: total, byStage, stageConversions, interviewRate, offerRate, sponsorSplit, averageMatchScore };
+  const activeCount = ["applied", "interview", "offer"].reduce((sum, status) => sum + (currentCounts.get(status as ApplicationStatus) ?? 0), 0);
+  const thirtyDaysAgo = Date.now() - 30 * 86_400_000;
+  const appliedRecently = new Set<string>();
+  for (const row of historyRows ?? []) {
+    if (row.to_status === "applied" && new Date(row.changed_at).getTime() >= thirtyDaysAgo) appliedRecently.add(row.application_id);
+  }
+  const toInterview = daysBetweenFirstReaches(historyRows ?? [], "applied", "interview");
+  const toOffer = daysBetweenFirstReaches(historyRows ?? [], "applied", "offer");
+  const rounded = (value: number | null) => (value === null ? null : Math.round(value * 10) / 10);
+
+  return {
+    totalApplications: total,
+    activeCount,
+    appliedLast30Days: appliedRecently.size,
+    medianDaysToInterview: { value: rounded(median(toInterview)), sampleSize: toInterview.length },
+    medianDaysToOffer: { value: rounded(median(toOffer)), sampleSize: toOffer.length },
+    byStage, stageConversions, interviewRate, offerRate, sponsorSplit, averageMatchScore };
 }

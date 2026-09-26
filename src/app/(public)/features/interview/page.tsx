@@ -26,7 +26,7 @@ export default function InterviewCoachPage() {
         "Sector-targeted question packs across consulting, banking, law, and public sector",
         "Feedback broken down against the STAR structure — situation, task, action, result, reflection",
         "A session summary scored across clarity, structure, keywords, and relevance",
-        "Voice-based practice with spoken questions, available on Elite",
+        "Voice-based practice with spoken questions, with a monthly allowance on Premium and a larger one on Elite",
       ]}
       beforeAfter={{
         before: '"I worked on a few projects and helped the team out."',
@@ -51,7 +51,7 @@ export default function InterviewCoachPage() {
         {
           question: "Do I need a microphone?",
           answer:
-            "Only for voice practice, which is part of Elite. Text-based practice needs nothing extra.",
+            "Only for voice practice, which has a monthly allowance on Premium and Elite. Text-based practice needs nothing extra.",
         },
         {
           question: "Can I revisit a weak answer?",

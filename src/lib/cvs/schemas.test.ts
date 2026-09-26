@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { educationSchema, experienceSchema, personalSchema, projectSchema } from "@/lib/cvs/schemas";
+import { educationSchema, experienceSchema, personalSchema, projectSchema, runManualAtsScanSchema } from "@/lib/cvs/schemas";
 
 const VERSION_ID = "11111111-1111-4111-8111-111111111111";
 
@@ -84,5 +84,44 @@ describe("blank and missing optional fields mean 'no value'", () => {
   it("applies to project links", () => {
     const parsed = projectSchema.parse({ versionId: VERSION_ID, name: "Site", url: "" });
     expect(parsed.url).toBeUndefined();
+  });
+});
+
+describe("multi-line text line endings", () => {
+  it("stores textarea text with plain \n line breaks, whatever the browser submitted", async () => {
+    const { experienceSchema, summarySchema, customSectionSchema } = await import("@/lib/cvs/schemas");
+    const id = "11111111-1111-4111-8111-111111111111";
+    const role = experienceSchema.parse({ versionId: id, jobTitle: "Engineer", employer: "Acme", startDate: "2020-01-01", description: "- one\r\n- two\r- three" });
+    expect(role.description).toBe("- one\n- two\n- three");
+    expect(summarySchema.parse({ versionId: id, content: "Line one\r\nLine two" }).content).toBe("Line one\nLine two");
+    expect(customSectionSchema.parse({ versionId: id, title: "Volunteering", content: "a\r\nb" }).content).toBe("a\nb");
+  });
+});
+
+describe("runManualAtsScanSchema (the ATS Scanner's upload-a-file / paste-text entry point)", () => {
+  const valid = { jobDescription: "A real job description long enough to pass the minimum length check.", cvText: "Some real CV text extracted from a file or pasted directly." };
+
+  it("accepts a real job description and CV text, with no CV version required", () => {
+    const parsed = runManualAtsScanSchema.parse(valid);
+    expect(parsed.jobDescription).toBe(valid.jobDescription);
+    expect(parsed.cvText).toBe(valid.cvText);
+    expect(parsed.reusedFromScanId).toBeUndefined();
+    expect("versionId" in parsed).toBe(false);
+  });
+
+  it("rejects a job description under the real minimum length, the same bound the saved-CV scan uses", () => {
+    const result = runManualAtsScanSchema.safeParse({ ...valid, jobDescription: "Too short." });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects empty CV text — nothing was uploaded or pasted", () => {
+    const result = runManualAtsScanSchema.safeParse({ ...valid, cvText: "" });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a real reusedFromScanId and rejects a malformed one", () => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    expect(runManualAtsScanSchema.safeParse({ ...valid, reusedFromScanId: id }).success).toBe(true);
+    expect(runManualAtsScanSchema.safeParse({ ...valid, reusedFromScanId: "not-a-uuid" }).success).toBe(false);
   });
 });

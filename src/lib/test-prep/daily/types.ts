@@ -1,10 +1,7 @@
-// Types for the daily-practice flow (src/lib/test-prep/daily/actions.ts)
-// — a separate, smaller surface from src/lib/test-prep/practice's
-// pack-based flow, even though both ultimately share the same
-// test_sessions/test_answers tables and the same submitAnswer/
-// completeTestSession actions for the actual quiz-taking part.
+// Types for the daily-practice flow (src/lib/test-prep/daily/actions.ts) — a small surface of its own, although the quiz
+// itself runs through the same session actions as pack practice.
 
-import type { Question } from "@/lib/test-prep/types";
+import type { ActionError, StartedSession } from "@/lib/test-prep/practice/types";
 
 export type DailyPracticeDay = {
   /** Local calendar date, "YYYY-MM-DD", in whatever timezone the caller supplied. */
@@ -16,14 +13,15 @@ export type DailyPracticeDay = {
 
 export type DailyPracticeStatus = {
   completedToday: boolean;
+  /** Today's five were started but not finished — starting again resumes them. */
+  inProgressToday: boolean;
   currentStreak: number;
+  longestStreak: number;
+  totalDaysCompleted: number;
   /** Oldest first — 13 days ago through today, 14 entries. */
   last14Days: DailyPracticeDay[];
 };
 
-export type StartDailyPracticeResult =
-  | { error: string }
-  | { alreadyCompletedToday: true }
-  | { sessionId: string; questions: Question[] };
+export type StartDailyPracticeResult = ActionError | { alreadyCompletedToday: true } | (StartedSession & { resumed: boolean });
 
-export type RecordDailyCompletionResult = { error: string } | { localDate: string };
+export type RecordDailyCompletionResult = ActionError | { localDate: string };

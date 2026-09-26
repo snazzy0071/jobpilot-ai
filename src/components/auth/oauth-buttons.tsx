@@ -12,7 +12,7 @@ const PROVIDERS = [
 
 type ProviderId = (typeof PROVIDERS)[number]["id"];
 
-export function OAuthButtons({ redirectTo }: { redirectTo?: string }) {
+export function OAuthButtons({ redirectTo, schemeSlug }: { redirectTo?: string; schemeSlug?: string }) {
   const supabase = createClient();
   const [pendingProvider, setPendingProvider] = useState<ProviderId | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,6 +23,10 @@ export function OAuthButtons({ redirectTo }: { redirectTo?: string }) {
 
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     if (redirectTo) callbackUrl.searchParams.set("next", redirectTo);
+    if (schemeSlug) {
+      callbackUrl.searchParams.set("from", "grad");
+      callbackUrl.searchParams.set("scheme", schemeSlug);
+    }
 
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider,

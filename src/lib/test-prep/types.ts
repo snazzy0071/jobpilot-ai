@@ -8,6 +8,8 @@
 // query using the anon-respecting client can't select them regardless,
 // so a type that promised them would be a lie).
 
+import type { Exhibit, FigureCell } from "@/lib/test-prep/exhibit";
+
 export const QUESTION_TYPES = ["multiple_choice", "true_false", "free_text"] as const;
 export type QuestionType = (typeof QUESTION_TYPES)[number];
 
@@ -46,8 +48,14 @@ export type Question = {
   id: string;
   questionPackId: string;
   questionType: QuestionType;
+  /** The passage / scenario the question is about, shown above the prompt. */
+  stimulus: string | null;
   prompt: string;
   options: string[];
+  /** A table, bar chart or shape figure the question is about (numerical and diagrammatic reasoning). */
+  exhibit: Exhibit | null;
+  /** One picture per option, for diagrammatic answers (the option text is then just its label). */
+  optionFigures: FigureCell[] | null;
   /** Both nullable — not every question is tagged (migration 0069's own comment covers why difficulty is an enum and subtype is free text). Neither is sensitive; both are in the same public column grant as prompt/options. */
   difficulty: QuestionDifficulty | null;
   subtype: string | null;
@@ -55,9 +63,12 @@ export type Question = {
   isActive: boolean;
 };
 
+export type TestSessionMode = "practice" | "timed";
+
 export type TestSession = {
   id: string;
   questionPackId: string | null;
+  mode: TestSessionMode;
   totalQuestions: number;
   correctCount: number | null;
   score: number | null;

@@ -13,6 +13,7 @@ const MAIN_NAV_ITEMS: SidebarNavItem[] = [
   { href: "/dashboard/linkedin", label: "LinkedIn Optimiser", icon: "id-card" },
   { href: "/dashboard/jobs", label: "Job Feed", icon: "briefcase" },
   { href: "/dashboard/applications", label: "Applications", icon: "clipboard-list" },
+  { href: "/dashboard/auto-apply", label: "Auto-Apply", icon: "send" },
   { href: "/dashboard/test-prep", label: "Test Prep", icon: "list-checks" },
 ];
 

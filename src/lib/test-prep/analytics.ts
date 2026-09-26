@@ -1,29 +1,27 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { aggregateTopics, accuracyByType, findWeakAreas, type TopicAccuracy } from "@/lib/test-prep/accuracy";
+import { loadAccuracyRows } from "@/lib/test-prep/history-data";
 import { listActiveTestTypes } from "@/lib/test-prep/queries";
-import type { QuestionDifficulty } from "@/lib/test-prep/types";
 
-// Real numbers only, read across every one of this user's own
-// completed test_sessions/test_answers — nothing here is AI-generated
-// or fabricated (a "personalized study plan" from an LLM would need to
-// go through src/lib/ai/gateway.ts and be entitlement-gated; this is
-// plain arithmetic over the user's own history, so it isn't and
-// doesn't need to be). Every query goes through the regular,
-// RLS-scoped client — none of this needs correct_answer/explanation,
-// only is_correct/subtype/difficulty, all of which are public columns
-// or already user-owned.
+// Real numbers only, computed from this user's own completed sessions and answers: nothing here is AI-generated or
+// invented, so it isn't (and needn't be) routed through the AI gateway. Accuracy by topic comes from one SQL aggregate
+// (test_prep_accuracy, migration 0106) instead of fetching every answer and joining in application code, which silently
+// truncated at PostgREST's row cap for anyone who practises regularly.
 
-const WEAK_ACCURACY_THRESHOLD = 70;
-const MIN_SUBTYPE_SAMPLE = 3;
-const MAX_WEAK_SUBTYPES = 5;
-const MAX_UNTRIED_TYPES = 3;
+const HISTORY_LIMIT = 100;
+const MAX_WEAK_RECOMMENDATIONS = 4;
+const MAX_UNTRIED_RECOMMENDATIONS = 3;
+/** Enough answers, and a good enough accuracy, in a format to suggest sitting it as a timed exam. */
+const TIMED_READY_MIN_ANSWERS = 15;
+const TIMED_READY_ACCURACY = 75;
 
 export type AccuracyPoint = {
   sessionId: string;
   completedAt: string;
-  /** correct ÷ totalQuestions (the session's own snapshot) — counts a skipped question against it, same definition used everywhere else in this app. */
+  /** correct ÷ the session's fixed question count — a skipped question counts against it, same definition everywhere. */
   score: number;
-  /** correct ÷ answered — distinct from score, same reasoning as the per-session summary. */
+  /** correct ÷ answered — separate from score. */
   accuracy: number;
   correctCount: number;
   answeredCount: number;
@@ -31,185 +29,158 @@ export type AccuracyPoint = {
   label: string;
   testTypeName: string | null;
   isDaily: boolean;
+  mode: "practice" | "timed";
 };
 
-export type SubtypeHeatmapCell = {
-  subtype: string;
-  difficulty: QuestionDifficulty | "unspecified";
-  total: number;
-  correct: number;
-  accuracy: number;
+export type TypeSummary = {
+  testTypeId: string;
+  name: string;
+  slug: string;
+  answers: number;
+  accuracy: number | null;
+  attempts: number;
+  bestScore: number | null;
+  lastPracticedAt: string | null;
 };
 
 export type StudyRecommendation =
-  | {
-      kind: "weak_subtype";
-      subtype: string;
-      accuracy: number;
-      sampleSize: number;
-      testTypeName: string | null;
-      packId: string | null;
-      packName: string | null;
-    }
-  | { kind: "untried_type"; testTypeId: string; testTypeName: string };
+  | { kind: "weak_subtype"; subtype: string; accuracy: number; sampleSize: number; testTypeId: string; testTypeName: string | null; trend: TopicAccuracy["trend"] }
+  | { kind: "untried_type"; testTypeId: string; testTypeName: string }
+  | { kind: "try_timed"; testTypeId: string; testTypeName: string; accuracy: number };
 
 export type TestPrepInsights = {
   hasHistory: boolean;
   accuracyHistory: AccuracyPoint[];
-  subtypeHeatmap: SubtypeHeatmapCell[];
+  topics: (TopicAccuracy & { testTypeName: string | null })[];
+  byType: TypeSummary[];
+  weakAreas: (TopicAccuracy & { testTypeName: string | null })[];
   recommendations: StudyRecommendation[];
+  totals: { sessions: number; answers: number; accuracy: number | null };
 };
 
-const EMPTY_INSIGHTS: TestPrepInsights = { hasHistory: false, accuracyHistory: [], subtypeHeatmap: [], recommendations: [] };
+export const EMPTY_TEST_PREP_INSIGHTS: TestPrepInsights = {
+  hasHistory: false,
+  accuracyHistory: [],
+  topics: [],
+  byType: [],
+  weakAreas: [],
+  recommendations: [],
+  totals: { sessions: 0, answers: 0, accuracy: null },
+};
 
 type SessionRow = {
   id: string;
-  question_pack_id: string | null;
   is_daily: boolean;
+  mode: "practice" | "timed";
+  focus_subtype: string | null;
   total_questions: number;
   correct_count: number | null;
   score: number | null;
   completed_at: string | null;
+  question_packs: { name: string; test_types: { name: string } | { name: string }[] | null } | { name: string; test_types: unknown }[] | null;
+  test_answers: { count: number }[] | null;
 };
 
-type AnswerRow = { test_session_id: string; question_id: string | null; is_correct: boolean | null };
-type QuestionRow = { id: string; question_pack_id: string; subtype: string | null; difficulty: QuestionDifficulty | null };
-type PackRow = { id: string; name: string; test_type_id: string };
-type TypeRow = { id: string; name: string };
+function labelFor(row: SessionRow): { label: string; testTypeName: string | null } {
+  const pack = (Array.isArray(row.question_packs) ? row.question_packs[0] : row.question_packs) as { name: string; test_types: { name: string } | { name: string }[] | null } | null;
+  const type = pack ? (Array.isArray(pack.test_types) ? pack.test_types[0] : pack.test_types) : null;
+  if (row.is_daily) return { label: "Daily five", testTypeName: null };
+  if (row.focus_subtype) return { label: `Focus: ${row.focus_subtype}`, testTypeName: null };
+  return { label: pack?.name ?? "Practice session", testTypeName: type?.name ?? null };
+}
 
-/** Every completed session's score/accuracy over time, an aggregate weak-subtype×difficulty breakdown, and study-plan recommendations derived from both — all computed from this one user's own real history, never a single session in isolation. */
+/** Every completed session's score/accuracy over time, accuracy by test type and by topic, weak areas with their trend, and recommendations derived from them — for one user. Throws on a database error (an outage must never read as "no history"). */
 export async function getTestPrepInsights(userId: string): Promise<TestPrepInsights> {
   const supabase = await createClient();
 
-  const { data: sessionRows } = await supabase
-    .from("test_sessions")
-    .select("id, question_pack_id, is_daily, total_questions, correct_count, score, completed_at")
-    .eq("user_id", userId)
-    .not("completed_at", "is", null)
-    .order("completed_at", { ascending: true });
-  const sessions = (sessionRows ?? []) as SessionRow[];
-  if (sessions.length === 0) return EMPTY_INSIGHTS;
-
-  const sessionIds = sessions.map((session) => session.id);
-  const { data: answerRows } = await supabase
-    .from("test_answers")
-    .select("test_session_id, question_id, is_correct")
-    .in("test_session_id", sessionIds);
-  const answers = (answerRows ?? []) as AnswerRow[];
-
-  const questionIds = [...new Set(answers.map((answer) => answer.question_id).filter((id): id is string => !!id))];
-  const { data: questionRows } = questionIds.length
-    ? await supabase.from("questions").select("id, question_pack_id, subtype, difficulty").in("id", questionIds)
-    : { data: [] as QuestionRow[] };
-  const questions = (questionRows ?? []) as QuestionRow[];
-  const questionById = new Map(questions.map((question) => [question.id, question]));
-
-  const packIds = [
-    ...new Set([...sessions.map((session) => session.question_pack_id), ...questions.map((question) => question.question_pack_id)].filter(
-      (id): id is string => !!id,
-    )),
-  ];
-  const { data: packRows } = packIds.length
-    ? await supabase.from("question_packs").select("id, name, test_type_id").in("id", packIds)
-    : { data: [] as PackRow[] };
-  const packs = (packRows ?? []) as PackRow[];
-  const packById = new Map(packs.map((pack) => [pack.id, pack]));
-
-  const typeIds = [...new Set(packs.map((pack) => pack.test_type_id))];
-  const { data: typeRows } = typeIds.length
-    ? await supabase.from("test_types").select("id, name").in("id", typeIds)
-    : { data: [] as TypeRow[] };
-  const typeById = new Map(((typeRows ?? []) as TypeRow[]).map((type) => [type.id, type]));
-
-  // ---- accuracy history (score vs. accuracy, one point per session) ----
-  const answersBySession = new Map<string, { correct: number; answered: number }>();
-  for (const answer of answers) {
-    const bucket = answersBySession.get(answer.test_session_id) ?? { correct: 0, answered: 0 };
-    bucket.answered += 1;
-    if (answer.is_correct) bucket.correct += 1;
-    answersBySession.set(answer.test_session_id, bucket);
+  const [{ data: sessionRows, error: sessionsError }, accuracyRows, testTypes, { data: progressRows }] = await Promise.all([
+    supabase
+      .from("test_sessions")
+      .select(
+        "id, is_daily, mode, focus_subtype, total_questions, correct_count, score, completed_at, question_packs(name, test_types(name)), test_answers(count)",
+      )
+      .eq("user_id", userId)
+      .not("completed_at", "is", null)
+      .order("completed_at", { ascending: false })
+      .limit(HISTORY_LIMIT),
+    loadAccuracyRows(supabase),
+    listActiveTestTypes(),
+    supabase.from("practice_progress").select("test_type_id, attempts_count, best_score, last_practiced_at").eq("user_id", userId),
+  ]);
+  if (sessionsError) {
+    console.error("getTestPrepInsights failed:", sessionsError.message);
+    throw new Error("Couldn't load your practice history.");
   }
+
+  const sessions = (sessionRows ?? []) as unknown as SessionRow[];
+  if (sessions.length === 0) return EMPTY_TEST_PREP_INSIGHTS;
+
+  const typeName = new Map(testTypes.map((type) => [type.id, type.name]));
 
   const accuracyHistory: AccuracyPoint[] = sessions
-    .filter((session): session is SessionRow & { completed_at: string; score: number; correct_count: number } => session.completed_at !== null && session.score !== null && session.correct_count !== null)
-    .map((session) => {
-      const bucket = answersBySession.get(session.id) ?? { correct: 0, answered: 0 };
-      const pack = session.question_pack_id ? packById.get(session.question_pack_id) : undefined;
-      const type = pack ? typeById.get(pack.test_type_id) : undefined;
+    .filter((row): row is SessionRow & { completed_at: string; score: number; correct_count: number } => row.completed_at !== null && row.score !== null && row.correct_count !== null)
+    .map((row) => {
+      const answered = row.test_answers?.[0]?.count ?? 0;
+      const { label, testTypeName } = labelFor(row);
       return {
-        sessionId: session.id,
-        completedAt: session.completed_at,
-        score: session.score,
-        accuracy: bucket.answered > 0 ? Math.round((bucket.correct / bucket.answered) * 100) : 0,
-        correctCount: session.correct_count,
-        answeredCount: bucket.answered,
-        totalQuestions: session.total_questions,
-        label: session.is_daily ? "Daily practice" : (pack?.name ?? "Practice session"),
-        testTypeName: type?.name ?? null,
-        isDaily: session.is_daily,
-      };
-    });
-
-  // ---- weak-subtype × difficulty heatmap, across every answer ever ----
-  const heatmapCells = new Map<string, SubtypeHeatmapCell>();
-  // subtype-only aggregate (ignores difficulty) — what recommendations key off
-  const bySubtype = new Map<string, { total: number; correct: number; packVotes: Map<string, number> }>();
-
-  for (const answer of answers) {
-    const question = answer.question_id ? questionById.get(answer.question_id) : undefined;
-    if (!question) continue; // a deleted question carries no subtype info left to attribute
-    const subtype = question.subtype ?? "General";
-    const difficulty = question.difficulty ?? "unspecified";
-
-    const cellKey = `${subtype}::${difficulty}`;
-    const cell = heatmapCells.get(cellKey) ?? { subtype, difficulty, total: 0, correct: 0, accuracy: 0 };
-    cell.total += 1;
-    if (answer.is_correct) cell.correct += 1;
-    heatmapCells.set(cellKey, cell);
-
-    const subtypeBucket = bySubtype.get(subtype) ?? { total: 0, correct: 0, packVotes: new Map<string, number>() };
-    subtypeBucket.total += 1;
-    if (answer.is_correct) subtypeBucket.correct += 1;
-    subtypeBucket.packVotes.set(question.question_pack_id, (subtypeBucket.packVotes.get(question.question_pack_id) ?? 0) + 1);
-    bySubtype.set(subtype, subtypeBucket);
-  }
-
-  const subtypeHeatmap = Array.from(heatmapCells.values())
-    .map((cell) => ({ ...cell, accuracy: cell.total > 0 ? Math.round((cell.correct / cell.total) * 100) : 0 }))
-    .sort((a, b) => a.subtype.localeCompare(b.subtype));
-
-  // ---- recommendations: weakest real subtypes, then never-tried types ----
-  const weakSubtypes: StudyRecommendation[] = Array.from(bySubtype.entries())
-    .map(([subtype, bucket]) => {
-      const accuracy = bucket.total > 0 ? Math.round((bucket.correct / bucket.total) * 100) : 0;
-      const topPackId = Array.from(bucket.packVotes.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
-      const pack = topPackId ? packById.get(topPackId) : undefined;
-      const type = pack ? typeById.get(pack.test_type_id) : undefined;
-      return {
-        kind: "weak_subtype" as const,
-        subtype,
-        accuracy,
-        sampleSize: bucket.total,
-        testTypeName: type?.name ?? null,
-        packId: pack?.id ?? null,
-        packName: pack?.name ?? null,
+        sessionId: row.id,
+        completedAt: row.completed_at,
+        score: row.score,
+        accuracy: answered > 0 ? Math.round((row.correct_count / answered) * 100) : 0,
+        correctCount: row.correct_count,
+        answeredCount: answered,
+        totalQuestions: row.total_questions,
+        label,
+        testTypeName,
+        isDaily: row.is_daily,
+        mode: row.mode,
       };
     })
-    .filter((entry) => entry.sampleSize >= MIN_SUBTYPE_SAMPLE && entry.accuracy < WEAK_ACCURACY_THRESHOLD)
-    .sort((a, b) => a.accuracy - b.accuracy)
-    .slice(0, MAX_WEAK_SUBTYPES);
+    .reverse(); // oldest first, for the trend chart
 
-  const attemptedTypeIds = new Set(packs.map((pack) => pack.test_type_id));
-  const activeTypes = await listActiveTestTypes();
-  const untriedTypes: StudyRecommendation[] = activeTypes
-    .filter((type) => !attemptedTypeIds.has(type.id))
-    .slice(0, MAX_UNTRIED_TYPES)
-    .map((type) => ({ kind: "untried_type" as const, testTypeId: type.id, testTypeName: type.name }));
+  const topics = aggregateTopics(accuracyRows).map((topic) => ({ ...topic, testTypeName: topic.testTypeId ? (typeName.get(topic.testTypeId) ?? null) : null }));
+  const weakAreas = findWeakAreas(topics).map((topic) => ({ ...topic, testTypeName: topic.testTypeId ? (typeName.get(topic.testTypeId) ?? null) : null }));
 
+  const typeAccuracy = accuracyByType(accuracyRows);
+  const progressByType = new Map((progressRows ?? []).map((row) => [row.test_type_id, row]));
+  const byType: TypeSummary[] = testTypes.map((type) => {
+    const stats = typeAccuracy.get(type.id);
+    const progress = progressByType.get(type.id);
+    return {
+      testTypeId: type.id,
+      name: type.name,
+      slug: type.slug,
+      answers: stats?.total ?? 0,
+      accuracy: stats ? stats.accuracy : null,
+      attempts: progress?.attempts_count ?? 0,
+      bestScore: progress?.best_score ?? null,
+      lastPracticedAt: progress?.last_practiced_at ?? null,
+    };
+  });
+
+  // ---- recommendations: weakest topics first (with a way to drill them), formats never tried, then a format that's ready for the clock
+  const recommendations: StudyRecommendation[] = [];
+  for (const topic of weakAreas.slice(0, MAX_WEAK_RECOMMENDATIONS)) {
+    if (!topic.testTypeId) continue;
+    recommendations.push({ kind: "weak_subtype", subtype: topic.subtype, accuracy: topic.accuracy, sampleSize: topic.total, testTypeId: topic.testTypeId, testTypeName: topic.testTypeName, trend: topic.trend });
+  }
+  for (const type of byType.filter((entry) => entry.answers === 0).slice(0, MAX_UNTRIED_RECOMMENDATIONS)) {
+    recommendations.push({ kind: "untried_type", testTypeId: type.testTypeId, testTypeName: type.name });
+  }
+  const ready = byType.filter((entry) => entry.accuracy !== null && entry.answers >= TIMED_READY_MIN_ANSWERS && entry.accuracy >= TIMED_READY_ACCURACY).sort((a, b) => (b.accuracy ?? 0) - (a.accuracy ?? 0))[0];
+  if (ready && !accuracyHistory.some((point) => point.mode === "timed" && point.testTypeName === ready.name)) {
+    recommendations.push({ kind: "try_timed", testTypeId: ready.testTypeId, testTypeName: ready.name, accuracy: ready.accuracy ?? 0 });
+  }
+
+  const totalAnswers = byType.reduce((sum, type) => sum + type.answers, 0);
+  const totalCorrect = accuracyRows.reduce((sum, row) => sum + row.correct, 0);
   return {
     hasHistory: true,
     accuracyHistory,
-    subtypeHeatmap,
-    recommendations: [...weakSubtypes, ...untriedTypes],
+    topics,
+    byType,
+    weakAreas,
+    recommendations,
+    totals: { sessions: sessions.length, answers: totalAnswers, accuracy: totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : null },
   };
 }

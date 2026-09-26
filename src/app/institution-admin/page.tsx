@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { requireInstitutionAdmin } from "@/lib/auth/session";
 import { getInstitutionOverview } from "@/lib/institutions/admin/queries";
+import { daysUntilExpiry, EXPIRY_WARNING_DAYS } from "@/lib/institutions/licence";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +31,7 @@ export default async function InstitutionAdminOverviewPage() {
   }
 
   const { institution, licence, adminCount, memberCount, pendingInviteCount, seatsUsed, seatsTotal } = overview;
+  const expiryDays = licence ? daysUntilExpiry(licence) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -52,11 +54,32 @@ export default async function InstitutionAdminOverviewPage() {
           icon={ShieldCheckIcon}
           label="Licence"
           value={licence ? licence.planName : "None"}
-          caption={licence ? (licence.expiresAt ? `Renews ${new Date(licence.expiresAt).toLocaleDateString("en-GB")}` : "No expiry") : "Contact JobPilot"}
+          caption={
+            licence
+              ? licence.state === "expired"
+                ? `Expired ${new Date(licence.expiresAt as string).toLocaleDateString("en-GB")}`
+                : licence.expiresAt
+                  ? `Renews ${new Date(licence.expiresAt).toLocaleDateString("en-GB")}`
+                  : "No expiry"
+              : "Contact JobPilot"
+          }
           href="/institution-admin/licence"
         />
       </div>
 
+      {licence?.state === "expired" && (
+        <Card className="flex-row items-center gap-2 p-4 text-sm" role="status" data-testid="licence-expired">
+          Your licence has expired — no new members or invites can be added, and members are back on their own plans.
+          <Badge variant="outline" className="ml-auto">
+            Contact JobPilot
+          </Badge>
+        </Card>
+      )}
+      {expiryDays !== null && expiryDays <= EXPIRY_WARNING_DAYS && (
+        <Card className="p-4 text-sm" role="status">
+          Your licence expires in {expiryDays} day{expiryDays === 1 ? "" : "s"}.
+        </Card>
+      )}
       {!licence && (
         <Card className="flex-row items-center gap-2 p-4 text-sm text-muted-foreground">
           Your institution has no active licence yet — members and invites can&apos;t be added until one is set up.

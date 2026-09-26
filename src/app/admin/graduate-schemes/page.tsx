@@ -2,13 +2,13 @@ import Link from "next/link";
 import { Plus, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { GraduateSchemeAdminList } from "@/components/admin/graduate-scheme-admin-list";
-import { getGraduateSchemes } from "@/lib/graduate-schemes/queries";
+import { listAllGraduateSchemesForAdmin } from "@/lib/graduate-schemes/queries";
 import { isStale } from "@/lib/graduate-schemes/staleness";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminGraduateSchemesPage() {
-  const schemes = await getGraduateSchemes();
+  const schemes = await listAllGraduateSchemesForAdmin();
   const staleCount = schemes.filter((scheme) => isStale(scheme.verifiedAt)).length;
 
   return (
@@ -22,6 +22,9 @@ export default async function AdminGraduateSchemesPage() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" render={<Link href="/admin/graduate-schemes/assessments/import" />}>
+            <Upload className="size-4" /> Import assessments
+          </Button>
           <Button variant="outline" render={<Link href="/admin/graduate-schemes/import" />}>
             <Upload className="size-4" /> Import CSV
           </Button>

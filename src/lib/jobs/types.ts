@@ -25,6 +25,8 @@ export type Job = {
   postedAt: string | null;
   expiresAt: string | null;
   isActive: boolean;
+  /** The requesting user's stored match score for the CV picked in the feed, when one exists. Only search results carry it. */
+  matchScore?: number | null;
 };
 
 /**
@@ -50,36 +52,28 @@ export type NormalizedJobInput = {
   expiresAt: string | null;
 };
 
-export const JOB_SORTS = ["newest", "oldest", "company_az", "match_desc"] as const;
+export const JOB_SORTS = ["relevance", "newest", "oldest", "company_az", "match_desc"] as const;
 export type JobSort = (typeof JOB_SORTS)[number];
 
 export type JobSearchFilters = {
+  /** Words to look for in the title, company and description. */
   keywords?: string;
+  /** A town, city or region — substring match on the job's location. */
   location?: string;
   sourceId?: string;
   /** Only jobs posted within this many days — undefined/0 means no date filter. */
   postedWithinDays?: number;
+  /** relevance (default when there are keywords) / newest / oldest / company_az / match_desc (needs cvVersionId). */
   sort?: JobSort;
   /**
-   * Only jobs the sponsor register cross-reference confirms as
-   * 'confirmed_sponsor' (src/lib/jobs/sponsor-match.ts) — never
-   * 'unconfirmed'/'not_found' rows, matching that module's own "never
-   * claim sponsorship when ambiguous" rule. A real post-filter over a
-   * bounded candidate window, not a stored column — see queries.ts's
-   * own comment on why `truncated` can be true here too.
+   * Only jobs whose employer is a confirmed licensed sponsor on the Home Office register (src/lib/jobs/sponsor-match.ts:
+   * an unambiguous exact match, on the sponsor's name or a trading-name alias) — evaluated in SQL over every matching
+   * job, never 'unconfirmed'/'not_found'.
    */
   sponsorOnly?: boolean;
-  /**
-   * Already-resolved current version of the CV to match against — the
-   * caller (a page) resolves a user-picked CV id to its current version
-   * (same way src/lib/jobs/matching/actions.ts does internally), so
-   * this file never needs to know about CV ownership itself. Required
-   * together with `minMatchScore` for the threshold filter to apply;
-   * ignored alone (there's nothing to filter or sort by without a
-   * threshold or `sort: "match_desc"`).
-   */
+  /** The current version of the CV to match against, already resolved by the page. Needed for minMatchScore / match_desc. */
   cvVersionId?: string;
-  /** Only jobs already scored (via job_matches) at or above this for `cvVersionId` — jobs never scored for that CV simply don't appear, since there's no score to compare; this never triggers a live AI call. */
+  /** Only jobs already scored (job_matches) at or above this for cvVersionId — jobs never scored for that CV have no score to compare, so they don't appear. Never triggers a live AI call. */
   minMatchScore?: number;
   page?: number;
 };
@@ -90,8 +84,8 @@ export type JobSearchResult = {
   page: number;
   pageSize: number;
   totalPages: number;
-  /** True when a keywords search hit queries.ts's CANDIDATE_LIMIT, or a sponsorOnly filter hit its own candidate window — either way, more real matches may exist beyond what was scanned, so `total`/`totalPages` undercount. */
-  truncated: boolean;
+  /** True when the search itself failed (database error) — distinct from a real search that found nothing. */
+  failed: boolean;
 };
 
 /** One migration 0060 job_source_sync_status row — "when did this source last sync successfully, and what happened". */

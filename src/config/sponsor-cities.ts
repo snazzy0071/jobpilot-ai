@@ -3,8 +3,8 @@ export type SponsorCity = {
   name: string;
 };
 
-// The register sync itself doesn't exist yet — this is just the fixed list
-// of major UK cities the directory will let people browse by, once it does.
+// The fixed list of major UK cities the directory lets people browse by — counts for each come from the real
+// register (sponsor_city_counts), not from this file.
 export const SPONSOR_CITIES: SponsorCity[] = [
   { slug: "london", name: "London" },
   { slug: "manchester", name: "Manchester" },

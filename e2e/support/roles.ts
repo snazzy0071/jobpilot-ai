@@ -48,13 +48,35 @@ export async function makeInstitutionAdmin(userId: string): Promise<string> {
   const { data: institution, error: instError } = await admin.from("institutions").insert({ name: "E2E Institution", slug }).select("id").single();
   if (instError || !institution) throw new Error(`e2e/support/roles.ts: couldn't create institution: ${instError?.message}`);
 
-  // The seat-capacity trigger refuses a member row for an institution with no active licence.
-  const { data: plan, error: planError } = await admin.from("plans").select("id").limit(1).single();
-  if (planError || !plan) throw new Error(`e2e/support/roles.ts: no plan to attach a licence to: ${planError?.message}`);
-  const { error: licenceError } = await admin.from("institution_licences").insert({ institution_id: institution.id, plan_id: plan.id, seat_count: 5 });
-  if (licenceError) throw new Error(`e2e/support/roles.ts: couldn't create licence: ${licenceError.message}`);
+  try {
+    // The seat-capacity trigger refuses a member row for an institution with no active licence.
+    const { data: plan, error: planError } = await admin.from("plans").select("id").limit(1).single();
+    if (planError || !plan) throw new Error(`e2e/support/roles.ts: no plan to attach a licence to: ${planError?.message}`);
+    const { error: licenceError } = await admin.from("institution_licences").insert({ institution_id: institution.id, plan_id: plan.id, seat_count: 5 });
+    if (licenceError) throw new Error(`e2e/support/roles.ts: couldn't create licence: ${licenceError.message}`);
 
-  const { error: memberError } = await admin.from("institution_members").insert({ institution_id: institution.id, user_id: userId, role: "admin" });
-  if (memberError) throw new Error(`e2e/support/roles.ts: couldn't add membership: ${memberError.message}`);
-  return institution.id;
+    const { error: memberError } = await admin.from("institution_members").insert({ institution_id: institution.id, user_id: userId, role: "admin" });
+    if (memberError) throw new Error(`e2e/support/roles.ts: couldn't add membership: ${memberError.message}`);
+    return institution.id;
+  } catch (error) {
+    // Don't leave a half-built institution behind in the shared database when setup fails part-way.
+    await admin.from("institutions").delete().eq("id", institution.id);
+    throw error;
+  }
+}
+
+/**
+ * Puts an isolated account on a paid plan (`pro`, `premium` or `elite`) the way a completed checkout would leave it:
+ * an active `subscriptions` row pointing at the plan. Lets a spec use features the Free plan caps (several CVs,
+ * AI rewrites) without going through Stripe. The row cascades away with the user.
+ */
+export async function setPlan(userId: string, slug: "pro" | "premium" | "elite"): Promise<void> {
+  const admin = getAdminClient();
+  const { data: plan, error: planError } = await admin.from("plans").select("id").eq("slug", slug).single();
+  if (planError || !plan) throw new Error(`e2e/support/roles.ts: no "${slug}" plan found: ${planError?.message}`);
+  const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await admin
+    .from("subscriptions")
+    .upsert({ user_id: userId, plan_id: plan.id, status: "active", billing_cycle: "monthly", current_period_end: periodEnd }, { onConflict: "user_id" });
+  if (error) throw new Error(`e2e/support/roles.ts: couldn't put ${userId} on ${slug}: ${error.message}`);
 }

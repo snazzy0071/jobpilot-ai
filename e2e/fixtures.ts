@@ -36,6 +36,7 @@ export async function completeOnboarding(page: Page): Promise<void> {
 
   await page.waitForURL(/\/onboarding\/targets/);
   await page.getByLabel("Target roles").fill("Software Engineer");
+  await page.getByRole("checkbox", { name: "Technology" }).click();
   await page.getByRole("button", { name: "Continue" }).click();
 
   await page.waitForURL(/\/onboarding\/logistics/);

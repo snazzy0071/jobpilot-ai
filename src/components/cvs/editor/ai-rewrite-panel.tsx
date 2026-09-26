@@ -58,7 +58,12 @@ export function AiRewritePanel({
 
   function handleStart() {
     const original = getValue().trim();
-    if (!original) return;
+    if (!original) {
+      // Nothing to rewrite: say so instead of a button that silently does nothing.
+      setResult(null);
+      setError("Write a few words first, then ask for a stronger version.");
+      return;
+    }
     setResult(null);
     void request(original);
   }

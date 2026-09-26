@@ -10,6 +10,7 @@ import { test, expect, completeOnboarding } from "../fixtures";
 
 test.describe("ATS scan", () => {
   test("running a scan against a real job description returns real scores and keyword feedback", async ({ authenticatedPage }) => {
+    test.skip(!process.env.ANTHROPIC_API_KEY, "Needs ANTHROPIC_API_KEY (real, or the mocked-provider mode); the same flow is covered by cv-ats-preflight and ats-scanner under the mock.");
     const { page } = authenticatedPage;
     await completeOnboarding(page);
 

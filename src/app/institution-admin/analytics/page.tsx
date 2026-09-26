@@ -29,6 +29,25 @@ export default async function InstitutionAdminAnalyticsPage() {
   const { institutionId } = await requireInstitutionAdmin();
   const analytics = await getInstitutionAnalytics(institutionId);
 
+  if (analytics.suppressed) {
+    return (
+      <div className="flex flex-col gap-6">
+        <div>
+          <h1 className="font-heading text-2xl font-semibold tracking-tight">Analytics</h1>
+          <p className="mt-1 text-muted-foreground">Aggregate activity across your student cohort — never broken down by individual student.</p>
+        </div>
+        <Card variant="admin" className="gap-2 p-6" data-testid="analytics-suppressed">
+          <p className="font-medium">
+            {analytics.studentCount} student{analytics.studentCount === 1 ? "" : "s"} so far
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Activity figures appear once at least {analytics.minCohort} students have joined. With fewer, a total would describe individual students, so it is withheld to protect their privacy.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   const activationRate = analytics.studentCount > 0 ? Math.round((analytics.activatedStudents / analytics.studentCount) * 100) : null;
 
   return (

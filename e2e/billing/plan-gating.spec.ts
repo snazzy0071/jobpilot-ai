@@ -1,4 +1,9 @@
-import { test, expect, completeOnboarding } from "../fixtures";
+import { test, expect } from "../fixtures";
+import { markOnboarded } from "../support/roles";
+import { seedCv } from "../support/cv";
+
+// These start from a signed-in fresh account. The onboarding wizard has its own spec; here the account is simply marked onboarded
+// (the wizard's selectors changed and are not what this suite is about).
 
 // A freshly created, isolated account has no subscriptions row at all,
 // which src/lib/entitlements/service.ts's getEntitlements() resolves to
@@ -7,31 +12,27 @@ import { test, expect, completeOnboarding } from "../fixtures";
 
 test.describe("Plan gating", () => {
   test("a free-plan user sees the upgrade prompt in the sidebar", async ({ authenticatedPage }) => {
-    const { page } = authenticatedPage;
-    await completeOnboarding(page);
+    const { page, user } = authenticatedPage;
+    await markOnboarded(user.id);
+    await page.goto("/dashboard");
 
     // DashboardSidebar only renders PlanUpgradeCard when plan === "free"
     // — "Free plan" text appears twice on the page (the sidebar's own
     // plan label, and PlanUpgradeCard's own copy), so .first() rather
     // than an exact single match.
     await expect(page.getByText("Free plan").first()).toBeVisible();
-    await expect(page.getByRole("link", { name: "Upgrade" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "Upgrade", exact: true }).first()).toBeVisible();
   });
 
-  test("generating a cover letter — a Pro+ feature — is blocked server-side with a real entitlement error, not silently allowed", async ({
+  test("generating a cover letter — a Premium feature — is blocked server-side with a real entitlement error, not silently allowed", async ({
     authenticatedPage,
   }) => {
-    const { page } = authenticatedPage;
-    await completeOnboarding(page);
+    const { page, user } = authenticatedPage;
+    await markOnboarded(user.id);
+    await page.goto("/dashboard");
 
-    // Needs at least one real CV to reach the generation form at all
-    // (cover-letter-create-form.tsx's own eligibleCvs check) — any
-    // created CV qualifies, no content required.
-    await page.goto("/dashboard/cvs");
-    await page.getByRole("button", { name: "New CV" }).first().click();
-    await page.getByLabel("Title").fill("E2E Gating CV");
-    await page.getByRole("button", { name: "Create CV" }).click();
-    await page.waitForURL(/\/dashboard\/cvs\/[^/]+$/);
+    // A CV with real content (an empty one is rejected earlier, for a different reason).
+    await seedCv(user.id, { title: "E2E Gating CV" });
 
     await page.goto("/dashboard/cover-letters/new");
     await page.getByLabel("Job description").fill(
@@ -46,14 +47,15 @@ test.describe("Plan gating", () => {
     // requireFeature — a Free plan doesn't include it, so this must
     // fail with the real EntitlementError message, not attempt (and
     // possibly succeed at, or silently no-op) a real AI generation.
-    await expect(page.getByRole("alert")).toContainText("isn't included in your current plan");
+    await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toContainText("isn't included in your current plan");
     // Still on the form — no cover letter was created to redirect to.
     await expect(page).toHaveURL(/\/dashboard\/cover-letters\/new/);
   });
 
   test("the free plan's real numeric limits are reflected in the CV list (cv_limit)", async ({ authenticatedPage }) => {
-    const { page } = authenticatedPage;
-    await completeOnboarding(page);
+    const { page, user } = authenticatedPage;
+    await markOnboarded(user.id);
+    await page.goto("/dashboard");
 
     // migration 0016's seeded Free entitlements cap cv_limit at 1 — a
     // second CV attempt must be blocked server-side by
@@ -74,7 +76,7 @@ test.describe("Plan gating", () => {
     // reserveCvSlot -> requireUsageAllowed's real EntitlementError
     // message for a reached (not zero) limit — see
     // src/lib/entitlements/service.ts's requireUsageAllowed.
-    await expect(page.getByRole("alert")).toContainText("You've used all 1 of your allowance");
+    await expect(page.getByRole("alert")).toContainText("You've reached your plan's limit for CVs");
     // Still on the CV list (dialog open, not redirected into a second editor).
     await expect(page).toHaveURL(/\/dashboard\/cvs$/);
   });

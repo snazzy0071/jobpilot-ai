@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getAIEnv } from "@/lib/ai/env";
 import { getStripeEnv } from "@/lib/stripe/env";
 import { getEmailEnv } from "@/lib/email/env";
+import { deriveSponsorSyncState, SPONSOR_SYNC_STALE_AFTER_HOURS } from "@/lib/admin/sponsors/sync-state";
 import type { HealthCheckResult, HealthStatus } from "@/lib/health/types";
 
 // 4x the 6-hourly job-sync cron interval (vercel.json) — a real buffer
@@ -71,25 +72,32 @@ export async function checkEmail(): Promise<HealthCheckResult> {
 }
 
 /**
- * `sponsor_sync_status` carries "Anyone can view" RLS (built on top of
- * migration 0049's `sponsor_imports`, same policy), so the regular
- * client is enough. This pipeline genuinely has no ingestion job wired
- * up yet — that migration's own comment says so — so a row-less result
- * is the accurate "not configured" state, not a false alarm.
+ * The sponsor register syncs daily from the Home Office's published CSV (.github/workflows/sponsors-sync.yml).
+ * `sponsor_sync_status` and `sponsor_imports` are readable by anyone, so the regular client is enough. Uses the same
+ * derivation as the admin page (src/lib/admin/sponsors/sync-state.ts): a failed newest run or a last completed sync
+ * older than the stale window is `degraded`; a register that has never synced is `down` (the public directory
+ * is empty without it).
  */
 export async function checkSponsorSync(): Promise<HealthCheckResult> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("sponsor_sync_status").select("completed_at").maybeSingle();
+  const [{ data: status, error }, { data: latest }] = await Promise.all([
+    supabase.from("sponsor_sync_status").select("completed_at, source_date").maybeSingle(),
+    supabase.from("sponsor_imports").select("status, started_at").order("started_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
   if (error) return result("sponsor_sync", "Sponsor register sync", "down", `Query failed: ${error.message}`);
-  if (!data?.completed_at) {
-    return result(
-      "sponsor_sync",
-      "Sponsor register sync",
-      "not_configured",
-      "No sponsor sync has ever completed — no ingestion job is wired up yet.",
-    );
+
+  const state = deriveSponsorSyncState({
+    latestStatus: latest?.status ?? null,
+    latestStartedAt: latest?.started_at ?? null,
+    lastCompletedAt: status?.completed_at ?? null,
+  });
+  if (state === "never") return result("sponsor_sync", "Sponsor register sync", "down", "No sponsor sync has ever completed.");
+  const lastOk = `Last completed sync: ${status?.completed_at} (register dated ${status?.source_date}).`;
+  if (state === "failed") return result("sponsor_sync", "Sponsor register sync", "degraded", `The latest sync failed. ${lastOk}`);
+  if (state === "stale") {
+    return result("sponsor_sync", "Sponsor register sync", "degraded", `No completed sync in ${SPONSOR_SYNC_STALE_AFTER_HOURS} hours. ${lastOk}`);
   }
-  return result("sponsor_sync", "Sponsor register sync", "operational", `Last completed sync: ${data.completed_at}.`);
+  return result("sponsor_sync", "Sponsor register sync", "operational", lastOk);
 }
 
 /**

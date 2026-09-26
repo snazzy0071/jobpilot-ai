@@ -10,9 +10,9 @@
 // has correctly.
 
 import type { Question } from "@/lib/test-prep/types";
-import type { AnsweredState, CompleteSessionResult } from "@/lib/test-prep/practice/types";
+import type { AnsweredState, SessionResult } from "@/lib/test-prep/practice/types";
 
-type CompletedSession = Extract<CompleteSessionResult, { score: number }>;
+type CompletedSession = SessionResult;
 
 export type SubtypeBreakdown = {
   subtype: string;

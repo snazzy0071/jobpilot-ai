@@ -1,7 +1,7 @@
 import type { CSSProperties, ReactNode } from "react";
 import { getContactItems, type ContactItem } from "@/components/cvs/templates/content";
 import { ATOM, ATOM_STYLE, colorOf, fontOf, mainTone } from "@/components/cvs/templates/primitives";
-import { PAGE_PAD_Y, type TemplateDesign } from "@/components/cvs/templates/design";
+import { PAGE_PAD_Y, safeTracking, type TemplateDesign } from "@/components/cvs/templates/design";
 import type { CvTemplateContentData } from "@/components/cvs/templates/types";
 
 function ContactLink({ item }: { item: ContactItem }) {
@@ -88,7 +88,7 @@ export function CvHeader({ data, design, padX }: { data: CvTemplateContentData; 
   const headlineColor = onBand ? (h.subInk ?? h.ink ?? "#ffffff") : colorOf(tone, h.headlineColor, "muted");
   const contactColor = onBand ? (h.subInk ?? h.ink ?? "#ffffff") : tone.muted;
   const align: "left" | "center" | "right" = h.variant === "center" || h.variant === "framed" ? "center" : "left";
-  const items = getContactItems(personal);
+  const items = getContactItems(personal).map((item) => (data.staticLinks ? { ...item, href: undefined } : item));
 
   const name: ReactNode = (
     <h2
@@ -98,7 +98,7 @@ export function CvHeader({ data, design, padX }: { data: CvTemplateContentData; 
         fontSize: h.nameSize,
         fontWeight: h.nameWeight,
         fontStyle: h.nameItalic ? "italic" : "normal",
-        letterSpacing: `${h.nameTracking}em`,
+        letterSpacing: `${safeTracking(h.nameTracking)}em`,
         textTransform: h.nameCase === "upper" ? "uppercase" : "none",
         fontVariantCaps: h.nameCase === "small-caps" ? "small-caps" : "normal",
         lineHeight: 1.1,
@@ -120,7 +120,7 @@ export function CvHeader({ data, design, padX }: { data: CvTemplateContentData; 
         fontWeight: h.headlineStyle === "caps" ? 600 : 500,
         fontStyle: h.headlineStyle === "italic" ? "italic" : "normal",
         textTransform: h.headlineStyle === "caps" ? "uppercase" : "none",
-        letterSpacing: h.headlineStyle === "caps" ? "0.14em" : undefined,
+        letterSpacing: h.headlineStyle === "caps" ? `${safeTracking(0.14)}em` : undefined,
         color: headlineColor,
         textAlign: align,
         lineHeight: 1.3,

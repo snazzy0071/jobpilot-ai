@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCvEditorData } from "@/lib/cvs/queries";
 import { getJobById, getJobSourceName, getJobMatchesForCv } from "@/lib/jobs/queries";
 import { matchJobToSponsor } from "@/lib/jobs/sponsor-match";
-import { saveJobSchema, unsaveJobSchema } from "@/lib/jobs/wishlist/schemas";
+import { saveJobSchema, unsaveJobSchema, removeSavedJobSchema, updateSavedJobNotesSchema } from "@/lib/jobs/wishlist/schemas";
 import type { SavedJob } from "@/lib/jobs/types";
 
 export type SaveJobResult = { error: string } | { savedJob: SavedJob };
@@ -68,7 +68,15 @@ export async function saveJob(input: { jobId: string; cvId?: string }): Promise<
   const job = await getJobById(parsed.data.jobId);
   if (!job) return { error: "That job couldn't be found." };
 
-  const [sponsorMatch, sourceName] = await Promise.all([matchJobToSponsor(job.companyName), getJobSourceName(job.sourceId)]);
+  // A failed register lookup must not be saved as a sponsor status ("not found" would be a claim): ask the user to retry.
+  let sponsorMatch;
+  let sourceName;
+  try {
+    [sponsorMatch, sourceName] = await Promise.all([matchJobToSponsor(job.companyName), getJobSourceName(job.sourceId)]);
+  } catch (err) {
+    console.error("saveJob: sponsor check failed:", err);
+    return { error: "Couldn't check the sponsor register just now — try again in a moment." };
+  }
 
   let matchScore: number | null = null;
   if (parsed.data.cvId) {
@@ -119,4 +127,44 @@ export async function unsaveJob(input: { jobId: string }): Promise<UnsaveJobResu
 
   revalidatePath("/dashboard/jobs");
   return { success: true };
+}
+
+/** Remove one saved job by its own id: the saved page's remove, which also works for a job whose listing has since been pruned (no job id left to unsave by). */
+export async function removeSavedJob(input: { savedJobId: string }): Promise<UnsaveJobResult> {
+  const user = await requireUser();
+
+  const parsed = removeSavedJobSchema.safeParse(input);
+  if (!parsed.success) return { error: "Invalid request." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("saved_jobs").delete().eq("id", parsed.data.savedJobId).eq("user_id", user.id);
+  if (error) return { error: "Couldn't remove that job — try again." };
+
+  revalidatePath("/dashboard/jobs");
+  revalidatePath("/dashboard/jobs/saved");
+  return { success: true };
+}
+
+export type SaveNotesResult = { error: string } | { notes: string | null };
+
+/** The user's own note on a saved job (the only field of a saved job they edit: everything else is the snapshot taken when they saved it). */
+export async function updateSavedJobNotes(input: { savedJobId: string; notes: string }): Promise<SaveNotesResult> {
+  const user = await requireUser();
+
+  const parsed = updateSavedJobNotesSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("saved_jobs")
+    .update({ notes: parsed.data.notes })
+    .eq("id", parsed.data.savedJobId)
+    .eq("user_id", user.id)
+    .select("notes")
+    .maybeSingle();
+  if (error) return { error: "Couldn't save that note — try again." };
+  if (!data) return { error: "That saved job couldn't be found." };
+
+  revalidatePath("/dashboard/jobs/saved");
+  return { notes: data.notes };
 }

@@ -11,6 +11,7 @@
 // scoping it to one tenant).
 
 import type { InstitutionMemberRole } from "@/lib/institutions/types";
+import type { LicenceState } from "@/lib/institutions/licence";
 
 export type AdminInstitutionMember = {
   id: string;
@@ -38,6 +39,7 @@ export type InstitutionLicenceSummary = {
   startsAt: string;
   expiresAt: string | null;
   isActive: boolean;
+  state: LicenceState;
 };
 
 export type InstitutionOverview = {
@@ -72,4 +74,7 @@ export type InstitutionAnalytics = {
   interviewsCompleted: number;
   applicationsTracked: number;
   testSessionsCompleted: number;
+  /** True when the cohort is smaller than `minCohort`: the activity counts are withheld (they would describe individuals), only studentCount is real. */
+  suppressed: boolean;
+  minCohort: number;
 };

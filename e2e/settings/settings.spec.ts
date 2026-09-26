@@ -49,6 +49,8 @@ test.describe("Settings", () => {
     await page.goto("/dashboard/settings");
     await page.getByRole("tab", { name: "Privacy" }).click();
     await page.getByLabel(/type.*delete.*to confirm/i).fill("DELETE");
+    // Deleting an account needs the current password as well as the typed confirmation.
+    await page.locator("#currentPasswordForDelete").fill(testUser.password);
     await page.getByRole("button", { name: "Delete my account" }).click();
 
     // eraseUserAccount + auth.signOut() + redirect("/") — real proof the

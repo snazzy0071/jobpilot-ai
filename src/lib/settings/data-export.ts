@@ -1,72 +1,105 @@
 import "server-only";
 import type { User } from "@supabase/supabase-js";
 import JSZip from "jszip";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { EXPORT_TABLES, EXPORT_EXCLUDED_TABLES } from "@/lib/settings/export-tables";
+
+export { EXPORT_TABLES, EXPORT_EXCLUDED_TABLES };
 
 export type DataExportPayload = {
   exportedAt: string;
-  account: { id: string; email: string | null | undefined; createdAt: string };
+  account: { id: string; email: string | null | undefined; createdAt: string; lastSignInAt: string | null | undefined; signInMethods: string[] };
   profile: unknown;
   preferences: unknown;
-  applications: unknown[];
-  applicationStatusHistory: unknown[];
-  applicationReminders: unknown[];
+  /** Every table that holds this person's data, keyed by table name (see export-tables.ts). */
+  data: Record<string, unknown[]>;
+  /** Records kept against the email address rather than the account: newsletter subscription, messages sent through the contact form, emails we sent. */
+  emailKeyed: { newsletterSubscription: unknown[]; contactMessages: unknown[]; emailsSent: unknown[] };
+  /** Each time an administrator viewed this account (read-only "view as user"): when, and how it ended. The administrator is not named here. */
+  accountAccessBySupport: unknown[];
+  /** What is deliberately not in this file, and why. */
+  notIncluded: { table: string; reason: string }[];
 };
 
+const PAGE = 1000;
+const MAX_PAGES = 200;
+
+/** Reads every row for one filter, page by page (the API returns at most 1000 rows per request, so a single select would silently truncate a large history). */
+async function fetchAll(query: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: { message: string } | null }>, label: string): Promise<unknown[]> {
+  const rows: unknown[] = [];
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await query(page * PAGE, page * PAGE + PAGE - 1);
+    // A failed read must never produce a smaller "complete" export.
+    if (error) throw new Error(`Data export failed while reading ${label}: ${error.message}`);
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  return rows;
+}
+
 /**
- * Every table here is scoped to `user_id`/`id` = the caller's own id
- * even though RLS (`auth.uid() = user_id` on every one of these tables)
- * already guarantees the same result — defence in depth, same reasoning
- * src/lib/applications/queries.ts's own listApplications already gives.
- * Raw `select("*")` rather than this app's own mapped camelCase types: a
- * GDPR export should show the real stored record, not a client-shaped
- * view of it.
- *
- * "User-owned application data" here means the Tracker (`applications`,
- * `application_status_history`, `application_reminders` — migrations
- * 0063/0066), not every table this account has ever touched across the
- * whole product.
+ * The person's complete data (GDPR Articles 15 and 20): every table that stores something against their account, not just the
+ * application tracker. Each read is scoped to this user's id explicitly. It uses the service-role client because a few of these
+ * tables (billing history, AI usage records, memberships) are deliberately not readable by the user through the API, yet are
+ * still their personal data. The route is behind requireUser(), and `user` comes from that session, never from the request.
+ * Raw `select("*")`: an export shows the real stored record, not a client-shaped view of it.
  */
 export async function buildDataExportPayload(user: User): Promise<DataExportPayload> {
-  const supabase = await createClient();
+  const admin = createAdminClient();
+  const email = user.email?.toLowerCase() ?? null;
 
-  const [{ data: profile }, { data: preferences }, { data: applications }, { data: applicationStatusHistory }, { data: applicationReminders }] =
-    await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user.id).single(),
-      supabase.from("user_preferences").select("*").eq("id", user.id).single(),
-      supabase.from("applications").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
-      supabase.from("application_status_history").select("*").eq("user_id", user.id).order("changed_at", { ascending: true }),
-      supabase.from("application_reminders").select("*").eq("user_id", user.id).order("created_at", { ascending: true }),
-    ]);
+  const [{ data: profile }, { data: preferences }] = await Promise.all([
+    admin.from("profiles").select("*").eq("id", user.id).maybeSingle(),
+    admin.from("user_preferences").select("*").eq("id", user.id).maybeSingle(),
+  ]);
+
+  const entries = await Promise.all(
+    EXPORT_TABLES.map(async ({ table, orderBy }) => [table, await fetchAll((from, to) => admin.from(table).select("*").eq("user_id", user.id).order(orderBy ?? "id", { ascending: true }).range(from, to), table)] as const),
+  );
+
+  const byEmail = async (table: string, column: string, order: string) =>
+    email ? fetchAll((from, to) => admin.from(table).select("*").eq(column, email).order(order, { ascending: true }).range(from, to), table) : [];
+
+  const accountAccessBySupport = (
+    await fetchAll((from, to) => admin.from("admin_impersonation_sessions").select("started_at, ended_at, end_reason").eq("target_user_id", user.id).order("id", { ascending: true }).range(from, to), "admin_impersonation_sessions")
+  );
+
+  const [newsletterSubscription, contactMessages, emailsSent] = await Promise.all([
+    byEmail("newsletter_subscribers", "email", "id"),
+    byEmail("contact_messages", "email", "id"),
+    byEmail("email_send_logs", "recipient", "id"),
+  ]);
 
   return {
     exportedAt: new Date().toISOString(),
-    account: { id: user.id, email: user.email, createdAt: user.created_at },
+    account: {
+      id: user.id,
+      email: user.email,
+      createdAt: user.created_at,
+      lastSignInAt: user.last_sign_in_at,
+      signInMethods: (user.identities ?? []).map((identity) => identity.provider),
+    },
     profile,
     preferences,
-    applications: applications ?? [],
-    applicationStatusHistory: applicationStatusHistory ?? [],
-    applicationReminders: applicationReminders ?? [],
+    data: Object.fromEntries(entries),
+    emailKeyed: { newsletterSubscription, contactMessages, emailsSent },
+    accountAccessBySupport,
+    notIncluded: EXPORT_EXCLUDED_TABLES.map(({ table, reason }) => ({ table, reason })),
   };
 }
 
 /**
- * One JSON file per category rather than one undifferentiated blob —
- * the conventional shape a portable subject-access export takes, and
- * easier for someone to actually open and read than a single large file.
+ * One JSON file per category rather than one undifferentiated blob: the conventional shape a portable subject-access export takes,
+ * and easier to open and read than a single large file.
  */
 export async function buildDataExportZip(payload: DataExportPayload): Promise<Buffer> {
   const zip = new JSZip();
   zip.file(
     "account-and-profile.json",
-    JSON.stringify(
-      { exportedAt: payload.exportedAt, account: payload.account, profile: payload.profile, preferences: payload.preferences },
-      null,
-      2,
-    ),
+    JSON.stringify({ exportedAt: payload.exportedAt, account: payload.account, profile: payload.profile, preferences: payload.preferences, notIncluded: payload.notIncluded }, null, 2),
   );
-  zip.file("applications.json", JSON.stringify(payload.applications, null, 2));
-  zip.file("application_status_history.json", JSON.stringify(payload.applicationStatusHistory, null, 2));
-  zip.file("application_reminders.json", JSON.stringify(payload.applicationReminders, null, 2));
+  for (const [table, rows] of Object.entries(payload.data)) zip.file(`${table}.json`, JSON.stringify(rows, null, 2));
+  zip.file("account-access-by-support.json", JSON.stringify(payload.accountAccessBySupport, null, 2));
+  zip.file("email-keyed-records.json", JSON.stringify(payload.emailKeyed, null, 2));
   return zip.generateAsync({ type: "nodebuffer" });
 }

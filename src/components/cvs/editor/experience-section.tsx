@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { saveExperience, deleteExperience, reorderExperience } from "@/lib/cvs/section-actions";
 import { rewriteExperienceWithAi } from "@/lib/cvs/ai-actions";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { AutosaveStatus } from "@/components/cvs/editor/autosave-status";
 import { useAutosave } from "@/components/cvs/editor/use-autosave";
+import { dropEndDateWhenOngoing } from "@/lib/cvs/save-status";
 import { SectionList, type DragHandleProps } from "@/components/cvs/editor/section-list";
 import { DeleteRowButton } from "@/components/cvs/editor/delete-row-button";
 import { useCvPreview } from "@/components/cvs/editor/preview-context";
@@ -31,12 +32,25 @@ function ExperienceForm({
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [rowId, setRowId] = useState<string | null>(initial?.id ?? null);
   const [isCurrent, setIsCurrent] = useState(initial?.isCurrent ?? false);
-  const { setLiveExperience } = useCvPreview();
-  const rowKey = initial?.id ?? "new";
+  const { preview, setLiveExperience, rekeyLiveExperience } = useCvPreview();
+  // The row's real id once it has one (it is inserted by its first save), so the live preview edit follows the row.
+  const rowKey = rowId ?? "new";
+
+  // Same as the summary box: a change to this role made elsewhere (accepting an ATS keyword rewrite) must show here too,
+  // or the next keystroke would save the old description back over it. Only while the box isn't being typed in.
+  const currentDescription = rowId ? (preview.experience.find((row) => row.id === rowId)?.description ?? null) : null;
+  useEffect(() => {
+    const box = descriptionRef.current;
+    if (!box || currentDescription === null || document.activeElement === box) return;
+    if (box.value !== currentDescription) box.value = currentDescription;
+  }, [currentDescription]);
 
   const { status, errorMessage, scheduleSave, flush } = useAutosave(saveExperience, {
     onSaved: (id) => {
-      if (id) setRowId(id);
+      if (id) {
+        rekeyLiveExperience("new", id);
+        setRowId(id);
+      }
     },
   });
 
@@ -44,7 +58,7 @@ function ExperienceForm({
     if (!formRef.current) return null;
     const formData = new FormData(formRef.current);
     if (rowId) formData.set("id", rowId);
-    return formData;
+    return dropEndDateWhenOngoing(formData, "isCurrent");
   }
 
   function handleChange() {

@@ -58,7 +58,7 @@ export default async function AdminJobsPage() {
                 <TableHead>Source</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Fetched / new / updated</TableHead>
+                <TableHead>Fetched / new / updated / duplicates / skipped</TableHead>
                 <TableHead>Started</TableHead>
               </TableRow>
             </TableHeader>
@@ -69,10 +69,15 @@ export default async function AdminJobsPage() {
                   <TableCell className="text-sm text-muted-foreground">{run.runType}</TableCell>
                   <TableCell>
                     <Badge variant={statusVariant(run.status)}>{run.status}</Badge>
-                    {run.errorMessage && <p className="mt-1 text-xs text-destructive">{run.errorMessage}</p>}
+                    {run.errorMessage && (
+                      <p className={`mt-1 max-w-md text-xs ${run.status === "failed" ? "text-destructive" : "text-amber-700 dark:text-amber-400"}`}>
+                        {run.status === "completed" ? "Completed with warnings: " : ""}
+                        {run.errorMessage}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {run.fetchedCount ?? "—"} / {run.createdCount ?? "—"} / {run.updatedCount ?? "—"}
+                    {run.fetchedCount ?? "—"} / {run.createdCount ?? "—"} / {run.updatedCount ?? "—"} / {run.duplicateCount ?? "—"} / {run.skippedCount ?? "—"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">{formatDateTime(run.startedAt)}</TableCell>
                 </TableRow>

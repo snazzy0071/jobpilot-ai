@@ -46,7 +46,10 @@ export type BillingOverview = {
   /** Monthly-equivalent revenue: active subscriptions on a paid plan only (a trial hasn't been charged; a past-due payment already failed once). */
   mrrPence: number;
   arrPence: number;
+  /** Active subscriptions on a paid plan that Stripe is billing. */
   activePaid: number;
+  /** Active on a paid plan but not billed (access-code or complimentary grants): shown, never counted as revenue. */
+  complimentary: number;
   trialing: number;
   pastDue: number;
   incomplete: number;
@@ -77,7 +80,7 @@ export type FailureCounts7d = {
   webhooksUnresolved: number;
 };
 
-export type SyncState = "ok" | "stale" | "failed" | "never";
+export type SyncState = "ok" | "stale" | "failed" | "never" | "running";
 
 export type JobSourceSync = {
   sourceName: string;

@@ -1,14 +1,12 @@
 import { z } from "zod";
 
-// remindAt comes from a <input type="datetime-local"> value
-// ("2026-03-05T14:30") — validated as a real, parseable date/time
-// rather than trusted as-is, then converted to a full ISO string
-// before it ever reaches the database.
-const remindAtField = z
-  .string()
-  .trim()
-  .min(1, "Choose a date and time.")
-  .refine((value) => !Number.isNaN(new Date(value).getTime()), "Enter a valid date and time.")
+// remindAt is an absolute instant (ISO 8601 with an offset or Z). The form converts the person's local date and time
+// to that in the browser — the server can't know their time zone, and reading a bare "2026-03-05T14:30" here would
+// silently mean UTC and fire an hour early all summer. A reminder more than a minute in the past is refused: it could
+// never remind anyone of anything.
+const remindAtField = z.iso
+  .datetime({ offset: true, message: "Enter a valid date and time." })
+  .refine((value) => new Date(value).getTime() >= Date.now() - 60_000, "Choose a time in the future.")
   .transform((value) => new Date(value).toISOString());
 
 export const createReminderSchema = z

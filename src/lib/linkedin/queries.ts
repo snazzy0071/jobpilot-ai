@@ -6,6 +6,7 @@ import type {
   LinkedinProfileDraftDetail,
   LinkedinExperienceBulletItem,
   LinkedinKeywordTerm,
+  LinkedinDraftVersionSummary,
 } from "@/lib/linkedin/types";
 
 type DraftRow = {
@@ -20,6 +21,7 @@ type DraftRow = {
   optimized_headline_narrative: string | null;
   optimized_headline_keyword_dense: string | null;
   optimized_about: string | null;
+  selected_headline: string | null;
   suggested_skills: string[];
   notes: string[];
   keyword_coverage_terms: LinkedinKeywordTerm[];
@@ -54,7 +56,7 @@ export async function getLinkedinDraftDetail(userId: string, draftId: string): P
   const { data, error } = await supabase
     .from("linkedin_profile_drafts")
     .select(
-      "id, title, target_role, target_seniority, current_headline, current_about, current_experience, optimized_headline_concise, optimized_headline_narrative, optimized_headline_keyword_dense, optimized_about, suggested_skills, notes, keyword_coverage_terms, generated_at, updated_at",
+      "id, title, target_role, target_seniority, current_headline, current_about, current_experience, optimized_headline_concise, optimized_headline_narrative, optimized_headline_keyword_dense, selected_headline, optimized_about, suggested_skills, notes, keyword_coverage_terms, generated_at, updated_at",
     )
     .eq("id", draftId)
     .eq("user_id", userId)
@@ -105,6 +107,7 @@ export async function getLinkedinDraftDetail(userId: string, draftId: string): P
         }
       : null,
     optimizedAbout: row.optimized_about,
+    selectedHeadline: row.selected_headline,
     experienceBullets,
     suggestedSkills: row.suggested_skills ?? [],
     notes: row.notes ?? [],
@@ -113,4 +116,17 @@ export async function getLinkedinDraftDetail(userId: string, draftId: string): P
     generatedAt: row.generated_at,
     updatedAt: row.updated_at,
   };
+}
+
+/** Past states of one draft, newest first — the history dialog's list. */
+export async function listLinkedinDraftVersions(userId: string, draftId: string): Promise<LinkedinDraftVersionSummary[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("linkedin_draft_versions")
+    .select("id, label, created_at")
+    .eq("draft_id", draftId)
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+  if (error || !data) return [];
+  return data.map((row) => ({ id: row.id, label: row.label, createdAt: row.created_at }));
 }

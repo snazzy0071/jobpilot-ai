@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Building2, CheckCircle2, MapPin, MessagesSquare, ShieldCheck } from "lucide-react";
+import { Building2, CheckCircle2, CircleDollarSign, GraduationCap, MapPin, MessagesSquare, ShieldCheck, ListChecks, FileText, Wrench, Landmark } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Section } from "@/components/marketing/section";
 import { SectionHeading } from "@/components/marketing/section-heading";
@@ -27,10 +27,17 @@ import { TestPrepDemo } from "@/components/marketing/home/test-prep-demo";
 import { HeroStatChips } from "@/components/marketing/hero-stat-chips";
 import { JourneySteps, type JourneyStep } from "@/components/marketing/journey-steps";
 import { Reveal } from "@/components/motion/reveal";
+import { ProductFrame } from "@/components/marketing/product-frame";
+import { StatBand } from "@/components/marketing/stat-band";
+import { PersonaCards, type Persona } from "@/components/marketing/persona-cards";
+import { Faq, type FaqItem } from "@/components/marketing/faq";
+import { JsonLd } from "@/components/seo/json-ld";
 import { siteConfig } from "@/config/site";
 import { TOOLS } from "@/config/tools";
 import { PLAN_LABELS } from "@/config/plans";
 import { getTotalSponsorCount } from "@/lib/sponsors/queries";
+import { getPublicPlans } from "@/lib/plans/public-plans";
+import { minPlanForTool } from "@/lib/plans/plan-features";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
@@ -118,13 +125,37 @@ const BENEFITS = [
   },
 ];
 
+const PERSONAS: Persona[] = [
+  { icon: GraduationCap, who: "Final-year students & graduates", need: "Track scheme deadlines, practise the aptitude tests and get a CV that reads well to graduate recruiters.", href: "/graduate-schemes", cta: "Browse graduate schemes" },
+  { icon: Landmark, who: "Internationals who need sponsorship", need: "Search the Home Office register of licensed sponsors so you spend time only where an employer can hire you.", href: "/visa-sponsors", cta: "Search the sponsor register" },
+  { icon: FileText, who: "Anyone applying now", need: "Find out how a CV scores against a specific job description before you send it, with the top fixes to make first.", href: "/free-ats-checker", cta: "Score my CV free" },
+  { icon: Building2, who: "Universities & careers teams", need: "Give a whole cohort the toolkit, with seat management, invites and privacy-safe aggregate analytics.", href: "/for-universities", cta: "See institution plans" },
+];
+
+const HOME_FAQ: FaqItem[] = [
+  { question: "Is JobPilot AI free?", answer: "Yes. You can start on the Free plan with no card: build a CV, run ATS scans, use the job tracker and search the UK visa sponsor register. Paid plans add more tools and are launching soon; nothing is charged today." },
+  { question: "Is the visa sponsor data real?", answer: "Yes. It comes from the UK Home Office's published register of licensed sponsors and is refreshed from gov.uk. A licence shows an employer is allowed to sponsor; it does not guarantee that a particular role is sponsored." },
+  { question: "What is a UK-standard CV?", answer: "UK recruiters expect a CV that is normally two pages of A4 with no photo. The CV builder's templates follow those conventions and include an ATS pre-check." },
+  { question: "Can I check my CV without an account?", answer: "Yes. The free ATS checker scores a CV against a job description with no signup, and emails you a PDF report. There is a limit of two scans per email address each month." },
+  { question: "Do you apply to jobs for me?", answer: "No. JobPilot AI helps you prepare and choose where to apply. Auto-Apply prepares applications for you to review and approve, and hands you the employer's link to apply yourself where a site cannot be applied to by software." },
+];
+
 export default async function HomePage() {
-  const sponsorCount = await getTotalSponsorCount();
+  const [sponsorCount, publicPlans] = await Promise.all([getTotalSponsorCount(), getPublicPlans()]);
+  // The plan badge on each tool comes from the plans table, not from the marketing config.
+  const planBadge = (toolSlug: string, fallback: keyof typeof PLAN_LABELS) => {
+    const slug = minPlanForTool(toolSlug, publicPlans) ?? fallback;
+    return slug === "free" ? "All plans" : (PLAN_LABELS[slug as keyof typeof PLAN_LABELS] ?? PLAN_LABELS[fallback]);
+  };
 
   return (
     <>
       {/* Hero */}
-      <Section className="hero-glow pt-24 sm:pt-32">
+      <Section className="hero-glow relative pt-24 sm:pt-32">
+        <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
+          <div className="animate-orb absolute top-24 right-[6%] size-72 rounded-full bg-primary/15 blur-3xl" />
+          <div className="animate-orb absolute bottom-10 left-[4%] size-64 rounded-full bg-brand-secondary/15 blur-3xl [animation-delay:-7s]" />
+        </div>
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <Reveal className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
             <Eyebrow>Built for the UK job market</Eyebrow>
@@ -137,14 +168,16 @@ export default async function HomePage() {
               in one place.
             </p>
             <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
-              <Button size="lg" variant="gradient" render={<Link href="/free-ats-checker">Score my CV free</Link>} />
+              <Button size="lg" variant="gradient" className="btn-shine" render={<Link href="/free-ats-checker">Score my CV free</Link>} />
               <Button size="lg" variant="outline" render={<Link href="/signup">Get started</Link>} />
             </div>
             <HeroStatChips sponsorCount={sponsorCount} />
           </Reveal>
 
           <Reveal delay={0.15} className="pt-4 pb-6 lg:py-0">
-            <HeroStage />
+            <ProductFrame>
+              <HeroStage />
+            </ProductFrame>
           </Reveal>
         </div>
       </Section>
@@ -152,6 +185,14 @@ export default async function HomePage() {
       {/* Trust bar */}
       <Section className="py-8 sm:py-10">
         <TrustBar />
+      </Section>
+
+      {/* Who it's for */}
+      <Section tone="aurora">
+        <SectionHeading eyebrow="Who it's for" title="Whatever stage of the search you're at" lead="Pick the situation closest to yours and start there. Everything connects." />
+        <div className="mt-12">
+          <PersonaCards personas={PERSONAS} />
+        </div>
       </Section>
 
       {/* CV preview */}
@@ -171,7 +212,9 @@ export default async function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <CvBuilderDemo />
+            <ProductFrame>
+              <CvBuilderDemo />
+            </ProductFrame>
           </Reveal>
         </div>
       </Section>
@@ -180,7 +223,9 @@ export default async function HomePage() {
       <Section>
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <Reveal className="order-2 lg:order-1" delay={0.1}>
-            <AtsScoreDemo />
+            <ProductFrame>
+              <AtsScoreDemo />
+            </ProductFrame>
           </Reveal>
           <Reveal className="order-1 flex flex-col gap-4 lg:order-2">
             <Eyebrow>Free tool</Eyebrow>
@@ -204,7 +249,7 @@ export default async function HomePage() {
       </Section>
 
       {/* Sponsor section */}
-      <Section tone="muted">
+      <Section tone="aurora">
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <Reveal className="flex flex-col gap-4">
             <Eyebrow>Visa sponsorship</Eyebrow>
@@ -222,7 +267,9 @@ export default async function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <SponsorSearchDemo total={sponsorCount} />
+            <ProductFrame>
+              <SponsorSearchDemo total={sponsorCount} />
+            </ProductFrame>
           </Reveal>
         </div>
       </Section>
@@ -244,7 +291,9 @@ export default async function HomePage() {
             </div>
           </Reveal>
           <Reveal className="order-2 lg:order-1" delay={0.1}>
-            <JobMatchDemo />
+            <ProductFrame>
+              <JobMatchDemo />
+            </ProductFrame>
           </Reveal>
         </div>
       </Section>
@@ -266,7 +315,9 @@ export default async function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <InterviewDemo />
+            <ProductFrame>
+              <InterviewDemo />
+            </ProductFrame>
           </Reveal>
         </div>
       </Section>
@@ -293,7 +344,7 @@ export default async function HomePage() {
           title="Ten tools. One subscription."
           lead="Built to work together, not as ten separate apps to juggle."
         />
-        <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="snap-row -mx-4 mt-12 px-4 pb-4 sm:mx-0 sm:grid sm:grid-cols-2 sm:gap-6 sm:overflow-visible sm:px-0 sm:pb-0 lg:grid-cols-3">
           {TOOLS.map((tool, index) => (
             <ToolShowcaseCard
               key={tool.slug}
@@ -303,7 +354,7 @@ export default async function HomePage() {
               href={tool.href}
               bullets={TOOL_SHOWCASE[tool.slug]?.bullets ?? []}
               preview={TOOL_SHOWCASE[tool.slug]?.preview}
-              planBadge={tool.plan === "free" ? "All plans" : PLAN_LABELS[tool.plan]}
+              planBadge={planBadge(tool.slug, tool.plan)}
               index={index}
             />
           ))}
@@ -325,8 +376,35 @@ export default async function HomePage() {
             planBadge="All plans"
             index={TOOLS.length + 1}
           />
+          <Reveal className="h-full lg:col-span-2" delay={0.2}>
+            <Link
+              href="/go"
+              className="section-dark card-sheen group relative flex h-full min-h-56 flex-col justify-between gap-6 overflow-hidden rounded-xl p-7 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            >
+              <div className="animate-orb pointer-events-none absolute -top-10 -right-10 size-48 rounded-full bg-brand-secondary/30 blur-3xl" aria-hidden="true" />
+              <div className="relative flex flex-col gap-2">
+                <p className="text-xs font-semibold tracking-widest text-white/70 uppercase">Not sure where to start?</p>
+                <h3 className="font-heading text-2xl font-semibold tracking-tight text-balance">Tell us your situation and we&apos;ll point you to the right tool</h3>
+              </div>
+              <span className="relative inline-flex items-center gap-1 text-sm font-semibold">
+                Find my starting point
+                <span aria-hidden="true" className="transition-transform duration-300 group-hover:translate-x-1">&rarr;</span>
+              </span>
+            </Link>
+          </Reveal>
         </div>
       </Section>
+
+      <StatBand
+        eyebrow="The toolkit in numbers"
+        title="Real data, one workspace"
+        items={[
+          { icon: ShieldCheck, value: sponsorCount > 0 ? sponsorCount : "Live", suffix: sponsorCount > 0 ? "+" : undefined, label: "Licensed UK sponsors", caption: "From the Home Office register, synced from gov.uk" },
+          { icon: Wrench, value: TOOLS.length + 2, label: "Tools in one place", caption: "CV, ATS, cover letters, interviews, tracker and more" },
+          { icon: ListChecks, value: 5, label: "Aptitude test formats", caption: "Original practice questions with explanations" },
+          { icon: CircleDollarSign, value: "£0", label: "To start", caption: "Free plan, no card required" },
+        ]}
+      />
 
       {/* Grad-prep spotlight */}
       <Section>
@@ -346,13 +424,15 @@ export default async function HomePage() {
             </div>
           </Reveal>
           <Reveal delay={0.1}>
-            <TestPrepDemo />
+            <ProductFrame>
+              <TestPrepDemo />
+            </ProductFrame>
           </Reveal>
         </div>
       </Section>
 
       {/* Five-step journey */}
-      <Section tone="muted">
+      <Section tone="aurora">
         <SectionHeading eyebrow="How it works" title="From CV to offer" />
         <div className="mt-12">
           <JourneySteps steps={JOURNEY} />
@@ -369,10 +449,36 @@ export default async function HomePage() {
         </div>
       </Section>
 
+      <Section tone="muted">
+        <SectionHeading eyebrow="FAQ" title="Questions people ask first" />
+        <div className="mt-12">
+          <Faq items={HOME_FAQ} />
+        </div>
+      </Section>
+
       {/* Closing CTA */}
-      <CtaSection title="Ready to get started?" description="Create a free account — no card required.">
+      <CtaSection
+        title="Ready to get started?"
+        description="Create a free account and see how your CV scores today."
+        points={["No card required", "UK-format CVs", "Real Home Office sponsor data"]}
+      >
         <Button size="lg" variant="secondary" render={<Link href="/signup">Create free account</Link>} />
+        <Button size="lg" variant="ghost" className="border border-white/40 text-white hover:bg-white/15 hover:text-white" render={<Link href="/free-ats-checker">Score my CV free</Link>} />
       </CtaSection>
+
+      <JsonLd
+        data={{
+          "@context": "https://schema.org",
+          "@type": "WebApplication",
+          name: siteConfig.name,
+          url: siteConfig.domain,
+          applicationCategory: "BusinessApplication",
+          operatingSystem: "Web",
+          description: "UK career toolkit: CV builder, ATS scanner, interview coach, job tracker and a searchable UK visa sponsor register.",
+          areaServed: "GB",
+          offers: { "@type": "Offer", price: "0", priceCurrency: "GBP", description: "Free plan" },
+        }}
+      />
     </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { AlertTriangle, ExternalLink, MapPin, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -228,6 +229,12 @@ export function GradSchemeResults({ schemes }: { schemes: GraduateScheme[] }) {
                           <p>{scheme.notes}</p>
                         </div>
                       )}
+
+                      <p>
+                        <Link href={`/graduate-schemes/${scheme.slug}`} className="font-medium underline">
+                          Full details, dates and assessments
+                        </Link>
+                      </p>
 
                       <div className="flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-xs text-muted-foreground">
                         <a

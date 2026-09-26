@@ -14,6 +14,8 @@ import {
   updateMemberRoleSchema,
   memberIdSchema,
   inviteIdSchema,
+  claimDomainSchema,
+  domainIdSchema,
 } from "@/lib/institutions/admin/schemas";
 
 const INVITE_VALIDITY_MS = 14 * 24 * 60 * 60 * 1000;
@@ -260,4 +262,38 @@ export async function resendInstitutionInvite(_prevState: unknown, formData: For
   }
 
   revalidatePath("/institution-admin/invites");
+}
+
+/**
+ * Claims an email domain for this institution. The claim starts UNVERIFIED and does nothing until a JobPilot admin verifies it
+ * (the database refuses a self-verified claim — migration 0119); only then does anyone with a confirmed address at that domain get
+ * a seat automatically. A domain can belong to one institution only.
+ */
+export async function claimInstitutionDomain(formData: FormData) {
+  const { institutionId } = await requireInstitutionAdmin();
+
+  const parsed = claimDomainSchema.safeParse({ domain: formData.get("domain") });
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("institution_domains").insert({ institution_id: institutionId, domain: parsed.data.domain, is_verified: false });
+  if (error) {
+    if (error.code === "23505") return { error: "That domain is already claimed." };
+    return { error: "Couldn't claim that domain — try again." };
+  }
+
+  revalidatePath("/institution-admin/domains");
+}
+
+export async function removeInstitutionDomain(_prevState: unknown, formData: FormData) {
+  const { institutionId } = await requireInstitutionAdmin();
+
+  const parsed = domainIdSchema.safeParse({ domainId: formData.get("domainId") });
+  if (!parsed.success) return { error: "Invalid request." };
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("institution_domains").delete().eq("id", parsed.data.domainId).eq("institution_id", institutionId);
+  if (error) return { error: "Couldn't remove that domain — try again." };
+
+  revalidatePath("/institution-admin/domains");
 }

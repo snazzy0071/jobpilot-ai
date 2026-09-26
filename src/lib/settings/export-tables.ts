@@ -1,0 +1,66 @@
+// Every table that stores personal data against a user id, for the account data export (GDPR Articles 15 and 20). Kept as plain data
+// so a unit test can check it against the migrations: adding a `user_id uuid references auth.users` table without listing it here (or
+// excluding it, with a reason, below) fails the build.
+
+export type ExportTable = { table: string; /** Column to page by (a stable order is needed to read past 1000 rows); default id. */ orderBy?: string };
+
+export const EXPORT_TABLES: ExportTable[] = [
+  { table: "cvs" },
+  { table: "cv_versions" },
+  { table: "cv_personal" },
+  { table: "cv_summary" },
+  { table: "cv_experience" },
+  { table: "cv_education" },
+  { table: "cv_skills" },
+  { table: "cv_projects" },
+  { table: "cv_certifications" },
+  { table: "cv_languages" },
+  { table: "cv_custom_sections" },
+  { table: "cover_letters" },
+  { table: "cover_letter_versions" },
+  { table: "cover_letter_paragraphs" },
+  { table: "cover_letter_paragraph_rewrites" },
+  { table: "ats_scans" },
+  { table: "ats_keywords" },
+  { table: "ats_issues" },
+  { table: "ats_rewrites" },
+  { table: "interview_sessions" },
+  { table: "interview_questions" },
+  { table: "interview_answers" },
+  { table: "interview_scores" },
+  { table: "interview_transcripts" },
+  { table: "linkedin_profile_drafts" },
+  { table: "linkedin_draft_versions" },
+  { table: "linkedin_about_rewrites" },
+  { table: "linkedin_experience_bullets" },
+  { table: "linkedin_experience_bullet_rewrites" },
+  { table: "applications" },
+  { table: "application_status_history" },
+  { table: "application_reminders" },
+  { table: "saved_jobs" },
+  { table: "job_matches" },
+  { table: "auto_apply_settings", orderBy: "user_id" },
+  { table: "auto_apply_queue" },
+  { table: "auto_apply_events" },
+  { table: "test_sessions" },
+  { table: "test_answers" },
+  { table: "test_session_questions" },
+  { table: "daily_practice_completions" },
+  { table: "practice_progress" },
+  { table: "graduate_scheme_preparations" },
+  { table: "subscriptions" },
+  { table: "subscription_usage" },
+  { table: "billing_events" },
+  { table: "voice_interview_topups" },
+  { table: "access_code_redemptions" },
+  { table: "institution_members" },
+  { table: "admin_user_roles" },
+  { table: "ai_usage_logs" },
+  { table: "data_export_logs" },
+];
+
+/** Tables with a user id that are deliberately left out of the export, and why. */
+export const EXPORT_EXCLUDED_TABLES: { table: string; reason: string }[] = [
+  { table: "admin_impersonation_sessions", reason: "Exported separately as `accountAccessBySupport`: the times an administrator viewed this account (as the person viewed, not the administrator)." },
+  { table: "ai_rate_limit_windows", reason: "Short-lived request counters (60-second windows, deleted after 7 days) with no personal content." },
+];

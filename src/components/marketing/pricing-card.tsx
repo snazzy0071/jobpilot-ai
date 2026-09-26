@@ -28,7 +28,7 @@ export function PricingCard({
     <Card
       variant="pricing"
       animatedAccent={popular}
-      className={cn("h-full", popular && "border-primary shadow-pop")}
+      className={cn("card-ring h-full", popular && "border-primary shadow-pop")}
     >
       {popular && (
         // Inside the card's top-right corner, not straddling its top
@@ -55,6 +55,7 @@ export function PricingCard({
         </ul>
         <Button
           variant={popular ? "default" : "outline"}
+          className={popular ? "btn-shine" : undefined}
           render={
             <Link href={ctaHref}>
               {ctaLabel}

@@ -1,11 +1,14 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { demoRequestSchema } from "@/lib/demo/schemas";
 import { sendDemoAcknowledgementEmail } from "@/lib/demo/send-acknowledgement-email";
 import { consumeIpRateLimit } from "@/lib/rate-limit/ip-limit";
+import { echoFields, type EchoedValues } from "@/lib/forms/echo";
 
-export type DemoRequestResult = { error: string } | { success: string } | void;
+const DEMO_FIELDS = ["institutionName", "contactName", "email", "role", "studentPopulation", "message"] as const;
+
+export type DemoRequestResult = { error: string; values?: EchoedValues } | { success: string } | void;
 
 const RATE_LIMIT_MESSAGE = "Too many requests sent — try again in a bit.";
 
@@ -14,7 +17,7 @@ export async function requestDemo(
   formData: FormData,
 ): Promise<DemoRequestResult> {
   if (!(await consumeIpRateLimit("lead_demo", { windowSeconds: 60 * 60, maxRequests: 5 }))) {
-    return { error: RATE_LIMIT_MESSAGE };
+    return { error: RATE_LIMIT_MESSAGE, values: echoFields(formData, DEMO_FIELDS) };
   }
 
   const parsed = demoRequestSchema.safeParse({
@@ -27,10 +30,12 @@ export async function requestDemo(
   });
 
   if (!parsed.success) {
-    return { error: parsed.error.issues[0].message };
+    return { error: parsed.error.issues[0].message, values: echoFields(formData, DEMO_FIELDS) };
   }
 
-  const supabase = await createClient();
+  // Service role, after the rate limit and validation above: the tables no longer accept anonymous inserts (migration 0124), so the
+  // only way in is through this action and its checks.
+  const supabase = createAdminClient();
   const { error } = await supabase.from("demo_requests").insert({
     institution_name: parsed.data.institutionName,
     contact_name: parsed.data.contactName,
@@ -41,7 +46,7 @@ export async function requestDemo(
   });
 
   if (error) {
-    return { error: "Something went wrong — try again in a moment." };
+    return { error: "Something went wrong — try again in a moment.", values: echoFields(formData, DEMO_FIELDS) };
   }
 
   await sendDemoAcknowledgementEmail(parsed.data.email, parsed.data.contactName, parsed.data.institutionName);

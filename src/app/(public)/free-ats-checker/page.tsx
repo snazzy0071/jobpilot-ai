@@ -32,7 +32,7 @@ const COLUMNS: ComparisonColumn[] = [
 ];
 
 const ROWS: ComparisonRow[] = [
-  { label: "ATS scans", values: { free: "2 per month, no signup", pro: "Unlimited, saved to your account" } },
+  { label: "ATS scans", values: { free: "2 per month, no signup", pro: "Unlimited on paid plans, saved to your account" } },
   { label: "Top 10 matched and missing keywords", values: { free: true, pro: true } },
   { label: "Every keyword, mapped to the CV section it belongs in", values: { free: false, pro: true } },
   { label: "Top 3 fixes", values: { free: true, pro: true } },
@@ -52,7 +52,7 @@ const FAQ_ITEMS = [
   {
     question: "How many times can I use it?",
     answer:
-      "2 free scans a month without an account. Create a free account for unlimited tailored scans, saved history, and the full breakdown.",
+      "2 free scans a month without an account. A paid plan adds unlimited scans saved to your account, with history and the full breakdown.",
   },
   {
     question: "What happens to my CV after I submit it?",

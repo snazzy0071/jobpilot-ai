@@ -46,7 +46,7 @@ export function ToolShowcaseCard({
   return (
     <Reveal delay={Math.min(index * 0.06, 0.3)} className="h-full">
       <Link href={href} className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50">
-        <Card variant="tool" animatedAccent={index === 0} className="h-full gap-0 p-0">
+        <Card variant="tool" animatedAccent={index === 0} className="card-ring h-full gap-0 p-0">
           {preview && (
             <div className="relative h-36 overflow-hidden border-b bg-muted/30">
               {/* origin-top + items-start (not centered): these preview

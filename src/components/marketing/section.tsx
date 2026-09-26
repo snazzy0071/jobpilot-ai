@@ -6,6 +6,8 @@ const TONE_CLASSES = {
   default: "bg-background",
   muted: "bg-muted/40",
   primary: "bg-primary text-primary-foreground",
+  aurora: "bg-background section-aurora",
+  dark: "section-dark",
 } as const;
 
 export function Section({

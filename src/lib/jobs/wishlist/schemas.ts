@@ -10,3 +10,16 @@ export const saveJobSchema = z.object({
 export const unsaveJobSchema = z.object({
   jobId: z.string().uuid(),
 });
+
+export const removeSavedJobSchema = z.object({
+  savedJobId: z.string().uuid(),
+});
+
+export const updateSavedJobNotesSchema = z.object({
+  savedJobId: z.string().uuid(),
+  notes: z
+    .string()
+    .trim()
+    .max(2000, "Keep notes to 2,000 characters or fewer.")
+    .transform((value) => (value ? value : null)),
+});

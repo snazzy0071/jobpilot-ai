@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeftIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
-import { getLinkedinDraftDetail } from "@/lib/linkedin/queries";
+import { getLinkedinDraftDetail, listLinkedinDraftVersions } from "@/lib/linkedin/queries";
 import { Button } from "@/components/ui/button";
 import { LinkedinDraftDetail } from "@/components/linkedin/linkedin-draft-detail";
 
@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function LinkedinDraftPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const user = await requireUser();
-  const draft = await getLinkedinDraftDetail(user.id, id);
+  const [draft, versions] = await Promise.all([getLinkedinDraftDetail(user.id, id), listLinkedinDraftVersions(user.id, id)]);
   if (!draft) notFound();
 
   return (
@@ -34,7 +34,7 @@ export default async function LinkedinDraftPage({ params }: { params: Promise<{ 
           new ids included) forces a clean remount with fresh server data,
           instead of this client component's useState hooks keeping their
           stale initial values across a router.refresh(). */}
-      <LinkedinDraftDetail key={draft.updatedAt} draft={draft} />
+      <LinkedinDraftDetail key={draft.updatedAt} draft={draft} versions={versions} />
     </div>
   );
 }

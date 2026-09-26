@@ -12,7 +12,14 @@ import {
   linkedinExperienceBulletRewritePrompt,
   linkedinExperienceBulletRewriteSchema,
 } from "@/lib/ai/prompts";
-import { getLinkedinDraftOwner, getLinkedinBulletOwner, persistLinkedinAboutRewrite, persistLinkedinExperienceBulletRewrite } from "@/lib/linkedin/internal";
+import {
+  getLinkedinDraftOwner,
+  getLinkedinBulletOwner,
+  persistLinkedinAboutRewrite,
+  persistLinkedinExperienceBulletRewrite,
+  ensureLinkedinHistorySnapshot,
+  getLinkedinBulletDraftId,
+} from "@/lib/linkedin/internal";
 import {
   regenerateLinkedinAboutSchema,
   resolveLinkedinAboutRewriteSchema,
@@ -112,6 +119,7 @@ export async function resolveLinkedinAboutRewrite(input: { rewriteId: string; st
     .eq("user_id", user.id);
 
   if (parsed.data.status === "accepted") {
+    await ensureLinkedinHistorySnapshot(supabase, user.id, rewrite.draft_id as string);
     await supabase
       .from("linkedin_profile_drafts")
       .update({ optimized_about: rewrite.suggested_text })
@@ -189,6 +197,8 @@ export async function resolveLinkedinExperienceBulletRewrite(input: {
     .eq("user_id", user.id);
 
   if (parsed.data.status === "accepted") {
+    const draftId = await getLinkedinBulletDraftId(supabase, user.id, rewrite.bullet_id as string);
+    if (draftId) await ensureLinkedinHistorySnapshot(supabase, user.id, draftId);
     await supabase
       .from("linkedin_experience_bullets")
       .update({ content: rewrite.suggested_text })

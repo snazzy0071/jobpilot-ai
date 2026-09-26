@@ -2,11 +2,12 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { isTemplateAllowed, TEMPLATE_LOCKED_MESSAGE } from "@/lib/cvs/template-access";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
-import { requireUsageAllowed, releaseUsage, EntitlementError } from "@/lib/entitlements/service";
+import { requireUsageAllowed, getLimit, releaseUsage, EntitlementError } from "@/lib/entitlements/service";
 import { getCvEditorData } from "@/lib/cvs/queries";
-import { assertOwnsVersion, copySectionsToVersion } from "@/lib/cvs/internal";
+import { assertOwnsVersion, copySectionsToVersion, getVersionOwner } from "@/lib/cvs/internal";
 import {
   createCvSchema,
   renameCvSchema,
@@ -38,7 +39,10 @@ async function reserveCvSlot(userId: string): Promise<{ error: string } | null> 
     await requireUsageAllowed(userId, "cv_limit");
     return null;
   } catch (err) {
-    if (err instanceof EntitlementError) return { error: err.message };
+    // The generic entitlement wording ("your allowance for this feature this month") doesn't say what to do about it.
+    if (err instanceof EntitlementError) {
+      return { error: "You've reached your plan's limit for CVs. Delete a CV you no longer need, or upgrade your plan to create more." };
+    }
     throw err;
   }
 }
@@ -50,6 +54,9 @@ export async function createCv(_prevState: CvActionResult, formData: FormData): 
     template: formData.get("template"),
   });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
+
+  // The plan's template allowance (cv_template_count) is enforced here, not just in the picker.
+  if (!isTemplateAllowed(parsed.data.template, await getLimit(user.id, "cv_template_count"))) return { error: TEMPLATE_LOCKED_MESSAGE };
 
   const slotError = await reserveCvSlot(user.id);
   if (slotError) return slotError;
@@ -110,6 +117,13 @@ export async function updateCvTemplate(_prevState: CvActionResult, formData: For
   if (!parsed.success) return { error: "Invalid request." };
 
   const supabase = await createClient();
+
+  // A template outside the plan's allowance can't be newly chosen. A CV already using one (from an earlier plan) keeps it.
+  if (!isTemplateAllowed(parsed.data.template, await getLimit(user.id, "cv_template_count"))) {
+    const { data: existing } = await supabase.from("cvs").select("template").eq("id", parsed.data.cvId).eq("user_id", user.id).maybeSingle();
+    if (existing?.template !== parsed.data.template) return { error: TEMPLATE_LOCKED_MESSAGE };
+  }
+
   // `.select()` so a zero-row update (wrong id, not the owner, RLS) is an error instead of a silent "success".
   const { data: updated, error } = await supabase
     .from("cvs")
@@ -253,7 +267,10 @@ export async function restoreVersion(_prevState: CvActionResult, formData: FormD
   if (!parsed.success) return { error: "Invalid request." };
 
   const supabase = await createClient();
-  const owned = await assertOwnsVersion(supabase, user.id, parsed.data.versionId);
+  // Ownership only — not assertOwnsVersion, which also takes a history checkpoint. Restoring writes no content: it just
+  // makes an older version current (the one it replaces stays in the history untouched), so a checkpoint here would
+  // only add a stray copy of the version being restored.
+  const owned = await getVersionOwner(supabase, user.id, parsed.data.versionId);
   if (!owned || owned.cvId !== parsed.data.cvId) return { error: "That version couldn't be found." };
 
   const { error } = await supabase

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/session";
 import { getGrantedPermissions } from "@/lib/admin/permissions";
-import { AdminSidebar, ADMIN_NAV_ITEMS } from "@/components/layout/admin-sidebar";
+import { AdminSidebar, ADMIN_NAV_ITEMS, ADMIN_UNLISTED_PAGES } from "@/components/layout/admin-sidebar";
 import { Badge } from "@/components/ui/badge";
 import { SkipLink } from "@/components/layout/skip-link";
 import { UserMenu } from "@/components/layout/user-menu";
@@ -43,7 +43,7 @@ export default async function AdminLayout({
               <Logo />
             </div>
             <div className="hidden md:block">
-              <CurrentPageTitle items={ADMIN_NAV_ITEMS} fallback="Admin" />
+              <CurrentPageTitle items={[...ADMIN_NAV_ITEMS, ...ADMIN_UNLISTED_PAGES]} fallback="Admin" />
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">

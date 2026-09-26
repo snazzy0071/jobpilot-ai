@@ -9,6 +9,8 @@ export type CurrentSubscription = {
   currentPeriodEnd: string | null;
   cancelAtPeriodEnd: boolean;
   hasStripeCustomer: boolean;
+  /** A Stripe subscription id is on the row (false for a plan that was granted rather than bought). */
+  hasStripeSubscription: boolean;
   entitlements: Record<string, unknown>;
 };
 
@@ -18,6 +20,7 @@ type SubscriptionRow = {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   stripe_customer_id: string | null;
+  stripe_subscription_id: string | null;
   plan: { slug: string; name: string; entitlements: Record<string, unknown> } | null;
 };
 
@@ -35,7 +38,7 @@ export async function getCurrentSubscription(userId: string): Promise<CurrentSub
   const { data, error } = await supabase
     .from("subscriptions")
     .select(
-      "status, billing_cycle, current_period_end, cancel_at_period_end, stripe_customer_id, plan:plans ( slug, name, entitlements )",
+      "status, billing_cycle, current_period_end, cancel_at_period_end, stripe_customer_id, stripe_subscription_id, plan:plans ( slug, name, entitlements )",
     )
     .eq("user_id", userId)
     .maybeSingle();
@@ -57,6 +60,7 @@ export async function getCurrentSubscription(userId: string): Promise<CurrentSub
     currentPeriodEnd: row.current_period_end,
     cancelAtPeriodEnd: row.cancel_at_period_end,
     hasStripeCustomer: Boolean(row.stripe_customer_id),
+    hasStripeSubscription: Boolean(row.stripe_subscription_id),
     entitlements: row.plan.entitlements,
   };
 }

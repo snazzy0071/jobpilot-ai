@@ -4,6 +4,7 @@ import type { CurrentSubscription } from "@/lib/billing/queries";
 vi.mock("@/lib/billing/queries", () => ({ getCurrentSubscription: vi.fn() }));
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/supabase/admin", () => ({ createAdminClient: vi.fn() }));
+vi.mock("@/lib/institutions/licence-access", () => ({ getInstitutionLicencePlan: vi.fn().mockResolvedValue(null) }));
 
 function subscription(overrides: Partial<CurrentSubscription> = {}): CurrentSubscription {
   return {
@@ -14,6 +15,7 @@ function subscription(overrides: Partial<CurrentSubscription> = {}): CurrentSubs
     currentPeriodEnd: null,
     cancelAtPeriodEnd: false,
     hasStripeCustomer: true,
+    hasStripeSubscription: true,
     entitlements: { tailored_ats_scans_per_month: 20 },
     ...overrides,
   };
@@ -119,6 +121,44 @@ describe("getEntitlements / hasFeature", () => {
 
     const { hasFeature } = await import("@/lib/entitlements/service");
     expect(await hasFeature("user-1", "cover_letter_generator")).toBe(false);
+  });
+});
+
+describe("institution licence entitlements", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function setup(personal: CurrentSubscription | null, licence: { planSlug: string; entitlements: Record<string, unknown> } | null) {
+    const { getCurrentSubscription } = await import("@/lib/billing/queries");
+    (getCurrentSubscription as ReturnType<typeof vi.fn>).mockResolvedValue(personal);
+    const { getInstitutionLicencePlan } = await import("@/lib/institutions/licence-access");
+    (getInstitutionLicencePlan as ReturnType<typeof vi.fn>).mockResolvedValue(licence ? { planName: licence.planSlug, institutionId: "i", ...licence } : null);
+    const { createClient } = await import("@/lib/supabase/server");
+    (createClient as ReturnType<typeof vi.fn>).mockResolvedValue(stubSupabase({ data: { entitlements: { auto_apply: false } }, error: null }));
+    return import("@/lib/entitlements/service");
+  }
+
+  it("gives a free member the plan their institution's licence provides", async () => {
+    const { getEntitlements, hasFeature } = await setup(null, { planSlug: "premium", entitlements: { auto_apply: true } });
+    expect((await getEntitlements("u")).planSlug).toBe("premium");
+    expect(await hasFeature("u", "auto_apply")).toBe(true);
+  });
+
+  it("keeps a member's own plan when it is higher, and on a tie", async () => {
+    const own = subscription({ planSlug: "elite", entitlements: { auto_apply: true, marker: "own" } });
+    const higher = await setup(own, { planSlug: "premium", entitlements: { auto_apply: false } });
+    expect((await higher.getEntitlements("u")).planSlug).toBe("elite");
+    const tie = await setup(subscription({ planSlug: "premium", entitlements: { marker: "own" } }), { planSlug: "premium", entitlements: { marker: "licence" } });
+    expect((await tie.getEntitlements("u")).entitlements.marker).toBe("own");
+  });
+
+  it("upgrades a lapsed personal subscription to the licence plan, and to nothing extra when there is no licence", async () => {
+    const lapsed = subscription({ status: "canceled", planSlug: "pro" });
+    const withLicence = await setup(lapsed, { planSlug: "premium", entitlements: { auto_apply: true } });
+    expect((await withLicence.getEntitlements("u")).planSlug).toBe("premium");
+    const without = await setup(lapsed, null);
+    expect((await without.getEntitlements("u")).planSlug).toBe("free");
   });
 });
 

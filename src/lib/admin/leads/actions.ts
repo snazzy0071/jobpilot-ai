@@ -4,13 +4,14 @@ import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requirePermission } from "@/lib/admin/permissions";
+import { logAdminAction } from "@/lib/admin/audit/log";
 
 const idSchema = z.object({ id: z.string().uuid() });
 
 type LeadTable = "newsletter_subscribers" | "contact_messages" | "demo_requests" | "partner_inquiries";
 
 async function deleteLeadRow(table: LeadTable, formData: FormData) {
-  await requirePermission("view_leads");
+  const { user: actingAdmin } = await requirePermission("view_leads");
 
   const parsed = idSchema.safeParse({ id: formData.get("id") });
   if (!parsed.success) return { error: "Invalid request." };
@@ -18,6 +19,9 @@ async function deleteLeadRow(table: LeadTable, formData: FormData) {
   const admin = createAdminClient();
   const { error } = await admin.from(table).delete().eq("id", parsed.data.id);
   if (error) return { error: "Couldn't delete that entry — try again." };
+
+  // Deleting a person's submitted details is personal-data handling: record who did it, which table and which row (never the content).
+  await logAdminAction({ actorId: actingAdmin.id, actorEmail: actingAdmin.email ?? null, action: "lead.delete", entityType: "lead", entityId: parsed.data.id, metadata: { table } });
 
   revalidatePath("/admin/leads");
 }

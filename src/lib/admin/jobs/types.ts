@@ -18,6 +18,7 @@ export type AdminJobImportRun = {
   createdCount: number | null;
   updatedCount: number | null;
   duplicateCount: number | null;
+  skippedCount: number | null;
   deactivatedCount: number | null;
   prunedCount: number | null;
   errorMessage: string | null;

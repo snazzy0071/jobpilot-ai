@@ -3,6 +3,7 @@ import { SplitFormPage } from "@/components/marketing/split-form-page";
 import { GradientText } from "@/components/marketing/gradient-text";
 import { ContactForm } from "@/components/contact/contact-form";
 import { siteConfig } from "@/config/site";
+import { JsonLd } from "@/components/seo/json-ld";
 import { buildMetadata } from "@/lib/seo/metadata";
 
 export const metadata = buildMetadata({
@@ -13,6 +14,8 @@ export const metadata = buildMetadata({
 
 export default function ContactPage() {
   return (
+    <>
+    <JsonLd data={{ "@context": "https://schema.org", "@type": "ContactPage", name: `Contact ${siteConfig.name}`, url: `${siteConfig.domain}/contact`, isPartOf: { "@id": `${siteConfig.domain}/#website` } }} />
     <SplitFormPage
       eyebrow="Contact"
       title={
@@ -38,5 +41,6 @@ export default function ContactPage() {
         </>
       }
     />
+    </>
   );
 }

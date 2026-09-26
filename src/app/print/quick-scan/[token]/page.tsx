@@ -59,7 +59,7 @@ export default async function QuickScanPrintPage({ params }: { params: Promise<{
 
         <div className="score-row">
           <span className="score">{result.overallScore}</span>
-          <span className="score-out-of">/ 100 match with this job description</span>
+          <span className="score-out-of">{result.hasJobDescription ? "/ 100 match with this job description" : "/ 100 general ATS-readiness"}</span>
         </div>
         <p className="score-label">{scoreLabel(result.overallScore)}</p>
         <p className="summary">{result.summary}</p>

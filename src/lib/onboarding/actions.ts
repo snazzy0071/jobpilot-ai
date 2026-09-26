@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { resolvePostOnboardingPath } from "@/lib/graduate-schemes/signup-server";
 import {
   aboutStepSchema,
   logisticsStepSchema,
@@ -122,7 +123,8 @@ export async function saveLogisticsStep(
   }
 
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  // /dashboard as always, unless the account signed up for a specific graduate scheme (then that scheme's preparation flow).
+  redirect(await resolvePostOnboardingPath(user));
 }
 
 export async function skipOnboarding() {
@@ -130,5 +132,5 @@ export async function skipOnboarding() {
   const supabase = await createClient();
   await supabase.from("profiles").update({ onboarding_status: "completed" }).eq("id", user.id);
   revalidatePath("/", "layout");
-  redirect("/dashboard");
+  redirect(await resolvePostOnboardingPath(user));
 }

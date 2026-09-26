@@ -91,6 +91,29 @@ async function findUserIdByStripeCustomerId(
   return { userId: data.user_id, subscriptionRowId: data.id, currentPlanId: data.plan_id };
 }
 
+/**
+ * Stripe does not promise to deliver events in order (a retry of an old customer.subscription.updated can arrive after a newer
+ * one, or after customer.subscription.deleted). Every event we act on records Stripe's own creation time; an event older than
+ * one already applied for the same Stripe subscription is ignored, so stale state can never overwrite newer state (for
+ * instance bring a cancelled subscription back to life).
+ */
+export async function isStaleSubscriptionEvent(admin: SupabaseClient, stripeSubscriptionId: string, eventCreated: number): Promise<boolean> {
+  const { data } = await admin
+    .from("billing_events")
+    .select("metadata")
+    .eq("metadata->>stripe_subscription_id", stripeSubscriptionId)
+    .order("created_at", { ascending: false })
+    .limit(25);
+  const newest = (data ?? []).reduce((max, row) => {
+    const value = Number((row.metadata as { stripe_event_created?: number } | null)?.stripe_event_created);
+    return Number.isFinite(value) && value > max ? value : max;
+  }, 0);
+  return newest > eventCreated;
+}
+
+/** Statuses a later payment-failed / paid event may move a subscription between. A cancelled or never-completed subscription is never revived by an invoice event. */
+const LIVE_STATUSES = ["active", "trialing", "past_due"];
+
 export async function handleCheckoutSessionCompleted(event: Stripe.Event): Promise<void> {
   const session = event.data.object as Stripe.Checkout.Session;
 
@@ -209,6 +232,19 @@ export async function handleSubscriptionCreatedOrUpdated(event: Stripe.Event): P
     return;
   }
 
+  if (await isStaleSubscriptionEvent(admin, subscription.id, event.created)) {
+    console.warn(`${event.type} ${event.id}: older than an event already applied for ${subscription.id}, ignoring`);
+    return;
+  }
+
+  // A different, still-running Stripe subscription is already on this account (a double checkout): don't let this one
+  // overwrite it. The extra subscription needs a human (refund/cancel in Stripe), so make it visible rather than silent.
+  const { data: currentRow } = await admin.from("subscriptions").select("stripe_subscription_id, status").eq("user_id", existing.userId).maybeSingle();
+  if (currentRow?.stripe_subscription_id && currentRow.stripe_subscription_id !== subscription.id && LIVE_STATUSES.includes(currentRow.status)) {
+    console.warn(`${event.type} ${event.id}: user already has live subscription ${currentRow.stripe_subscription_id}; ignoring ${subscription.id}`);
+    return;
+  }
+
   const priceId = subscription.items.data[0]?.price.id;
   const resolved = priceId ? resolvePlanFromPriceId(priceId) : null;
   if (!resolved) {
@@ -246,7 +282,7 @@ export async function handleSubscriptionCreatedOrUpdated(event: Stripe.Event): P
     existing.userId,
     existing.subscriptionRowId,
     eventType,
-    { stripe_subscription_id: subscription.id, plan_slug: resolved.plan, billing_cycle: resolved.cycle },
+    { stripe_subscription_id: subscription.id, plan_slug: resolved.plan, billing_cycle: resolved.cycle, stripe_event_created: event.created },
     async () => {
       const { error } = await admin
         .from("subscriptions")
@@ -278,13 +314,21 @@ export async function handleSubscriptionDeleted(event: Stripe.Event): Promise<vo
     return;
   }
 
+  // Only the subscription this account currently holds can cancel it. A late or repeated event for an OLD subscription
+  // (the person has since re-subscribed) must not cancel the new one.
+  const { data: heldRow } = await admin.from("subscriptions").select("stripe_subscription_id").eq("user_id", existing.userId).maybeSingle();
+  if (heldRow?.stripe_subscription_id && heldRow.stripe_subscription_id !== subscription.id) {
+    console.warn(`customer.subscription.deleted ${event.id}: ${subscription.id} is not the current subscription, ignoring`);
+    return;
+  }
+
   await withIdempotency(
     admin,
     event,
     existing.userId,
     existing.subscriptionRowId,
     "subscription_canceled",
-    { stripe_subscription_id: subscription.id },
+    { stripe_subscription_id: subscription.id, stripe_event_created: event.created },
     async () => {
       // Deliberately not reverting plan_id to free here — the row keeps
       // recording what they were subscribed to; `status` is what says
@@ -364,7 +408,8 @@ export async function handleInvoicePaymentFailed(event: Stripe.Event): Promise<v
       const { error } = await admin
         .from("subscriptions")
         .update({ status: "past_due" })
-        .eq("user_id", existing.userId);
+        .eq("user_id", existing.userId)
+        .in("status", LIVE_STATUSES);
 
       if (error) throw new Error(`Failed to mark subscription past_due: ${error.message}`);
 

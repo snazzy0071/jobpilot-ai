@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { carryRowId, deriveOverallStatus } from "@/lib/cvs/save-status";
+import { carryRowId, deriveOverallStatus, dropEndDateWhenOngoing } from "@/lib/cvs/save-status";
 
 describe("deriveOverallStatus", () => {
   it("is idle before anything has been saved", () => {
@@ -50,5 +50,29 @@ describe("carryRowId", () => {
   it("does nothing when no row has been created yet", () => {
     const pending = new FormData();
     expect(carryRowId(pending, null).get("id")).toBeNull();
+  });
+});
+
+describe("dropEndDateWhenOngoing", () => {
+  it("removes the end date from a snapshot whose current/ongoing box is ticked (the server rejects both together)", () => {
+    for (const flag of ["isCurrent", "isOngoing"] as const) {
+      const snapshot = new FormData();
+      snapshot.set("endDate", "2021-02-01");
+      snapshot.set(flag, "on");
+      const result = dropEndDateWhenOngoing(snapshot, flag);
+      expect(result.get("endDate")).toBeNull();
+      expect(result.get(flag)).toBe("on");
+    }
+  });
+
+  it("keeps the end date when the box is unticked or absent", () => {
+    const off = new FormData();
+    off.set("endDate", "2021-02-01");
+    off.set("isCurrent", "off");
+    expect(dropEndDateWhenOngoing(off, "isCurrent").get("endDate")).toBe("2021-02-01");
+
+    const absent = new FormData();
+    absent.set("endDate", "2021-02-01");
+    expect(dropEndDateWhenOngoing(absent, "isOngoing").get("endDate")).toBe("2021-02-01");
   });
 });

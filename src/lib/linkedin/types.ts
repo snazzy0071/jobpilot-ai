@@ -86,6 +86,8 @@ export type LinkedinProfileDraftDetail = {
   /** Null until the first successful generation. */
   optimizedHeadlineVariants: LinkedinHeadlineVariants | null;
   optimizedAbout: string | null;
+  /** The headline the user chose (a variant, or one they then edited) — null until they choose. The "after" keyword score is computed against this, not all three variants at once. */
+  selectedHeadline: string | null;
   experienceBullets: LinkedinExperienceBulletItem[];
   suggestedSkills: string[];
   notes: string[];
@@ -95,4 +97,11 @@ export type LinkedinProfileDraftDetail = {
   keywordCoverageBefore: LinkedinKeywordCoverage | null;
   generatedAt: string | null;
   updatedAt: string;
+};
+
+/** A past state of a draft (migration 0093's linkedin_draft_versions) — always a past state: the draft itself is the current one. */
+export type LinkedinDraftVersionSummary = {
+  id: string;
+  label: string;
+  createdAt: string;
 };

@@ -3,6 +3,7 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { FeatureBadge } from "@/components/marketing/feature-badge";
 import { QuickAnswer } from "@/components/marketing/quick-answer";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
+import { ProductFrame } from "@/components/marketing/product-frame";
 import type { PlanTier } from "@/config/plans";
 
 export function FeatureHero({
@@ -42,13 +43,13 @@ export function FeatureHero({
       }
       visual={
         demo ? (
-          <div className="relative">
+          <ProductFrame>
             <div
-              className="pointer-events-none absolute -inset-8 -z-10 rounded-[2.5rem] bg-gradient-to-br from-primary/15 via-transparent to-brand-secondary/15 blur-2xl"
+              className="animate-orb pointer-events-none absolute -top-10 -right-8 -z-10 size-40 rounded-full bg-brand-secondary/20 blur-3xl"
               aria-hidden="true"
             />
             {demo}
-          </div>
+          </ProductFrame>
         ) : undefined
       }
       footer={<QuickAnswer>{quickAnswer}</QuickAnswer>}
