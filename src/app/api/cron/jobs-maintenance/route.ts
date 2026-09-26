@@ -1,3 +1,4 @@
+import { isBearerMatch } from "@/lib/auth/bearer";
 import { NextResponse, type NextRequest } from "next/server";
 import { runJobsMaintenance } from "@/lib/jobs/maintenance";
 
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
   }
 
   const authHeader = req.headers.get("authorization");
-  if (authHeader !== `Bearer ${cronSecret}`) {
+  if (!isBearerMatch(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

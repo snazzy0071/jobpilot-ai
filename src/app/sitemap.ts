@@ -3,6 +3,7 @@ import { siteConfig } from "@/config/site";
 import { getBlogPosts } from "@/lib/blog/queries";
 import { SPONSOR_CITIES } from "@/config/sponsor-cities";
 import { getGraduateSchemes } from "@/lib/graduate-schemes/queries";
+import { cityCounts } from "@/lib/graduate-schemes/cities";
 import { getLiveGuides } from "@/lib/advice/queries";
 import { getLiveComparisons } from "@/lib/comparisons/queries";
 
@@ -29,8 +30,10 @@ const STATIC_ROUTES: { path: string; changeFrequency: MetadataRoute.Sitemap[numb
   { path: "/visa-sponsors/cities", changeFrequency: "weekly", priority: 0.6 },
   { path: "/visa-sponsors/statistics", changeFrequency: "weekly", priority: 0.6 },
   { path: "/sponsor-licence-check", changeFrequency: "weekly", priority: 0.7 },
+  { path: "/skilled-worker-salary-calculator", changeFrequency: "monthly", priority: 0.7 },
   { path: "/deadlines", changeFrequency: "daily", priority: 0.8 },
   { path: "/graduate-schemes", changeFrequency: "daily", priority: 0.8 },
+  { path: "/graduate-schemes/cities", changeFrequency: "weekly", priority: 0.6 },
   { path: "/graduate-visa-sponsorship", changeFrequency: "weekly", priority: 0.7 },
   { path: "/compare", changeFrequency: "monthly", priority: 0.6 },
   { path: "/go", changeFrequency: "monthly", priority: 0.6 },
@@ -43,6 +46,7 @@ const STATIC_ROUTES: { path: string; changeFrequency: MetadataRoute.Sitemap[numb
   { path: "/for-universities", changeFrequency: "monthly", priority: 0.6 },
   { path: "/demo", changeFrequency: "yearly", priority: 0.5 },
   { path: "/partners", changeFrequency: "monthly", priority: 0.5 },
+  { path: "/campus-crew", changeFrequency: "monthly", priority: 0.5 },
   { path: "/privacy", changeFrequency: "yearly", priority: 0.2 },
   { path: "/terms", changeFrequency: "yearly", priority: 0.2 },
   { path: "/cookies", changeFrequency: "yearly", priority: 0.2 },
@@ -82,6 +86,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }));
 
+  // Only places a published scheme names.
+  const schemeCityEntries: MetadataRoute.Sitemap = cityCounts(schemes).map((city) => ({
+    url: `${siteConfig.domain}/graduate-schemes/cities/${city.slug}`,
+    changeFrequency: "weekly",
+    priority: 0.6,
+  }));
+
   // Live guides only (drafts and scheduled ones aren't public).
   const guides = await getLiveGuides().catch(() => []);
   const guideEntries: MetadataRoute.Sitemap = guides.map((guide) => ({
@@ -100,5 +111,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticEntries, ...cityEntries, ...postEntries, ...schemeEntries, ...guideEntries, ...comparisonEntries];
+  return [...staticEntries, ...cityEntries, ...postEntries, ...schemeEntries, ...schemeCityEntries, ...guideEntries, ...comparisonEntries];
 }

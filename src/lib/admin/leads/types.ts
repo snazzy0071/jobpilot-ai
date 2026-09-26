@@ -3,7 +3,7 @@ export type AdminNewsletterSubscriber = {
   email: string;
   subscribedAt: string;
   consentSource: string;
-  status: "subscribed" | "unsubscribed";
+  status: "pending" | "subscribed" | "unsubscribed";
   unsubscribedAt: string | null;
 };
 
@@ -34,5 +34,17 @@ export type AdminPartnerInquiry = {
   email: string;
   partnershipType: string;
   message: string;
+  createdAt: string;
+};
+
+export type AdminCampusCrewApplication = {
+  id: string;
+  name: string;
+  email: string;
+  university: string;
+  course: string | null;
+  studyYear: string | null;
+  motivation: string;
+  reach: string | null;
   createdAt: string;
 };

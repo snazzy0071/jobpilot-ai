@@ -1,3 +1,4 @@
+import { isBearerMatch } from "@/lib/auth/bearer";
 import "server-only";
 import { NextResponse, type NextRequest } from "next/server";
 import { consumeSystemRateLimit } from "@/lib/rate-limit/ip-limit";
@@ -38,7 +39,7 @@ export async function handleJobSyncRequest(
     console.error(`${config.label} sync route called but CRON_SECRET isn't configured.`);
     return NextResponse.json({ error: "Not configured" }, { status: 503 });
   }
-  if (req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
+  if (!isBearerMatch(req.headers.get("authorization"), cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

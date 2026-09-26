@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
+import { trackerBlocked } from "@/lib/applications/access";
 import { createClient } from "@/lib/supabase/server";
 import { getApplicationById } from "@/lib/applications/queries";
 import { createReminderSchema, deleteReminderSchema, completeReminderSchema } from "@/lib/applications/reminders/schemas";
@@ -20,6 +21,8 @@ export type ReminderMutationResult = { error: string } | { success: string } | v
  */
 export async function createReminder(formData: FormData): Promise<ReminderActionResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = createReminderSchema.safeParse({
     applicationId: formData.get("applicationId"),
@@ -79,6 +82,8 @@ export async function completeReminder(
   formData: FormData,
 ): Promise<ReminderMutationResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = completeReminderSchema.safeParse({ id: formData.get("id") });
   if (!parsed.success) return { error: "Invalid request." };
@@ -103,6 +108,8 @@ export async function deleteReminder(
   formData: FormData,
 ): Promise<ReminderMutationResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = deleteReminderSchema.safeParse({ id: formData.get("id") });
   if (!parsed.success) return { error: "Invalid request." };

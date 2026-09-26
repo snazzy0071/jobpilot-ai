@@ -14,7 +14,7 @@ export type DataExportPayload = {
   /** Every table that holds this person's data, keyed by table name (see export-tables.ts). */
   data: Record<string, unknown[]>;
   /** Records kept against the email address rather than the account: newsletter subscription, messages sent through the contact form, emails we sent. */
-  emailKeyed: { newsletterSubscription: unknown[]; contactMessages: unknown[]; emailsSent: unknown[] };
+  emailKeyed: { newsletterSubscription: unknown[]; contactMessages: unknown[]; demoRequests: unknown[]; partnerInquiries: unknown[]; campusCrewApplications: unknown[]; emailsSent: unknown[] };
   /** Each time an administrator viewed this account (read-only "view as user"): when, and how it ended. The administrator is not named here. */
   accountAccessBySupport: unknown[];
   /** What is deliberately not in this file, and why. */
@@ -47,6 +47,8 @@ async function fetchAll(query: (from: number, to: number) => PromiseLike<{ data:
 export async function buildDataExportPayload(user: User): Promise<DataExportPayload> {
   const admin = createAdminClient();
   const email = user.email?.toLowerCase() ?? null;
+  // Forms store the address as typed, so match the stored form and the lower-case one (exact matches only, never a pattern).
+  const addressVariants = [...new Set([user.email ?? "", email ?? ""].filter(Boolean))];
 
   const [{ data: profile }, { data: preferences }] = await Promise.all([
     admin.from("profiles").select("*").eq("id", user.id).maybeSingle(),
@@ -58,15 +60,18 @@ export async function buildDataExportPayload(user: User): Promise<DataExportPayl
   );
 
   const byEmail = async (table: string, column: string, order: string) =>
-    email ? fetchAll((from, to) => admin.from(table).select("*").eq(column, email).order(order, { ascending: true }).range(from, to), table) : [];
+    email ? fetchAll((from, to) => admin.from(table).select("*").in(column, addressVariants).order(order, { ascending: true }).range(from, to), table) : [];
 
   const accountAccessBySupport = (
     await fetchAll((from, to) => admin.from("admin_impersonation_sessions").select("started_at, ended_at, end_reason").eq("target_user_id", user.id).order("id", { ascending: true }).range(from, to), "admin_impersonation_sessions")
   );
 
-  const [newsletterSubscription, contactMessages, emailsSent] = await Promise.all([
+  const [newsletterSubscription, contactMessages, demoRequests, partnerInquiries, campusCrewApplications, emailsSent] = await Promise.all([
     byEmail("newsletter_subscribers", "email", "id"),
     byEmail("contact_messages", "email", "id"),
+    byEmail("demo_requests", "email", "id"),
+    byEmail("partner_inquiries", "email", "id"),
+    byEmail("campus_crew_applications", "email", "id"),
     byEmail("email_send_logs", "recipient", "id"),
   ]);
 
@@ -82,7 +87,7 @@ export async function buildDataExportPayload(user: User): Promise<DataExportPayl
     profile,
     preferences,
     data: Object.fromEntries(entries),
-    emailKeyed: { newsletterSubscription, contactMessages, emailsSent },
+    emailKeyed: { newsletterSubscription, contactMessages, demoRequests, partnerInquiries, campusCrewApplications, emailsSent },
     accountAccessBySupport,
     notIncluded: EXPORT_EXCLUDED_TABLES.map(({ table, reason }) => ({ table, reason })),
   };

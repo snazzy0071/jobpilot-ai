@@ -94,7 +94,7 @@ test("an empty catalogue says so honestly, with no invented schemes", async ({ p
   await expect(cards(page)).toHaveCount(0);
   const sitemap = await (await page.request.get("/sitemap.xml")).text();
   expect(sitemap).toContain("/graduate-schemes<");
-  expect(sitemap).not.toMatch(/\/graduate-schemes\/[a-z]/);
+  expect(sitemap).not.toMatch(/\/graduate-schemes\/(?!cities<)[a-z]/); // (the cities index is a fixed page; no scheme or city page exists yet)
 });
 
 test.describe("public listing and detail", () => {

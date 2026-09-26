@@ -2,12 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { listNewsletterSubscribers, listContactMessages, listDemoRequests, listPartnerInquiries } from "@/lib/admin/leads/queries";
+import { listNewsletterSubscribers, listContactMessages, listDemoRequests, listPartnerInquiries, listCampusCrewApplications } from "@/lib/admin/leads/queries";
 import {
   deleteNewsletterSubscriber,
   deleteContactMessage,
   deleteDemoRequest,
   deletePartnerInquiry,
+  deleteCampusCrewApplication,
 } from "@/lib/admin/leads/actions";
 import { DeleteLeadButton } from "@/components/admin/leads/delete-lead-button";
 
@@ -18,11 +19,12 @@ function formatDate(iso: string): string {
 }
 
 export default async function AdminLeadsPage() {
-  const [subscribers, messages, demoRequests, partnerInquiries] = await Promise.all([
+  const [subscribers, messages, demoRequests, partnerInquiries, campusCrew] = await Promise.all([
     listNewsletterSubscribers(),
     listContactMessages(),
     listDemoRequests(),
     listPartnerInquiries(),
+    listCampusCrewApplications(),
   ]);
 
   return (
@@ -38,6 +40,7 @@ export default async function AdminLeadsPage() {
           <TabsTrigger value="contact">Contact ({messages.length})</TabsTrigger>
           <TabsTrigger value="demo">Demo requests ({demoRequests.length})</TabsTrigger>
           <TabsTrigger value="partners">Partners ({partnerInquiries.length})</TabsTrigger>
+          <TabsTrigger value="campus-crew">Campus Crew ({campusCrew.length})</TabsTrigger>
         </TabsList>
 
         <TabsContent value="newsletter" className="pt-4">
@@ -60,7 +63,7 @@ export default async function AdminLeadsPage() {
                     <TableCell className="text-sm">{subscriber.email}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{subscriber.consentSource}</TableCell>
                     <TableCell>
-                      <Badge variant={subscriber.status === "subscribed" ? "tinted" : "outline"}>{subscriber.status}</Badge>
+                      <Badge variant={subscriber.status === "subscribed" ? "tinted" : "outline"}>{subscriber.status === "pending" ? "pending confirmation" : subscriber.status}</Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">{formatDate(subscriber.subscribedAt)}</TableCell>
                     <TableCell>
@@ -136,6 +139,32 @@ export default async function AdminLeadsPage() {
                   <DeleteLeadButton id={inquiry.id} action={deletePartnerInquiry} label="partner inquiry" />
                 </div>
                 <p className="text-sm">{inquiry.message}</p>
+              </Card>
+            ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="campus-crew" className="flex flex-col gap-3 pt-4">
+          {campusCrew.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No Campus Crew applications yet.</p>
+          ) : (
+            campusCrew.map((application) => (
+              <Card key={application.id} variant="admin" className="gap-2 p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">
+                      {application.name} · {application.university}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {application.email}
+                      {application.course ? ` · ${application.course}` : ""}
+                      {application.studyYear ? ` · ${application.studyYear}` : ""} · {formatDate(application.createdAt)}
+                    </p>
+                  </div>
+                  <DeleteLeadButton id={application.id} action={deleteCampusCrewApplication} label="Campus Crew application" />
+                </div>
+                <p className="text-sm">{application.motivation}</p>
+                {application.reach && <p className="text-xs text-muted-foreground">Could reach: {application.reach}</p>}
               </Card>
             ))
           )}

@@ -11,36 +11,18 @@ import {
   grantAdminRoleSchema,
   revokeAdminRoleSchema,
 } from "@/lib/admin/roles/schemas";
-
-type RoleRelation = { permissions: string[]; is_active: boolean } | { permissions: string[]; is_active: boolean }[] | null;
-
-function firstRole(relation: RoleRelation): { permissions: string[]; is_active: boolean } | undefined {
-  return Array.isArray(relation) ? relation[0] : relation ?? undefined;
-}
+import { firstRole, wouldRemoveLastRoleManager, type AssignmentRow, type RoleRelation } from "@/lib/admin/roles/lockout";
 
 /** True if, once `excludeAssignmentId` is disregarded, no other active grant of manage_admin_roles remains anywhere in the system. */
-async function isLastManageAdminRolesAssignment(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  excludeAssignmentId: string,
-): Promise<boolean> {
+async function isLastManageAdminRolesAssignment(supabase: Awaited<ReturnType<typeof createClient>>, excludeAssignmentId: string): Promise<boolean> {
   const { data } = await supabase.from("admin_user_roles").select("id, admin_roles(permissions, is_active)");
-  const remaining = (data ?? []).some((row) => {
-    if (row.id === excludeAssignmentId) return false;
-    const role = firstRole(row.admin_roles as RoleRelation);
-    return !!role?.is_active && role.permissions.includes("manage_admin_roles");
-  });
-  return !remaining;
+  return wouldRemoveLastRoleManager((data ?? []) as AssignmentRow[], (row) => row.id === excludeAssignmentId);
 }
 
-/** Same check, but scoped to "would any OTHER role/assignment still grant it if `excludeRoleId` stopped counting" — used when editing/deleting a role rather than revoking one assignment. */
+/** Same check, but "would any OTHER role still grant it if `excludeRoleId` stopped counting" — used when editing/deleting a role rather than revoking one assignment. */
 async function isLastManageAdminRolesRole(supabase: Awaited<ReturnType<typeof createClient>>, excludeRoleId: string): Promise<boolean> {
   const { data } = await supabase.from("admin_user_roles").select("admin_role_id, admin_roles(permissions, is_active)");
-  const remaining = (data ?? []).some((row) => {
-    if (row.admin_role_id === excludeRoleId) return false;
-    const role = firstRole(row.admin_roles as RoleRelation);
-    return !!role?.is_active && role.permissions.includes("manage_admin_roles");
-  });
-  return !remaining;
+  return wouldRemoveLastRoleManager((data ?? []) as AssignmentRow[], (row) => row.admin_role_id === excludeRoleId);
 }
 
 const LOCKOUT_MESSAGE = "This is the last role/account that can manage admin roles — grant it elsewhere before making this change.";

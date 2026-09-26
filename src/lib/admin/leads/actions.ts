@@ -8,7 +8,7 @@ import { logAdminAction } from "@/lib/admin/audit/log";
 
 const idSchema = z.object({ id: z.string().uuid() });
 
-type LeadTable = "newsletter_subscribers" | "contact_messages" | "demo_requests" | "partner_inquiries";
+type LeadTable = "newsletter_subscribers" | "contact_messages" | "demo_requests" | "partner_inquiries" | "campus_crew_applications";
 
 async function deleteLeadRow(table: LeadTable, formData: FormData) {
   const { user: actingAdmin } = await requirePermission("view_leads");
@@ -40,4 +40,8 @@ export async function deleteDemoRequest(_prevState: unknown, formData: FormData)
 
 export async function deletePartnerInquiry(_prevState: unknown, formData: FormData) {
   return deleteLeadRow("partner_inquiries", formData);
+}
+
+export async function deleteCampusCrewApplication(_prevState: unknown, formData: FormData) {
+  return deleteLeadRow("campus_crew_applications", formData);
 }

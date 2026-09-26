@@ -1,3 +1,4 @@
+import { ScrollReset } from "@/components/layout/scroll-reset";
 import type { Metadata } from "next";
 import { requireOnboardedUser, getImpersonationStatus } from "@/lib/auth/session";
 import { getEntitlements } from "@/lib/entitlements/service";
@@ -82,6 +83,7 @@ export default async function DashboardLayout({
             <div className="shrink-0 bg-primary/10 px-4 py-2 text-center text-sm text-primary md:px-6">{announcementMessage}</div>
           )}
           <main id="main-content" className="dashboard-glow flex-1 p-6 md:min-h-0 md:scroll-pt-6 md:overflow-y-auto">
+          <ScrollReset />
             {children}
           </main>
         </div>

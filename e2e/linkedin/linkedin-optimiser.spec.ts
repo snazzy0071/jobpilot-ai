@@ -349,8 +349,8 @@ test.describe("plan gating", () => {
         .select("id")
         .single();
       const page = await open();
-      const response = await page.goto(`/dashboard/linkedin/${theirs!.id}`);
-      expect(response?.status()).toBe(404);
+      await page.goto(`/dashboard/linkedin/${theirs!.id}`);
+      await expect(page.locator("[data-route-not-found]")).toBeVisible(); // (a streamed page answers 200 before not-found renders, so check what the person sees)
       await expect(page.getByText("Not yours")).toHaveCount(0);
     } finally {
       await deleteIsolatedUser(other.id);

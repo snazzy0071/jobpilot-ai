@@ -3,7 +3,7 @@ import path from "node:path";
 import { test as base, expect, type Browser, type Page, type Route } from "@playwright/test";
 import { createIsolatedUser, deleteIsolatedUser, type IsolatedUser } from "../support/test-user";
 import { getAdminClient } from "../support/admin-client";
-import { markOnboarded } from "../support/roles";
+import { markOnboarded, setPlan } from "../support/roles";
 import { databaseKnowsNewTemplates, seedCv } from "../support/cv";
 
 // The CV builder's promises, tested against the real app, database and PDF
@@ -23,6 +23,7 @@ const test = base.extend<{ open: (viewport?: { width: number; height: number }) 
     async ({ browser }, use) => {
       const user = await createIsolatedUser({ fullName: "CV Persist Tester" });
       await markOnboarded(user.id);
+      await setPlan(user.id, "pro"); // template choice is limited on Free (cv_template_count), and these specs switch templates
       const state = `test-results/.cv-persist-${user.id}.json`;
       try {
         const context = await browser.newContext({ baseURL: BASE_URL });

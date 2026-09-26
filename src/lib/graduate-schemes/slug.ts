@@ -14,10 +14,13 @@ export function slugify(...parts: string[]): string {
 }
 
 /** The first of `slug`, `slug-2`, `slug-3`, ... that isn't in `taken`. */
+/** Public paths that sit beside `/graduate-schemes/[slug]`, so a scheme can never be given one of them as its address. */
+export const RESERVED_SCHEME_SLUGS: ReadonlySet<string> = new Set(["cities"]);
+
 export function uniqueSlug(base: string, taken: Set<string>): string {
-  if (!taken.has(base)) return base;
+  if (!taken.has(base) && !RESERVED_SCHEME_SLUGS.has(base)) return base;
   for (let n = 2; ; n++) {
     const candidate = `${base}-${n}`;
-    if (!taken.has(candidate)) return candidate;
+    if (!taken.has(candidate) && !RESERVED_SCHEME_SLUGS.has(candidate)) return candidate;
   }
 }

@@ -18,8 +18,10 @@ export const FEATURE_LINKS: NavLink[] = [
 export const VISA_LINKS: NavLink[] = [
   { href: "/visa-sponsors", label: "Visa Sponsors" },
   { href: "/sponsor-licence-check", label: "Sponsor Licence Check" },
+  { href: "/skilled-worker-salary-calculator", label: "Skilled Worker Salary Calculator" },
   { href: "/visa-sponsors/statistics", label: "Sponsorship Statistics" },
   { href: "/graduate-schemes", label: "Graduate Schemes" },
+  { href: "/graduate-schemes/cities", label: "Graduate Schemes by City" },
   { href: "/deadlines", label: "Application Deadlines" },
   { href: "/graduate-visa-sponsorship", label: "Graduate Visa Sponsorship" },
 ];
@@ -34,6 +36,7 @@ export const COMPANY_LINKS: NavLink[] = [
   { href: "/newsletter", label: "Newsletter" },
   { href: "/status", label: "Status" },
   { href: "/partners", label: "Partners" },
+  { href: "/campus-crew", label: "Campus Crew" },
 ];
 
 export const INSTITUTION_LINKS: NavLink[] = [

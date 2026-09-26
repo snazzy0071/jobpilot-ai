@@ -1,7 +1,7 @@
 import { test as base, expect, type Browser, type Page } from "@playwright/test";
 import { createIsolatedUser, deleteIsolatedUser, type IsolatedUser } from "../support/test-user";
 import { getAdminClient } from "../support/admin-client";
-import { markOnboarded } from "../support/roles";
+import { markOnboarded, setPlan } from "../support/roles";
 import { seedCv } from "../support/cv";
 
 // The editor's preview must always show the CV as it currently is — the saved data with whatever is being typed on
@@ -19,6 +19,7 @@ const test = base.extend<{ open: (viewport?: { width: number; height: number }) 
     async ({ browser }, use) => {
       const user = await createIsolatedUser({ fullName: "CV Preview Tester" });
       await markOnboarded(user.id);
+      await setPlan(user.id, "pro"); // template choice is limited on Free (cv_template_count), and these specs switch templates
       const state = `test-results/.cv-preview-${user.id}.json`;
       try {
         const context = await browser.newContext({ baseURL: BASE_URL });

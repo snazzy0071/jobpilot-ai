@@ -9,8 +9,8 @@ export const siteConfig = {
   supportEmail: "support@jobpilotai.com",
   aiCoachName: "Ivy",
   logo: {
-    // No image asset yet — Logo renders the text wordmark below until
-    // one is dropped in. Point this at the real file when it exists.
+    // public/logo.svg (an original mark). The header/footer Logo component draws its own CSS monogram tile; this file is for
+    // structured data and anywhere an image URL is needed.
     src: "/logo.svg",
     alt: "JobPilot AI logo",
   },

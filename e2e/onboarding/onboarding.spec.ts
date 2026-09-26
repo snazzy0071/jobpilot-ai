@@ -71,4 +71,14 @@ test.describe("Onboarding", () => {
     await expect(page).toHaveURL(/\/onboarding\/logistics/);
     await expect(page.getByText("Enter a valid year")).toBeVisible();
   });
+
+  test("every step fits a phone with no sideways scroll", async ({ authenticatedPage }) => {
+    const { page } = authenticatedPage;
+    await page.setViewportSize({ width: 375, height: 760 });
+    for (const step of ["about", "targets", "logistics"]) {
+      await page.goto(`/onboarding/${step}`);
+      await expect(page.getByRole("button", { name: /Continue|Finish/ })).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth), step).toBeLessThanOrEqual(1);
+    }
+  });
 });

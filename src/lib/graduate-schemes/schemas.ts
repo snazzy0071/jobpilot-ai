@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { todayInUk } from "@/lib/graduate-schemes/status";
+import { RESERVED_SCHEME_SLUGS } from "@/lib/graduate-schemes/slug";
 import {
   GRADUATE_SCHEME_SECTORS,
   GRADUATE_SCHEME_SPONSORSHIP_STATUSES,
@@ -52,7 +53,8 @@ const schemeInputFields = {
     .max(200)
     .optional()
     .transform(emptyToNull)
-    .refine((value) => value === null || /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value), "The URL slug can only use lower-case letters, numbers and single hyphens."),
+    .refine((value) => value === null || /^[a-z0-9]+(-[a-z0-9]+)*$/.test(value), "The URL slug can only use lower-case letters, numbers and single hyphens.")
+    .refine((value) => value === null || !RESERVED_SCHEME_SLUGS.has(value), "That address is reserved. Choose a different URL slug."),
   employer: z.string().trim().min(1, "Enter the employer's name.").max(300),
   schemeName: z.string().trim().min(1, "Enter the scheme's name.").max(300),
   sector: z.enum(GRADUATE_SCHEME_SECTORS, "Choose a sector."),

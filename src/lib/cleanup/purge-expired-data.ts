@@ -94,6 +94,28 @@ export async function purgeResolvedWebhookFailures(supabase: ReturnType<typeof c
   return data?.length ?? 0;
 }
 
+// newsletter_subscribers still `pending` (the address never confirmed): the address was typed into a form by someone, but its owner never
+// agreed, so it is not kept. The confirmation link lasts 3 days; 30 days leaves room for a resend and then the row goes.
+export const UNCONFIRMED_NEWSLETTER_RETENTION_DAYS = 30;
+
+export async function purgeUnconfirmedNewsletterSignups(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
+  const cutoff = new Date(Date.now() - UNCONFIRMED_NEWSLETTER_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from("newsletter_subscribers").delete().eq("status", "pending").lt("confirmation_sent_at", cutoff).select("id");
+  if (error) throw new Error(`Couldn't purge unconfirmed newsletter signups: ${error.message}`);
+  return data?.length ?? 0;
+}
+
+// campus_crew_applications: personal details (name, email, university) from people who applied to a programme. Kept for one year, long
+// enough to consider an application and reply, then removed.
+export const CAMPUS_CREW_RETENTION_DAYS = 365;
+
+export async function purgeOldCampusCrewApplications(supabase: ReturnType<typeof createAdminClient>): Promise<number> {
+  const cutoff = new Date(Date.now() - CAMPUS_CREW_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  const { data, error } = await supabase.from("campus_crew_applications").delete().lt("created_at", cutoff).select("id");
+  if (error) throw new Error(`Couldn't purge old Campus Crew applications: ${error.message}`);
+  return data?.length ?? 0;
+}
+
 export type PurgeExpiredDataResult = {
   quickScanResultsPurged: number;
   anonymousRateLimitsPurged: number;
@@ -101,6 +123,8 @@ export type PurgeExpiredDataResult = {
   institutionInvitesPurged: number;
   emailSendLogsPurged: number;
   webhookFailuresPurged: number;
+  unconfirmedNewsletterPurged: number;
+  campusCrewPurged: number;
   errors: string[];
 };
 
@@ -143,5 +167,8 @@ export async function purgeExpiredData(): Promise<PurgeExpiredDataResult> {
   const emailSendLogsPurged = await run("email_send_logs", () => purgeOldEmailSendLogs(supabase));
   const webhookFailuresPurged = await run("stripe_webhook_failures", () => purgeResolvedWebhookFailures(supabase));
 
-  return { quickScanResultsPurged, anonymousRateLimitsPurged, aiRateLimitWindowsPurged, institutionInvitesPurged, emailSendLogsPurged, webhookFailuresPurged, errors };
+  const unconfirmedNewsletterPurged = await run("newsletter_subscribers (unconfirmed)", () => purgeUnconfirmedNewsletterSignups(supabase));
+  const campusCrewPurged = await run("campus_crew_applications", () => purgeOldCampusCrewApplications(supabase));
+
+  return { quickScanResultsPurged, anonymousRateLimitsPurged, aiRateLimitWindowsPurged, institutionInvitesPurged, emailSendLogsPurged, webhookFailuresPurged, unconfirmedNewsletterPurged, campusCrewPurged, errors };
 }

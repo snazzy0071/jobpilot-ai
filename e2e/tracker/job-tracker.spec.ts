@@ -179,7 +179,7 @@ test.describe("tracker: create, edit, delete", () => {
       const page = await open();
       // Streamed pages answer 200 before notFound() renders, so assert on what the person sees, not the status code.
       await page.goto(`${BOARD}/${theirs.id}/edit`);
-      await expect(page.getByText(/404|not found|could not be found/i).first()).toBeVisible();
+      await expect(page.getByText(/404|not found|could not be found|couldn.t find/i).first()).toBeVisible();
       await expect(page.getByText("Secret Co")).toHaveCount(0);
       await expect(page.getByRole("heading", { name: "Edit application" })).toHaveCount(0);
       await go(page, BOARD);

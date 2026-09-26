@@ -132,6 +132,7 @@ export async function eraseEmailKeyedRecords(admin: ReturnType<typeof createAdmi
     ["contact_messages", "email"],
     ["demo_requests", "email"],
     ["partner_inquiries", "email"],
+    ["campus_crew_applications", "email"],
     ["email_send_logs", "recipient"],
   ];
   for (const [table, column] of targets) {

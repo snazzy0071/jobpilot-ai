@@ -176,3 +176,13 @@ test("overview: the 30-day tiles equal counts taken straight from the database",
   await expect(main(page).getByRole("heading", { name: "New sign-ups" })).toBeVisible();
   await page.context().close();
 });
+
+test("the overview's aggregate functions cannot be called with the public key", async () => {
+  const { createClient } = await import("@supabase/supabase-js");
+  const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  for (const fn of ["admin_overview_daily", "admin_overview_snapshot"]) {
+    const { data, error } = await anon.rpc(fn, fn === "admin_overview_daily" ? { p_days: 30 } : {});
+    expect(error, fn).not.toBeNull();
+    expect(data, fn).toBeNull();
+  }
+});

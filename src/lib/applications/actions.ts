@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth/session";
+import { trackerBlocked } from "@/lib/applications/access";
 import { createClient } from "@/lib/supabase/server";
 import { listCvs } from "@/lib/cvs/queries";
 import { listCoverLetters } from "@/lib/cover-letters/queries";
@@ -73,6 +74,8 @@ async function verifyOwnedLinks(userId: string, cvId: string | null, coverLetter
  */
 export async function createApplication(formData: FormData): Promise<ApplicationActionResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = createApplicationSchema.safeParse(applicationInputFromFormData(formData));
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -126,6 +129,8 @@ export async function updateApplication(
   formData: FormData,
 ): Promise<ApplicationMutationResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = updateApplicationSchema.safeParse({ id: formData.get("id"), ...applicationInputFromFormData(formData) });
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -208,6 +213,8 @@ export async function updateApplicationStatus(input: {
   status: Application["status"];
 }): Promise<UpdateApplicationStatusResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = updateApplicationStatusSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -260,6 +267,8 @@ export async function deleteApplication(
   formData: FormData,
 ): Promise<ApplicationMutationResult> {
   const user = await requireUser();
+  const blocked = await trackerBlocked(user.id);
+  if (blocked) return blocked;
 
   const parsed = deleteApplicationSchema.safeParse({ id: formData.get("id") });
   if (!parsed.success) return { error: "Invalid request." };

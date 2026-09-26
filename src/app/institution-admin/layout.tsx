@@ -1,3 +1,4 @@
+import { ScrollReset } from "@/components/layout/scroll-reset";
 import type { Metadata } from "next";
 import { requireInstitutionAdmin } from "@/lib/auth/session";
 import {
@@ -51,6 +52,7 @@ export default async function InstitutionAdminLayout({
           </div>
         </header>
         <main id="main-content" className="dashboard-glow flex-1 p-6">
+          <ScrollReset />
           {children}
         </main>
       </div>

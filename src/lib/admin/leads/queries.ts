@@ -1,6 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { AdminNewsletterSubscriber, AdminContactMessage, AdminDemoRequest, AdminPartnerInquiry } from "@/lib/admin/leads/types";
+import type { AdminNewsletterSubscriber, AdminContactMessage, AdminDemoRequest, AdminPartnerInquiry, AdminCampusCrewApplication } from "@/lib/admin/leads/types";
 
 const LIST_LIMIT = 200;
 
@@ -80,6 +80,27 @@ export async function listPartnerInquiries(): Promise<AdminPartnerInquiry[]> {
     email: row.email,
     partnershipType: row.partnership_type,
     message: row.message,
+    createdAt: row.created_at,
+  }));
+}
+
+export async function listCampusCrewApplications(): Promise<AdminCampusCrewApplication[]> {
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("campus_crew_applications")
+    .select("id, name, email, university, course, study_year, motivation, reach, created_at")
+    .order("created_at", { ascending: false })
+    .limit(LIST_LIMIT);
+  if (error || !data) return [];
+  return data.map((row) => ({
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    university: row.university,
+    course: row.course,
+    studyYear: row.study_year,
+    motivation: row.motivation,
+    reach: row.reach,
     createdAt: row.created_at,
   }));
 }

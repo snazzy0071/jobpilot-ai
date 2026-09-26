@@ -1,3 +1,4 @@
+import { ScrollReset } from "@/components/layout/scroll-reset";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/session";
 import { getGrantedPermissions } from "@/lib/admin/permissions";
@@ -54,6 +55,7 @@ export default async function AdminLayout({
           </div>
         </header>
         <main id="main-content" className="dashboard-glow flex-1 p-6 md:min-h-0 md:scroll-pt-6 md:overflow-y-auto">
+          <ScrollReset />
           {children}
         </main>
       </div>

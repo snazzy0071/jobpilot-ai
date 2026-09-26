@@ -1,4 +1,5 @@
 import { test, expect, completeOnboarding } from "../fixtures";
+import { setPlan } from "../support/roles";
 
 // Requires a real ANTHROPIC_API_KEY configured on the server this suite
 // runs against — runAtsScan (src/lib/cvs/ats-actions.ts) calls the real
@@ -11,7 +12,8 @@ import { test, expect, completeOnboarding } from "../fixtures";
 test.describe("ATS scan", () => {
   test("running a scan against a real job description returns real scores and keyword feedback", async ({ authenticatedPage }) => {
     test.skip(!process.env.ANTHROPIC_API_KEY, "Needs ANTHROPIC_API_KEY (real, or the mocked-provider mode); the same flow is covered by cv-ats-preflight and ats-scanner under the mock.");
-    const { page } = authenticatedPage;
+    const { page, user } = authenticatedPage;
+    await setPlan(user.id, "premium"); // tailored ATS scans are a paid-plan feature
     await completeOnboarding(page);
 
     await page.goto("/dashboard/cvs");

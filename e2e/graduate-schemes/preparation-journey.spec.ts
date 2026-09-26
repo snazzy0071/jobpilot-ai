@@ -117,7 +117,8 @@ test.describe("scheme page and starting", () => {
   test("drafts and unknown schemes have no journey", async ({ open }) => {
     const page = await open();
     for (const slug of ["e2ejp-draft", "no-such-scheme"]) {
-      expect((await page.goto(`/dashboard/graduate-schemes/${slug}/prepare`))?.status()).toBe(404);
+      await page.goto(`/dashboard/graduate-schemes/${slug}/prepare`);
+      await expect(page.locator("[data-route-not-found]"), slug).toBeVisible(); // (a streamed page answers 200 before not-found renders)
     }
   });
 });

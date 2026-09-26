@@ -9,8 +9,8 @@ const BASE_URL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 const ROUTES = [
   "/", "/pricing", "/features/cv", "/features/ats", "/features/cover-letter", "/features/interview", "/features/tracker", "/features/linkedin",
   "/features/jobmatch", "/features/gradprep", "/free-ats-checker", "/visa-sponsors", "/visa-sponsors/cities", "/visa-sponsors/statistics",
-  "/sponsor-licence-check", "/deadlines", "/graduate-schemes", "/graduate-visa-sponsorship", "/compare", "/go", "/blog", "/advice-hub",
-  "/about", "/contact", "/newsletter", "/status", "/for-universities", "/demo", "/partners", "/privacy", "/terms", "/cookies", "/accessibility",
+  "/sponsor-licence-check", "/skilled-worker-salary-calculator", "/deadlines", "/graduate-schemes", "/graduate-visa-sponsorship", "/compare", "/go", "/blog", "/advice-hub",
+  "/about", "/contact", "/newsletter", "/status", "/for-universities", "/demo", "/partners", "/campus-crew", "/privacy", "/terms", "/cookies", "/accessibility",
 ];
 
 async function open(page: Page, path: string) {
@@ -70,7 +70,9 @@ test.describe("SEO and structure on every public page", () => {
     const pricing = await graph("/pricing");
     const product = pricing.find((node) => node["@type"] === "Product");
     expect(product.offers.map((offer: { name: string; price: string }) => [offer.name, offer.price])).toEqual([["Free", "0"], ["Pro", "6"], ["Premium", "15"], ["Elite", "25"]]);
-    expect(product.offers.slice(1).every((offer: { availability: string }) => offer.availability.endsWith("PreOrder"))).toBe(true);
+    // Paid plans are marked pre-order while checkout is not configured on the server, and in stock once it is (the runtime Stripe check).
+    const checkoutConfigured = Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_PRO_MONTHLY);
+    expect(product.offers.slice(1).every((offer: { availability: string }) => offer.availability.endsWith(checkoutConfigured ? "InStock" : "PreOrder"))).toBe(true);
 
     expect(types(await graph("/about"))).toContain("AboutPage");
     expect(types(await graph("/contact"))).toContain("ContactPage");

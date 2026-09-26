@@ -14,6 +14,7 @@ const NEWS_EMAIL = `${RUN}-news@example.com`;
 const CONTACT_EMAIL = `${RUN}-contact@example.com`;
 const DEMO_EMAIL = `${RUN}-demo@example.com`;
 const PARTNER_EMAIL = `${RUN}-partner@example.com`;
+const CREW_EMAIL = `${RUN}-crew@example.com`;
 const ROLE = `e2e-leads-${RUN}`;
 
 let admin: AdminSession;
@@ -39,6 +40,7 @@ test.afterAll(async () => {
   await db().from("contact_messages").delete().like("email", `${RUN}%`);
   await db().from("demo_requests").delete().like("email", `${RUN}%`);
   await db().from("partner_inquiries").delete().like("email", `${RUN}%`);
+  await db().from("campus_crew_applications").delete().like("email", `${RUN}%`);
   await clearLimits();
   await removeAdminSession(admin);
   await removeAdminSession(limited, ROLE);
@@ -54,9 +56,13 @@ test("newsletter: a valid email subscribes and is stored with its consent source
 
   await page.getByLabel("Email").fill(NEWS_EMAIL);
   await page.getByRole("button", { name: "Subscribe" }).click();
-  await expect(page.getByRole("status")).toContainText("subscribed");
-  const { data } = await db().from("newsletter_subscribers").select("status, consent_source").eq("email", NEWS_EMAIL);
-  expect(data).toEqual([{ status: "subscribed", consent_source: "newsletter_page" }]);
+  // Double opt-in: the visitor is asked to confirm by email, and nothing is "subscribed" yet. Without an email provider configured the
+  // form says the email could not be sent; either way the address is stored as pending confirmation, never as subscribed.
+  await expect(page.getByRole("status").or(page.getByRole("alert").filter({ hasText: /confirmation email/ }))).toBeVisible();
+  const { data } = await db().from("newsletter_subscribers").select("status, consent_source, confirmed_at, confirm_token_hash").eq("email", NEWS_EMAIL);
+  expect(data).toHaveLength(1);
+  expect(data![0]).toMatchObject({ status: "pending", consent_source: "newsletter_page", confirmed_at: null });
+  expect(data![0].confirm_token_hash).toMatch(/^[0-9a-f]{64}$/);
 });
 
 test("contact: a message is stored, and a too-short one is refused by the server", async ({ page }) => {
@@ -106,6 +112,34 @@ test("partner enquiry: stored with the partnership type", async ({ page }) => {
   expect(data![0].partnership_type).toBeTruthy();
 });
 
+test("campus crew: an application is stored, optional fields may be left out, and a thin one is refused with the answer kept", async ({ page }) => {
+  await visit(page, "/campus-crew");
+  await page.getByLabel("Your name").fill("Crew Tester");
+  await page.getByLabel("Email").fill(CREW_EMAIL);
+  await page.getByLabel("University or college").fill(`${RUN} University`);
+  await page.getByLabel("Why do you want to be on the Campus Crew?").evaluate((el: HTMLTextAreaElement) => el.removeAttribute("minlength"));
+  await page.getByLabel("Why do you want to be on the Campus Crew?").fill("short");
+  await page.getByRole("button", { name: "Apply to the Campus Crew" }).click();
+  await expect(page.locator("form").getByRole("alert")).toContainText("at least 10");
+  await expect(page.getByLabel("Your name")).toHaveValue("Crew Tester");
+  expect((await db().from("campus_crew_applications").select("id").eq("email", CREW_EMAIL)).data).toHaveLength(0);
+
+  await page.getByLabel("Why do you want to be on the Campus Crew?").fill("I run the careers society and want more people to use good tools.");
+  await page.getByRole("button", { name: "Apply to the Campus Crew" }).click();
+  await expect(page.getByRole("status")).toContainText("your application is in");
+  const { data } = await db().from("campus_crew_applications").select("name, university, course, study_year, reach").eq("email", CREW_EMAIL);
+  expect(data).toEqual([{ name: "Crew Tester", university: `${RUN} University`, course: null, study_year: null, reach: null }]);
+});
+
+test("nobody can write to or read the Campus Crew table through the public API", async () => {
+  const { createClient } = await import("@supabase/supabase-js");
+  const anon = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { auth: { persistSession: false } });
+  const attempt = await anon.from("campus_crew_applications").insert({ name: "x", email: `${RUN}-direct@example.com`, university: "x", motivation: "long enough motivation" });
+  expect(attempt.error).not.toBeNull();
+  const read = await anon.from("campus_crew_applications").select("id").eq("email", CREW_EMAIL);
+  expect(read.data ?? []).toHaveLength(0);
+});
+
 test("the public forms are rate limited per address", async ({ page }) => {
   await clearLimits();
   let refused = false;
@@ -114,7 +148,7 @@ test("the public forms are rate limited per address", async ({ page }) => {
     await page.getByLabel("Email").fill(`${RUN}-burst${attempt}@example.com`);
     await page.getByRole("button", { name: "Subscribe" }).click();
     // Either the thank-you or the refusal appears; wait for whichever comes.
-    const outcome = page.getByRole("status").or(page.getByRole("alert").filter({ hasText: /too many/i }));
+    const outcome = page.getByRole("status").or(page.getByRole("alert").filter({ hasText: /\S/ }));
     await expect(outcome).toBeVisible({ timeout: 15_000 });
     refused = (await page.getByRole("alert").filter({ hasText: /too many/i }).count()) > 0;
   }
@@ -136,6 +170,9 @@ test("admin Leads shows each submission, and deleting one removes it and is audi
   await expect(page.getByText(`${RUN} University`)).toBeVisible();
   await page.getByRole("tab", { name: /^Partners/ }).click();
   await expect(page.getByText(`${RUN} Society`)).toBeVisible();
+  await page.getByRole("tab", { name: /^Campus Crew/ }).click();
+  await expect(page.getByText(`${RUN} University`, { exact: false }).first()).toBeVisible();
+  await expect(page.getByText(CREW_EMAIL, { exact: false })).toBeVisible();
 
   // Delete the contact message (a confirm dialog guards it).
   await page.getByRole("tab", { name: /^Contact/ }).click();

@@ -108,6 +108,24 @@ test("the user dashboard area works at phone width", async ({ browser }) => {
   await page.context().close();
 });
 
+test("a Test Prep quiz works at phone width: the pack page, a running session and a question with its answer options", async ({ browser }) => {
+  const { data: pack } = await db().from("question_packs").select("id").eq("is_active", true).limit(1).single();
+  const page = await phone(browser, member);
+  await page.goto(`/dashboard/test-prep/practice/${pack!.id}`);
+  await dismissCookieBanner(page);
+  await expect(page.getByRole("button", { name: /^Practice/ })).toBeVisible();
+  await page.getByRole("button", { name: /^Practice/ }).click();
+  await expect(page.getByTestId("quiz-progress")).toBeVisible();
+  await expect(page.getByRole("radio").first()).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  await page.getByRole("radio").first().check({ force: true });
+  await page.getByRole("button", { name: "Submit answer" }).click();
+  await expect(page.getByTestId("answer-feedback")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1);
+  await db().from("test_sessions").delete().eq("user_id", member.id);
+  await page.context().close();
+});
+
 test("the admin area works at phone width", async ({ browser }) => {
   const page = await phone(browser, admin);
   await sweep(page, ADMIN_PAGES);

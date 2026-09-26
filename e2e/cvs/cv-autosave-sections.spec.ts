@@ -1,7 +1,7 @@
 import { test as base, expect, type Browser, type Page } from "@playwright/test";
 import { createIsolatedUser, deleteIsolatedUser, type IsolatedUser } from "../support/test-user";
 import { getAdminClient } from "../support/admin-client";
-import { markOnboarded } from "../support/roles";
+import { markOnboarded, setPlan } from "../support/roles";
 import { seedCv } from "../support/cv";
 
 // Autosave for every part of the CV editor, through the real UI and the real database: each edit is written to
@@ -19,6 +19,7 @@ const test = base.extend<{ open: () => Promise<Page> }, { account: Account }>({
     async ({ browser }, use) => {
       const user = await createIsolatedUser({ fullName: "CV Autosave Tester" });
       await markOnboarded(user.id);
+      await setPlan(user.id, "pro"); // template choice is limited on Free (cv_template_count), and these specs switch templates
       const state = `test-results/.cv-autosave-${user.id}.json`;
       try {
         const context = await browser.newContext({ baseURL: BASE_URL });
