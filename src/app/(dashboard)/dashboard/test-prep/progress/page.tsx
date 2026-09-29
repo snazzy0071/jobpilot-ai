@@ -61,13 +61,6 @@ export default async function TestPrepProgressPage() {
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
       <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/dashboard/test-prep"><ArrowLeftIcon /> Test Prep</Link>} />
 
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Your progress</h1>
-        <p className="mt-1 text-muted-foreground">
-          Across your {insights.totals.sessions} completed practice session{insights.totals.sessions === 1 ? "" : "s"}.
-        </p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-3">
         <Tile label="Sessions" value={String(insights.totals.sessions)} />
         <Tile label="Questions answered" value={String(insights.totals.answers)} />

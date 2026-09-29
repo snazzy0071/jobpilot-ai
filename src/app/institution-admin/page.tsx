@@ -30,16 +30,11 @@ export default async function InstitutionAdminOverviewPage() {
     return <p className="text-muted-foreground">Your institution couldn&apos;t be found.</p>;
   }
 
-  const { institution, licence, adminCount, memberCount, pendingInviteCount, seatsUsed, seatsTotal } = overview;
+  const { licence, adminCount, memberCount, pendingInviteCount, seatsUsed, seatsTotal } = overview;
   const expiryDays = licence ? daysUntilExpiry(licence) : null;
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">{institution.name}</h1>
-        <p className="mt-1 text-muted-foreground">Cohort overview and licence status for your institution.</p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatTile
           icon={ArmchairIcon}

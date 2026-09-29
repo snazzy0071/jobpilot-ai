@@ -13,11 +13,6 @@ export default async function NewQuestionPage({ searchParams }: { searchParams: 
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Add question</h1>
-        <p className="mt-1 text-muted-foreground">In {pack.name}.</p>
-      </div>
-
       <QuestionForm questionPackId={pack.id} subtypeSuggestions={await listSubtypes()} />
     </div>
   );

@@ -4,7 +4,7 @@ import { ArrowLeftIcon, RefreshCwIcon, TrendingUpIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { getInterviewSessionDetail } from "@/lib/interviews/queries";
 import { computeCompetencyBreakdown, getWeakCompetencies } from "@/lib/interviews/results";
-import { INTERVIEW_DIFFICULTY_LABELS, INTERVIEW_COMPETENCY_LABELS } from "@/lib/interviews/types";
+import { INTERVIEW_COMPETENCY_LABELS } from "@/lib/interviews/types";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -83,16 +83,6 @@ export default async function InterviewResultsPage({ params }: { params: Promise
             </Link>
           }
         />
-      </div>
-
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          Results — {session.role}
-          {session.company ? ` at ${session.company}` : ""}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {INTERVIEW_DIFFICULTY_LABELS[session.difficulty]} · {session.questions.length} questions
-        </p>
       </div>
 
       {weakCompetencies.length > 0 && (

@@ -17,6 +17,13 @@ import type { CvAtsScan, CvAtsJobOption, CvAtsFormatIssue } from "@/lib/cvs/type
 
 const MIN_JOB_DESCRIPTION_LENGTH = 30;
 
+/** The label for one past scan in the history picker — score, date, and a snippet of the role it was scanned against. */
+function scanHistoryLabel(entry: CvAtsScan): string {
+  const date = new Date(entry.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const snippet = entry.jobDescription.slice(0, 40).replace(/\s+/g, " ");
+  return `${entry.overallScore}/100 — ${date} — ${snippet}${entry.jobDescription.length > 40 ? "…" : ""}`;
+}
+
 /**
  * reference/auth/ats-scanner.png's standalone scan form + result —
  * unlike the CV editor's embedded `AtsPreflightPanel`, this isn't
@@ -148,16 +155,14 @@ export function AtsScannerPanel({
           <Label htmlFor="ats-scan-history" className="flex items-center gap-1.5 text-sm">
             <HistoryIcon className="size-3.5" /> Past scans ({scanHistory.length})
           </Label>
-          <Select value={scan?.id ?? ""} onValueChange={handleSelectHistoryEntry}>
+          <Select items={Object.fromEntries(scanHistory.map((entry) => [entry.id, scanHistoryLabel(entry)]))} value={scan?.id ?? ""} onValueChange={handleSelectHistoryEntry}>
             <SelectTrigger id="ats-scan-history" className="w-full">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {scanHistory.map((entry) => (
                 <SelectItem key={entry.id} value={entry.id}>
-                  {entry.overallScore}/100 — {new Date(entry.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} —{" "}
-                  {entry.jobDescription.slice(0, 40).replace(/\s+/g, " ")}
-                  {entry.jobDescription.length > 40 ? "…" : ""}
+                  {scanHistoryLabel(entry)}
                 </SelectItem>
               ))}
             </SelectContent>

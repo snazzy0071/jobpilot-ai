@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { IdCardIcon, PlusIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { listLinkedinDrafts } from "@/lib/linkedin/queries";
 import { LINKEDIN_TARGET_SENIORITY_LABELS } from "@/lib/linkedin/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -20,19 +21,16 @@ export default async function LinkedinDraftsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">LinkedIn Optimiser</h1>
-          <p className="mt-1 text-muted-foreground">
-            Paste your headline, About, and Experience, and get a rewrite tuned for how UK recruiters actually search.
-          </p>
-        </div>
         <Button render={<Link href="/dashboard/linkedin/new"><PlusIcon /> New draft</Link>} />
       </div>
 
       {drafts.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">You haven&apos;t created a LinkedIn draft yet.</p>
-        </div>
+        <EmptyState
+          icon={IdCardIcon}
+          title="You haven't created a LinkedIn draft yet"
+          description="Paste your current headline, About and Experience, and get a rewrite tuned for how UK recruiters actually search."
+          actions={<Button render={<Link href="/dashboard/linkedin/new"><PlusIcon /> New draft</Link>} />}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {drafts.map((draft) => (

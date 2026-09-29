@@ -51,7 +51,7 @@ export function CareerPreferencesForm({
     <form action={formAction} className="flex max-w-md flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="careerStage">Career stage</Label>
-        <Select name="careerStage" required defaultValue={defaultCareerStage ?? undefined}>
+        <Select name="careerStage" required items={CAREER_STAGE_LABELS} defaultValue={defaultCareerStage ?? undefined}>
           <SelectTrigger id="careerStage" className="w-full">
             <SelectValue placeholder="Choose your career stage" />
           </SelectTrigger>
@@ -67,7 +67,7 @@ export function CareerPreferencesForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="primaryGoal">Main goal</Label>
-        <Select name="primaryGoal" required defaultValue={defaultPrimaryGoal ?? undefined}>
+        <Select name="primaryGoal" required items={PRIMARY_GOAL_LABELS} defaultValue={defaultPrimaryGoal ?? undefined}>
           <SelectTrigger id="primaryGoal" className="w-full">
             <SelectValue placeholder="Choose your main goal" />
           </SelectTrigger>
@@ -142,6 +142,7 @@ export function CareerPreferencesForm({
         <Select
           name="visaSponsorshipPreference"
           required
+          items={VISA_SPONSORSHIP_LABELS}
           defaultValue={defaultVisaPreference ?? undefined}
         >
           <SelectTrigger id="visaSponsorshipPreference" className="w-full">

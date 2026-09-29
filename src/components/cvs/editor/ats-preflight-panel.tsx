@@ -49,6 +49,12 @@ type KeywordActionState = {
 
 const MIN_JOB_DESCRIPTION_LENGTH = 30;
 
+/** The label shown for a previous scan's job description, both in the closed trigger and the open list — one place so they can't drift. */
+function jobOptionLabel(option: CvAtsJobOption): string {
+  const snippet = option.jobDescription.slice(0, 60).replace(/\s+/g, " ");
+  return option.jobDescription.length > 60 ? `${snippet}…` : snippet;
+}
+
 /** DOM id the editor header's "ATS scan" button scrolls to (reference/auth/create-cv.png's toolbar button). */
 export const atsPanelAnchorId = "cv-ats-panel";
 
@@ -386,15 +392,14 @@ export function AtsPreflightPanel({
           {recentJobOptions.length > 0 && (
             <div className="flex flex-col gap-1.5">
               <Label>Use a previous job description</Label>
-              <Select value={selectedJobId} onValueChange={handleSelectJob}>
+              <Select items={Object.fromEntries(recentJobOptions.map((option) => [option.id, jobOptionLabel(option)]))} value={selectedJobId} onValueChange={handleSelectJob}>
                 <SelectTrigger className="w-full">
                   <SelectValue placeholder="Select a job you've scanned before" />
                 </SelectTrigger>
                 <SelectContent>
                   {recentJobOptions.map((option) => (
                     <SelectItem key={option.id} value={option.id}>
-                      {option.jobDescription.slice(0, 60).replace(/\s+/g, " ")}
-                      {option.jobDescription.length > 60 ? "…" : ""}
+                      {jobOptionLabel(option)}
                     </SelectItem>
                   ))}
                 </SelectContent>

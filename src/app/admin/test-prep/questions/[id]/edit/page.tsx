@@ -11,10 +11,6 @@ export default async function EditQuestionPage({ params }: { params: Promise<{ i
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Edit question</h1>
-      </div>
-
       <QuestionForm questionPackId={question.questionPackId} question={question} subtypeSuggestions={await listSubtypes()} />
     </div>
   );

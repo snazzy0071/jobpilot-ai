@@ -71,7 +71,7 @@ export function PostForm({
         <div className="grid gap-4 sm:grid-cols-3">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="post-category">Category</Label>
-            <Select name="categoryId" value={categoryId} onValueChange={(value) => value && setCategoryId(value)}>
+            <Select name="categoryId" items={Object.fromEntries(categories.map((category) => [category.id, category.name]))} value={categoryId} onValueChange={(value) => value && setCategoryId(value)}>
               <SelectTrigger id="post-category" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -86,7 +86,7 @@ export function PostForm({
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="post-author">Author</Label>
-            <Select name="authorId" value={authorId} onValueChange={(value) => value && setAuthorId(value)}>
+            <Select name="authorId" items={Object.fromEntries(authors.map((author) => [author.id, author.name]))} value={authorId} onValueChange={(value) => value && setAuthorId(value)}>
               <SelectTrigger id="post-author" className="w-full">
                 <SelectValue />
               </SelectTrigger>

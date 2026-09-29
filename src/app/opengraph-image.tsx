@@ -20,18 +20,15 @@ export default function Image() {
           justifyContent: "center",
           // Literal hex, not the real CSS custom properties (Satori,
           // next/og's renderer, can't resolve `var(...)`/oklch()) — kept
-          // in step with globals.css's dark-mode --background/--primary/
-          // --muted-foreground by hand. A generic near-black/neutral-gray
-          // pairing here was the actual "random color" this file had —
-          // this is the same deep violet-black + brand purple everywhere
-          // else in the app already uses.
-          backgroundColor: "#15121f",
+          // in step with globals.css's `section-dark` band (deep blue-
+          // black) and --primary (#1D4ED8) by hand.
+          backgroundColor: "#0f1b33",
           color: "#ffffff",
           fontFamily: "sans-serif",
         }}
       >
-        <div style={{ fontSize: 108, fontWeight: 700, letterSpacing: -3, color: "#8f7bff" }}>{siteConfig.name}</div>
-        <div style={{ fontSize: 34, color: "#b3a9d1", marginTop: 20 }}>
+        <div style={{ fontSize: 108, fontWeight: 700, letterSpacing: -3, color: "#60a5fa" }}>{siteConfig.name}</div>
+        <div style={{ fontSize: 34, color: "#bfdbfe", marginTop: 20 }}>
           The UK career toolkit
         </div>
       </div>

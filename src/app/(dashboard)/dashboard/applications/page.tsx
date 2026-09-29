@@ -24,13 +24,6 @@ export default async function ApplicationsPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Applications</h1>
-          <p className="mt-1 text-muted-foreground">
-            {applications.length} tracked application{applications.length === 1 ? "" : "s"} — drag a card between
-            columns, or use its status menu.
-          </p>
-        </div>
         <div className="flex gap-2">
           <Button variant="outline" render={<Link href="/dashboard/applications/analytics" />}>
             <BarChart3 className="size-4" /> Analytics

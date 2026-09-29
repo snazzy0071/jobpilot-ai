@@ -24,9 +24,12 @@ export const metadata = buildMetadata({
   path: "/pricing",
 });
 
-// Plans, prices and what each includes are read from the `plans` table (the entitlements the server enforces), never typed here,
-// and the "launching soon" wording appears only while checkout is not configured (a runtime check, hence a dynamic page).
-export const dynamic = "force-dynamic";
+// Plans, prices and what each includes are read from the `plans` table (the entitlements the server enforces), never typed
+// here. getPublicPlans() already reads through a cookie-free anon client with its own 5-minute unstable_cache
+// (src/lib/plans/public-plans.ts) — matched here so the whole page (not just that one query) is ISR instead of fully
+// dynamic. isBillingConfigured() reads process.env, which is fixed for the life of the deployment, not something that
+// needs re-evaluating on every request either.
+export const revalidate = 300;
 
 function faqItems(billingLive: boolean): FaqItem[] {
   return billingLive

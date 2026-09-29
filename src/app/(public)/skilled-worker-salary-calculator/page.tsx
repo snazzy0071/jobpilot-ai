@@ -3,6 +3,7 @@ import { CalculatorIcon, ScaleIcon, ShieldCheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { NativeSelect } from "@/components/ui/native-select";
 import { PageHero } from "@/components/marketing/page-hero";
 import { GradientText } from "@/components/marketing/gradient-text";
 import { FloatingCardStack } from "@/components/marketing/floating-card-stack";
@@ -96,13 +97,13 @@ export default async function SkilledWorkerSalaryCalculatorPage({ searchParams }
                 <label htmlFor="category" className="text-sm font-medium">
                   Which rate applies to you?
                 </label>
-                <select id="category" name="category" defaultValue={category} className="h-10 w-full rounded-lg border border-input bg-transparent px-3 text-sm">
+                <NativeSelect id="category" name="category" defaultValue={category}>
                   {RATE_CATEGORIES.map((key) => (
                     <option key={key} value={key}>
                       {RATE_RULES[key].label}
                     </option>
                   ))}
-                </select>
+                </NativeSelect>
                 <p className="text-xs text-muted-foreground">{rule.who}</p>
               </div>
 

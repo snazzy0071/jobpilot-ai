@@ -86,7 +86,7 @@ export function ContentBlockEditor({ initialBlocks }: { initialBlocks: ContentBl
 
           {block.type === "heading" && (
             <div className="grid gap-2 sm:grid-cols-4">
-              <Select value={String(block.level)} onValueChange={(value) => value && updateBlock(index, { ...block, level: Number(value) as 2 | 3 })}>
+              <Select items={{ "2": "H2", "3": "H3" }} value={String(block.level)} onValueChange={(value) => value && updateBlock(index, { ...block, level: Number(value) as 2 | 3 })}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

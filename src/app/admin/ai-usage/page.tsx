@@ -137,11 +137,6 @@ export default async function AdminAiUsagePage({
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">AI usage</h1>
-        <p className="mt-1 text-muted-foreground">Real usage from `ai_usage_logs` — every call this app has made through the AI gateway, by feature, model, and user.</p>
-      </div>
-
       <div className="flex flex-wrap items-end gap-3">
         <form method="GET" className="flex flex-wrap items-end gap-3">
           <div className="flex flex-col gap-1.5">

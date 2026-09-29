@@ -13,10 +13,6 @@ export default async function AdminRolesPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Admin roles</h1>
-          <p className="mt-1 text-muted-foreground">Configure which admin areas each role can access, then grant roles to staff accounts.</p>
-        </div>
         <Button render={<Link href="/admin/roles/new"><PlusIcon /> New role</Link>} />
       </div>
 

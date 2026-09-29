@@ -61,6 +61,7 @@ export function LogisticsForm({
         <Select
           name="visaSponsorshipPreference"
           required
+          items={VISA_SPONSORSHIP_LABELS}
           defaultValue={defaultVisaPreference ?? undefined}
         >
           <SelectTrigger id="visaSponsorshipPreference" className="w-full">

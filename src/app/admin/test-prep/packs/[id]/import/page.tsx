@@ -16,8 +16,6 @@ export default async function ImportQuestionsPage({ params }: { params: Promise<
         <Link href={`/admin/test-prep/packs/${id}`} className="text-sm text-muted-foreground hover:underline">
           ← {pack.name}
         </Link>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Import questions</h1>
-        <p className="mt-1 text-muted-foreground">Add several questions to {pack.name} at once.</p>
       </div>
       <QuestionImportForm questionPackId={id} />
     </div>

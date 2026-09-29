@@ -4,7 +4,6 @@ import { ArrowLeftIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { hasFeature } from "@/lib/entitlements/service";
 import { getInterviewSessionDetail } from "@/lib/interviews/queries";
-import { INTERVIEW_MODE_LABELS, INTERVIEW_DIFFICULTY_LABELS } from "@/lib/interviews/types";
 import { Button } from "@/components/ui/button";
 import { InterviewChat } from "@/components/interviews/interview-chat";
 
@@ -53,16 +52,6 @@ export default async function InterviewSessionPage({
           </Link>
         }
       />
-
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {session.role}
-          {session.company ? ` at ${session.company}` : ""}
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {INTERVIEW_MODE_LABELS[session.mode]} · {INTERVIEW_DIFFICULTY_LABELS[session.difficulty]}
-        </p>
-      </div>
 
       {topupNotice && <p className="rounded-lg border bg-muted/50 p-3 text-sm">{topupNotice}</p>}
 

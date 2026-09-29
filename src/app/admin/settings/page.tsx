@@ -14,10 +14,6 @@ export default async function AdminSettingsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Global settings</h1>
-        <p className="mt-1 text-muted-foreground">Platform-wide controls — every setting here is real and wired in, not just stored.</p>
-      </div>
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-[15rem_minmax(0,1fr)] lg:items-start lg:gap-8">
         <SettingsSectionNav items={SECTIONS} />
         <AppSettingsForm settings={settings} />

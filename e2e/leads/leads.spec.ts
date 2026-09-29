@@ -161,7 +161,9 @@ test("the public forms are rate limited per address", async ({ page }) => {
 test("admin Leads shows each submission, and deleting one removes it and is audited without the content", async ({ browser }) => {
   const page = await openAs(browser, admin);
   await visit(page, "/admin/leads");
-  await expect(page.locator("#main-content").getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
+  // Not scoped to #main-content — the page's own duplicate "Leads" heading was removed (the shared admin header
+  // already renders one for this route), so the single remaining <h1> now lives in the header instead.
+  await expect(page.getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
 
   await expect(page.getByRole("cell", { name: NEWS_EMAIL })).toBeVisible();
   await page.getByRole("tab", { name: /^Contact/ }).click();

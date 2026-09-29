@@ -22,7 +22,17 @@ import {
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getPublishedSchemeBySlug() reads through createPublicClient() (no cookies), so this can be ISR instead of fully
+// dynamic — a scheme's admin-edited fields don't need sub-5-minute freshness.
+export const revalidate = 300;
+
+// Required for a dynamic segment to actually join the ISR cache at all — `revalidate` alone still renders every
+// request fresh without this (see blog/[slug]'s own comment for how that was verified). A scheme published after
+// the last build still works via `dynamicParams` (default true); it just renders on its first request instead.
+export async function generateStaticParams() {
+  const schemes = await getGraduateSchemes();
+  return schemes.map((scheme) => ({ slug: scheme.slug }));
+}
 
 /** A meta description made only of fields the row actually has — nothing padded in. */
 function describe(scheme: GraduateScheme): string {

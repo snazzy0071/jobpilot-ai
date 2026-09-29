@@ -16,7 +16,8 @@ import { getGraduateSchemes } from "@/lib/graduate-schemes/queries";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getGraduateSchemes() reads through createPublicClient() (no cookies), so this can be ISR instead of fully dynamic.
+export const revalidate = 300;
 
 export const metadata = buildMetadata({
   title: "Graduate Visa Sponsorship",

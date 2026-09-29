@@ -10,7 +10,19 @@ import { getSponsorById } from "@/lib/sponsors/queries";
 import { SPONSOR_RATING_LABELS, type SponsorRating } from "@/lib/sponsors/types";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getSponsorById() reads through createPublicClient() (no cookies), so this can be ISR instead of fully dynamic —
+// the register syncs on its own periodic schedule (src/lib/sponsors/), not sub-request freshness.
+export const revalidate = 3600;
+
+// An empty list, deliberately: the register has ~127k sponsors, so pre-rendering all of them at build time (like
+// blog/compare/graduate-schemes do with their much smaller sets) isn't practical. `generateStaticParams` still
+// needs to exist for a dynamic segment to be ISR-eligible at all (`revalidate` alone renders every request fresh
+// without it — verified against blog/[slug]); an empty return plus the default `dynamicParams: true` means every
+// sponsor page renders on its own first visit, then joins the cache from there, the same "generated on-demand"
+// path Next's own ISR docs describe for a param outside the pre-rendered set.
+export async function generateStaticParams() {
+  return [];
+}
 
 const RATING_BADGE_VARIANT: Record<SponsorRating, "default" | "secondary" | "outline"> = {
   a_rating: "default",
@@ -82,7 +94,7 @@ export default async function SponsorCompanyPage({ params }: { params: Promise<{
   };
 
   return (
-    <Section className="hero-glow pt-24 pb-24 sm:pt-32">
+    <Section decorative={false} className="hero-glow pt-24 pb-24 sm:pt-32">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c") }}

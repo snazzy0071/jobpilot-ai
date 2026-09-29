@@ -41,7 +41,13 @@ export function CreateCvDialog({ trigger, templateLimit = null }: { trigger?: Re
 
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="template">Template</Label>
-            <Select name="template" defaultValue={getCvTemplate("northlight").slug}>
+            <Select
+              name="template"
+              items={Object.fromEntries(
+                CV_TEMPLATES.map((t) => [t.slug, `${t.name} — ${CV_TEMPLATE_LAYOUT_LABELS[t.layout].toLowerCase()}${isTemplateAllowed(t.slug, templateLimit) ? "" : " (paid plan)"}`]),
+              )}
+              defaultValue={getCvTemplate("northlight").slug}
+            >
               <SelectTrigger id="template" className="w-full">
                 <SelectValue />
               </SelectTrigger>

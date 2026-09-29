@@ -62,7 +62,7 @@ function LanguageForm({ versionId, initial, onDone }: { versionId: string; initi
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="proficiency">Proficiency</Label>
-          <Select name="proficiency" defaultValue={initial?.proficiency ?? "conversational"} onValueChange={handleProficiencyChange}>
+          <Select name="proficiency" items={LANGUAGE_PROFICIENCY_LABELS} defaultValue={initial?.proficiency ?? "conversational"} onValueChange={handleProficiencyChange}>
             <SelectTrigger id="proficiency" className="w-full">
               <SelectValue />
             </SelectTrigger>

@@ -60,17 +60,32 @@ async function getImpersonationForRequest(
 }
 
 export async function proxy(request: NextRequest) {
-  const { supabaseResponse, user, supabase } = await updateSession(request);
   const { pathname } = request.nextUrl;
-
   const requiresAuth = AUTHENTICATED_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  const isGuestOnlyPath = GUEST_ONLY_PATHS.includes(pathname);
+  const isAdminArea = pathname.startsWith("/admin") || pathname.startsWith("/institution-admin");
+  const isWrite = request.method !== "GET" && request.method !== "HEAD";
+
+  // A plain GET to an ordinary public page (not auth-gated, not a guest-only page, not the admin/institution-admin
+  // area, not a write) needs none of the checks below, so it skips updateSession() entirely rather than paying a
+  // real Supabase auth.getUser() round trip — and the Set-Cookie header that call writes on every response — for
+  // every single public pageview. That Set-Cookie is also what was forcing every public page's response
+  // uncacheable (`Cache-Control: private, no-store`) regardless of that page's own `revalidate` export: middleware
+  // that mutates cookies on a request opts Next.js out of serving/storing a cached response for it. Every check
+  // that actually needs to know `user` is covered by the four flags above — this only skips the ones that don't.
+  if (!requiresAuth && !isGuestOnlyPath && !isAdminArea && !isWrite) {
+    return NextResponse.next();
+  }
+
+  const { supabaseResponse, user, supabase } = await updateSession(request);
+
   if (requiresAuth && !user) {
     const redirectUrl = new URL("/login", request.url);
     redirectUrl.searchParams.set("redirect", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (GUEST_ONLY_PATHS.includes(pathname) && user) {
+  if (isGuestOnlyPath && user) {
     // An explicit ?redirect= (e.g. bounced here from a protected page
     // before signing in, then navigating straight back to /login) is kept
     // only if it is valid for this role. Otherwise this is the role's own
@@ -105,14 +120,13 @@ export async function proxy(request: NextRequest) {
   if (user) {
     const impersonation = await getImpersonationForRequest(request, user.id);
     if (impersonation) {
-      const isSafeMethod = request.method === "GET" || request.method === "HEAD";
-      if (!isSafeMethod && pathname !== IMPERSONATION_EXIT_PATH) {
+      if (isWrite && pathname !== IMPERSONATION_EXIT_PATH) {
         const blockedUrl = new URL(pathname, request.url);
         blockedUrl.searchParams.set("impersonation_blocked", "1");
         return NextResponse.redirect(blockedUrl);
       }
 
-      if (isSafeMethod && (pathname.startsWith("/admin") || pathname.startsWith("/institution-admin"))) {
+      if (!isWrite && isAdminArea) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }

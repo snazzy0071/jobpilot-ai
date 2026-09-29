@@ -36,7 +36,7 @@ export function AppSettingsForm({ settings }: { settings: AppSettings }) {
   }
 
   return (
-    <Card className="p-6">
+    <Card className="p-6 shadow-elevated">
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">
         {/* One form, two labelled sections: the left-hand nav jumps between them, and a single Save covers both. */}
         <section id="settings-signups" aria-labelledby="settings-signups-heading" className="flex scroll-mt-6 flex-col gap-4">

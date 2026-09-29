@@ -72,13 +72,6 @@ export default async function CoverLetterEditorPage({ params }: { params: Promis
         />
 
         <div className="flex flex-wrap items-end justify-between gap-4 border-b pb-4">
-          <div>
-            <h1 className="font-heading text-2xl font-semibold tracking-tight">
-              {data.jobTitle} at {data.companyName}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">Version {data.versionNumber}</p>
-          </div>
-
           <div className="flex flex-wrap items-end gap-4">
             <div className="flex flex-col gap-1.5">
               <Label>Template</Label>

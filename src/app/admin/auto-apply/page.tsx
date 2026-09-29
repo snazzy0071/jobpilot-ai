@@ -14,7 +14,6 @@ export default async function AdminAutoApplyPage() {
   if (!data) {
     return (
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Auto-Apply</h1>
         <Card className="flex-row items-start gap-2 border-destructive/40 p-3 text-sm" role="alert">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
           <p>These figures couldn&apos;t be loaded. Has migration 0122 been applied?</p>
@@ -29,13 +28,6 @@ export default async function AdminAutoApplyPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Auto-Apply</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Aggregate activity of the assisted Auto-Apply feature. Counts only: no user, employer, job, CV or cover letter is shown here.
-        </p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label="Users with rules saved" icon={UsersIcon} value={data.usersWithSettings} caption={`${data.consented} gave consent`} />
         <MetricCard label="Turned on" icon={SendIcon} value={data.enabled} caption={`${data.paused} paused`} />

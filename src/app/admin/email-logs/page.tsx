@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { NativeSelect } from "@/components/ui/native-select";
 import { listAdminEmailLogs, listEmailTemplates } from "@/lib/admin/email-logs/queries";
 
 export const dynamic = "force-dynamic";
@@ -25,23 +26,15 @@ export default async function AdminEmailLogsPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Email logs</h1>
-        <p className="mt-1 text-muted-foreground">
-          Every send attempt through Resend — most recent {entries.length.toLocaleString()} shown. Recipient and outcome only, never subject or body content.
-        </p>
-      </div>
-
       <form method="GET" className="flex flex-wrap items-end gap-3">
         <div className="flex flex-col gap-1.5">
           <label htmlFor="template" className="text-sm font-medium">
             Template
           </label>
-          <select
+          <NativeSelect
             id="template"
             name="template"
             defaultValue={params.template ?? ""}
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           >
             <option value="">Any template</option>
             {templates.map((template) => (
@@ -49,22 +42,21 @@ export default async function AdminEmailLogsPage({
                 {template}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
         <div className="flex flex-col gap-1.5">
           <label htmlFor="status" className="text-sm font-medium">
             Status
           </label>
-          <select
+          <NativeSelect
             id="status"
             name="status"
             defaultValue={params.status ?? ""}
-            className="h-9 rounded-md border border-input bg-transparent px-3 text-sm"
           >
             <option value="">Any status</option>
             <option value="sent">Sent</option>
             <option value="failed">Failed</option>
-          </select>
+          </NativeSelect>
         </div>
         <Button type="submit">Filter</Button>
         {(params.template || params.status) && <Button type="button" variant="ghost" render={<Link href="/admin/email-logs">Clear</Link>} />}

@@ -1,9 +1,14 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { ComparisonDifference, ComparisonFaq, ComparisonFeature, ComparisonPage, ComparisonPricing } from "@/lib/comparisons/types";
 
-// Public feature: the anon-respecting client. RLS (migration 0117) shows everyone live pages and admins drafts, so the public
-// functions also filter on published_at explicitly — an admin browsing /compare sees what a visitor sees.
+// The two public-facing reads below (getLiveComparisons/getLiveComparisonBySlug) use createPublicClient() — a plain
+// anon-key client with no cookies and no session, matching the "Anyone can view live comparison pages" RLS policy
+// (migration 0117) exactly, and letting /compare and /compare/[slug] use ISR instead of being forced fully dynamic
+// just for touching cookies(). The two admin-only functions below still filter nothing (drafts included) and stay
+// on the session-bound createClient() they already used — an admin browsing /compare itself still sees what a
+// visitor sees (both public functions filter published_at explicitly either way).
 
 const FIELDS = "id, slug, competitor_name, competitor_website, intro, features, pricing, differences, faqs, updated_on, published_at, created_at, updated_at";
 
@@ -43,7 +48,7 @@ export function toComparison(row: Row): ComparisonPage {
 
 /** Every live comparison, A–Z. A database error is thrown (and logged) — never an empty list or a 404. */
 export async function getLiveComparisons(): Promise<ComparisonPage[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("comparison_pages").select(FIELDS).not("published_at", "is", null).lte("published_at", new Date().toISOString()).order("competitor_name").limit(200);
   if (error) {
     console.error("getLiveComparisons failed:", error.message);
@@ -53,7 +58,7 @@ export async function getLiveComparisons(): Promise<ComparisonPage[]> {
 }
 
 export async function getLiveComparisonBySlug(slug: string): Promise<ComparisonPage | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("comparison_pages").select(FIELDS).eq("slug", slug).not("published_at", "is", null).lte("published_at", new Date().toISOString()).maybeSingle();
   if (error) {
     console.error("getLiveComparisonBySlug failed:", error.message);

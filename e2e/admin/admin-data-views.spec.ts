@@ -3,8 +3,8 @@ import { getAdminClient } from "../support/admin-client";
 import { dismissCookieBanner } from "../support/cv-fixture";
 import { createLimitedAdmin, createSuperAdmin, openAs, removeAdminSession, type AdminSession } from "../support/admin-session";
 
-// The four read-only admin data views against rows this spec plants with known values (in a past day / a private template name so they
-// cannot mix with real data): AI usage, email logs, audit log, system health. The figures on screen are compared with what was planted.
+// The three read-only admin data views against rows this spec plants with known values (in a past day / a private template name so they
+// cannot mix with real data): AI usage, email logs, system health. The figures on screen are compared with what was planted.
 
 test.describe.configure({ mode: "serial", timeout: 180_000 });
 
@@ -42,11 +42,6 @@ test.beforeAll(async ({ browser }) => {
     { recipient: `failed-${RUN}@example.com`, template: TEMPLATE, status: "failed", attempts: 3, error_name: "rate_limit_exceeded" },
   ]);
   if (mailError) throw new Error(mailError.message);
-  const { error: auditError } = await db().from("admin_audit_logs").insert([
-    { actor_id: admin.user.id, actor_email: admin.user.email, action: `e2e.first.${RUN}`, entity_type: "e2e_entity", entity_id: "entity-1", metadata: { note: "planted" } },
-    { actor_id: admin.user.id, actor_email: admin.user.email, action: `e2e.second.${RUN}`, entity_type: "e2e_other", entity_id: "entity-2", metadata: {} },
-  ]);
-  if (auditError) throw new Error(auditError.message);
 });
 
 test.afterAll(async () => {
@@ -96,32 +91,6 @@ test("email logs: every send is listed with its outcome, and the template and st
   await page.context().close();
 });
 
-test("audit log: entries show who did what to what, and the type and search filters find them (also past the newest 200)", async ({ browser }) => {
-  const page = await openAs(browser, admin);
-  await visit(page, "/admin/audit-log");
-  await page.getByLabel("Search").fill(`e2e.first.${RUN}`);
-  await page.getByRole("button", { name: "Filter" }).click();
-  await expect(main(page).getByText(`e2e.first.${RUN}`)).toBeVisible();
-  await expect(main(page).getByText(`e2e.second.${RUN}`)).toHaveCount(0);
-  await expect(main(page)).toContainText(admin.user.email);
-  await expect(main(page)).toContainText("entity-1");
-  await expect(main(page)).toContainText("planted");
-
-  await visit(page, "/admin/audit-log?entityType=e2e_other");
-  await expect(main(page).getByText(`e2e.second.${RUN}`)).toBeVisible();
-  await expect(main(page).getByText(`e2e.first.${RUN}`)).toHaveCount(0);
-
-  await visit(page, "/admin/audit-log?search=zz-no-such-entry-zz");
-  await expect(main(page).getByText("No audit entries match these filters.")).toBeVisible();
-
-  // Search reaches entries older than the newest 200 rows: plant 205 newer ones and look for the oldest planted entry again.
-  const filler = Array.from({ length: 205 }, (_, index) => ({ actor_id: admin.user.id, actor_email: admin.user.email, action: `e2e.filler.${RUN}.${index}`, entity_type: "e2e_filler", metadata: {} }));
-  await db().from("admin_audit_logs").insert(filler);
-  await visit(page, `/admin/audit-log?search=${encodeURIComponent(`e2e.first.${RUN}`)}`);
-  await expect(main(page).getByText(`e2e.first.${RUN}`)).toBeVisible();
-  await page.context().close();
-});
-
 test("system health: each service reports a status with detail, and the public status page shows a summary without the detail", async ({ browser }) => {
   const page = await openAs(browser, admin);
   await visit(page, "/admin/system-health");
@@ -141,9 +110,9 @@ test("system health: each service reports a status with detail, and the public s
   await page.context().close();
 });
 
-test("an admin without these permissions is sent back to the dashboard from all four views", async ({ browser }) => {
+test("an admin without these permissions is sent back to the dashboard from all three views", async ({ browser }) => {
   const page = await openAs(browser, limited);
-  for (const path of ["/admin/ai-usage", "/admin/email-logs", "/admin/audit-log", "/admin/system-health"]) {
+  for (const path of ["/admin/ai-usage", "/admin/email-logs", "/admin/system-health"]) {
     await page.goto(path);
     await expect(page, path).toHaveURL(/\/admin$/);
   }

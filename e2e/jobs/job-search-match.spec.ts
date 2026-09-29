@@ -75,7 +75,9 @@ test.describe("job feeds: sync, dedupe, expiry, errors", () => {
     const page = await open();
     await page.goto("/dashboard/jobs");
     await dismissCookieBanner(page);
-    await expect(page.locator("#main-content").getByRole("heading", { name: "Job Feed" })).toBeVisible();
+    // Not scoped to #main-content — the page's own duplicate "Job Feed" heading was removed (the shared dashboard
+    // header already renders one for this route), so the single remaining <h1> now lives in the header instead.
+    await expect(page.getByRole("heading", { name: "Job Feed" })).toBeVisible();
     await expect(page.getByText("No jobs have been synced yet")).toBeVisible();
     await expect(cards(page)).toHaveCount(0);
   });

@@ -5,8 +5,9 @@ import { makeSuperAdmin, markOnboarded, setPlan } from "../support/roles";
 import { dismissCookieBanner } from "../support/cv-fixture";
 
 // The admin area against the REAL database: login lands on /admin, the menu is exactly the requested one, the sidebar stays put while
-// the content scrolls, there is no user-dashboard menu, View Public Website is there, permissions gate every section, and the
-// numbers shown are the numbers in the database (users, subscriptions, revenue, Auto-Apply activity). Serial; two accounts sign in once each.
+// the content scrolls, there is no user-dashboard menu, View Public Website and sign out are in the header (not duplicated in the
+// sidebar), permissions gate every section, and the numbers shown are the numbers in the database (users, subscriptions, revenue,
+// Auto-Apply activity). Serial; two accounts sign in once each.
 
 test.describe.configure({ mode: "serial" });
 
@@ -32,7 +33,6 @@ const MENU = [
   ["Auto-Apply", "/admin/auto-apply"],
   ["Leads", "/admin/leads"],
   ["Roles", "/admin/roles"],
-  ["Audit Log", "/admin/audit-log"],
   ["Settings", "/admin/settings"],
   ["System Health", "/admin/system-health"],
 ] as const;
@@ -87,7 +87,7 @@ test.afterAll(async () => {
 });
 
 test.describe("shell and menu", () => {
-  test("the menu is exactly the requested one, admin-only, with View Public Website and sign out", async ({ browser }) => {
+  test("the menu is exactly the requested one, admin-only, with no View Public Website or sign out clutter in it", async ({ browser }) => {
     const page = await open(browser, "superAdmin");
     await page.goto("/admin");
     await dismissCookieBanner(page);
@@ -105,10 +105,15 @@ test.describe("shell and menu", () => {
     // Email logs are not in the menu either, but System Health links to them.
     await expect(nav.getByRole("link", { name: "Email Logs" })).toHaveCount(0);
 
-    const publicLink = nav.getByRole("link", { name: /View Public Website/ });
+    // View Public Website and sign out are deliberately NOT duplicated in the sidebar — just the one copy of each in the header.
+    await expect(nav.getByRole("link", { name: /View Public Website/ })).toHaveCount(0);
+    await expect(nav.getByRole("button", { name: /sign out/i })).toHaveCount(0);
+
+    const publicLink = page.getByRole("link", { name: /View Public Website/ });
     await expect(publicLink).toHaveAttribute("href", "/");
     await expect(publicLink).toHaveAttribute("target", "_blank");
-    await expect(nav.getByRole("button", { name: /sign out/i })).toBeVisible();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
     await page.context().close();
   });
 
@@ -160,7 +165,7 @@ test.describe("shell and menu", () => {
     await page.goto("/admin");
     const links = page.locator("nav[aria-label='Main'] a[href^='/admin']");
     expect(await links.allInnerTexts()).toEqual(["Dashboard", "Users"]);
-    for (const href of ["/admin/plans", "/admin/auto-apply", "/admin/institutions", "/admin/roles", "/admin/audit-log", "/admin/settings", "/admin/email-logs"]) {
+    for (const href of ["/admin/plans", "/admin/auto-apply", "/admin/institutions", "/admin/roles", "/admin/settings", "/admin/email-logs"]) {
       await page.goto(href);
       await expect(page, href).toHaveURL(/\/admin$/);
     }

@@ -40,7 +40,7 @@ export function SplitFormPage({
 }) {
   const Heading = asSection ? "h2" : "h1";
   return (
-    <Section tone={asSection ? "muted" : "default"} decorative={asSection ? true : undefined} className={asSection ? undefined : "hero-glow pt-24 pb-24 sm:pt-32"}>
+    <Section tone={asSection ? "muted" : "default"} decorative={asSection ? true : false} className={asSection ? undefined : "hero-glow pt-24 pb-24 sm:pt-32"}>
       <div className="grid items-start gap-12 lg:grid-cols-[1fr_1.05fr] lg:gap-16">
         <Reveal className="flex flex-col gap-6 text-center lg:pt-6 lg:text-left">
           <div className="flex flex-col items-center gap-4 lg:items-start">

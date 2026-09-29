@@ -61,7 +61,11 @@ export function PageHero({
   );
 
   return (
-    <Section className={cn("hero-glow pt-24 pb-12 sm:pt-32 sm:pb-20", className)}>
+    // `decorative={false}`: this section already gets its own wash via the `hero-glow` class (sized
+    // and positioned specifically for a hero) — layering Section's own default SectionBackground glow
+    // underneath it doubled up the blur behind the one composition (the product mockup/floating
+    // cards) where a clean, uncluttered backdrop matters most.
+    <Section decorative={false} className={cn("hero-glow pt-24 pb-12 sm:pt-32 sm:pb-20", className)}>
       {breadcrumbs && <div className="mb-8">{breadcrumbs}</div>}
       {visual ? (
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">

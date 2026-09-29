@@ -107,7 +107,7 @@ export function CoverLetterCreateForm({ cvs }: { cvs: CvListItem[] }) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="cover-letter-cv">CV</Label>
-          <Select name="cvId" value={cvId} onValueChange={(value) => setCvId(value ?? "")}>
+          <Select name="cvId" items={Object.fromEntries(eligibleCvs.map((cv) => [cv.id, cv.title]))} value={cvId} onValueChange={(value) => setCvId(value ?? "")}>
             <SelectTrigger id="cover-letter-cv" className="w-full">
               <SelectValue placeholder="Choose a CV" />
             </SelectTrigger>
@@ -204,7 +204,7 @@ export function CoverLetterCreateForm({ cvs }: { cvs: CvListItem[] }) {
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cover-letter-tone">Tone</Label>
-            <Select name="tone" value={tone} onValueChange={(value) => setTone(value as typeof tone)}>
+            <Select name="tone" items={COVER_LETTER_TONE_LABELS} value={tone} onValueChange={(value) => setTone(value as typeof tone)}>
               <SelectTrigger id="cover-letter-tone" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -219,7 +219,7 @@ export function CoverLetterCreateForm({ cvs }: { cvs: CvListItem[] }) {
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="cover-letter-length">Length</Label>
-            <Select name="length" value={length} onValueChange={(value) => setLength(value as typeof length)}>
+            <Select name="length" items={COVER_LETTER_LENGTH_LABELS} value={length} onValueChange={(value) => setLength(value as typeof length)}>
               <SelectTrigger id="cover-letter-length" className="w-full">
                 <SelectValue />
               </SelectTrigger>

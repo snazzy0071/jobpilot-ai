@@ -61,13 +61,6 @@ export default async function AutoApplyPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <header className="flex flex-col gap-2">
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Auto-Apply</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          Set your rules and JobPilot finds jobs that fit them and prepares each application. You review and approve every one. Where an employer&apos;s site can&apos;t be applied to by software — which is currently every site — we hand you the link, and log it in your tracker once you tell us you&apos;ve applied. We never work around CAPTCHAs or a site&apos;s protections.
-        </p>
-      </header>
-
       <AutoApplyQueuePanel items={queue} cvs={cvOptions} coverLetters={letterOptions} enabled={settings.enabled} paused={settings.paused} />
       <AutoApplySettingsForm settings={settings} cvs={cvOptions} coverLetters={letterOptions} />
 

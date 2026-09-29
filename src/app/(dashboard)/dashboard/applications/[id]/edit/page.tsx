@@ -30,13 +30,6 @@ export default async function EditApplicationPage({ params }: { params: Promise<
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Edit application</h1>
-        <p className="mt-1 text-muted-foreground">
-          {application.companyName} — {application.jobTitle}
-        </p>
-      </div>
-
       <ApplicationForm
         application={application}
         cvs={cvs.map((cv) => ({ id: cv.id, title: cv.title }))}

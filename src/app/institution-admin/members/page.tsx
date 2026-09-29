@@ -10,10 +10,6 @@ export default async function InstitutionAdminMembersPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Students &amp; members</h1>
-        <p className="mt-1 text-muted-foreground">Everyone in your institution&apos;s cohort — {members.length} total.</p>
-      </div>
       <MembersTable members={members} />
     </div>
   );

@@ -1,8 +1,10 @@
 import Link from "next/link";
+import { BookmarkIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { listSavedJobs, type SavedJobListItem } from "@/lib/jobs/wishlist/queries";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { JobsSectionNav } from "@/components/jobs/jobs-section-nav";
 import { SavedJobCard } from "@/components/jobs/saved-job-card";
 
@@ -21,13 +23,6 @@ export default async function SavedJobsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Saved jobs</h1>
-        <p className="mt-1 text-muted-foreground">
-          Jobs you bookmarked from the feed. Each keeps what it looked like when you saved it, even after the listing closes.
-        </p>
-      </div>
-
       <JobsSectionNav active="saved" />
 
       {failed ? (
@@ -36,11 +31,12 @@ export default async function SavedJobsPage() {
           <p className="max-w-md text-sm text-muted-foreground">Try refreshing in a moment — your saved jobs are not lost.</p>
         </Card>
       ) : items.length === 0 ? (
-        <Card className="items-center gap-3 p-10 text-center">
-          <p className="font-medium">No saved jobs yet</p>
-          <p className="max-w-md text-sm text-muted-foreground">Use Save on a job in the feed to keep it here, then add it to your tracker when you decide to apply.</p>
-          <Button render={<Link href="/dashboard/jobs" />}>Browse the job feed</Button>
-        </Card>
+        <EmptyState
+          icon={BookmarkIcon}
+          title="No saved jobs yet"
+          description="Use Save on a job in the feed to keep it here, then add it to your tracker when you decide to apply."
+          actions={<Button render={<Link href="/dashboard/jobs">Browse the job feed</Link>} />}
+        />
       ) : (
         <div className="flex flex-col gap-3">
           <p className="text-sm text-muted-foreground" data-testid="saved-total">

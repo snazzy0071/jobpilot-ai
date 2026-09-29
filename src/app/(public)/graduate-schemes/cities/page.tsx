@@ -9,8 +9,9 @@ import { getGraduateSchemes } from "@/lib/graduate-schemes/queries";
 import { cityCounts } from "@/lib/graduate-schemes/cities";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-// Read per request: the places come from the published schemes, which an admin can change at any time.
-export const dynamic = "force-dynamic";
+// getGraduateSchemes() reads through createPublicClient() (no cookies), so this can be ISR instead of fully dynamic
+// — the places an admin changes don't need sub-5-minute freshness.
+export const revalidate = 300;
 
 export const metadata = buildMetadata({
   title: "UK Graduate Schemes by City",

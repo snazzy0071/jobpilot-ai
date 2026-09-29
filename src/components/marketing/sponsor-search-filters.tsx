@@ -78,7 +78,7 @@ export function SponsorSearchFilters({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="sponsor-route">Visa route</Label>
-        <Select value={route} onValueChange={(value) => value && setRoute(value)}>
+        <Select items={{ [ALL_ROUTES_VALUE]: "All routes", ...Object.fromEntries(routes.map((option) => [option, option])) }} value={route} onValueChange={(value) => value && setRoute(value)}>
           <SelectTrigger id="sponsor-route" className="w-full">
             <SelectValue />
           </SelectTrigger>
@@ -100,7 +100,7 @@ export function SponsorSearchFilters({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="sponsor-rating">Rating</Label>
-        <Select value={rating} onValueChange={(value) => value && setRating(value)}>
+        <Select items={{ [ALL_RATINGS_VALUE]: "All ratings", ...Object.fromEntries(SPONSOR_RATINGS.map((option) => [option, SPONSOR_RATING_LABELS[option]])) }} value={rating} onValueChange={(value) => value && setRating(value)}>
           <SelectTrigger id="sponsor-rating" className="w-full">
             <SelectValue />
           </SelectTrigger>

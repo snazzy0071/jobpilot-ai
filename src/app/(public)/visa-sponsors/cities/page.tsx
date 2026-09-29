@@ -10,7 +10,9 @@ import { SPONSOR_CITIES } from "@/config/sponsor-cities";
 import { getSponsorCityCounts } from "@/lib/sponsors/queries";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getSponsorCityCounts() reads through createPublicClient() (no cookies), so this can be ISR instead of fully
+// dynamic — the register syncs on its own periodic schedule, not sub-request freshness.
+export const revalidate = 3600;
 
 export const metadata = buildMetadata({
   title: "UK Visa Sponsors by City",

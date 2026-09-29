@@ -32,10 +32,6 @@ export default async function InstitutionAdminAnalyticsPage() {
   if (analytics.suppressed) {
     return (
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Analytics</h1>
-          <p className="mt-1 text-muted-foreground">Aggregate activity across your student cohort — never broken down by individual student.</p>
-        </div>
         <Card variant="admin" className="gap-2 p-6" data-testid="analytics-suppressed">
           <p className="font-medium">
             {analytics.studentCount} student{analytics.studentCount === 1 ? "" : "s"} so far
@@ -52,11 +48,6 @@ export default async function InstitutionAdminAnalyticsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Analytics</h1>
-        <p className="mt-1 text-muted-foreground">Aggregate activity across your student cohort — never broken down by individual student.</p>
-      </div>
-
       <Card variant="admin" className="gap-3 p-6">
         <div className="flex items-center justify-between text-sm">
           <span className="font-medium">Activated students</span>

@@ -49,17 +49,6 @@ export default async function NewInterviewSessionPage({
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">
-          {repractice ? "Practice weak areas" : "Set up a mock interview"}
-        </h1>
-        <p className="mt-1 text-muted-foreground">
-          {repractice
-            ? "A focused session on just the competencies that need work — your earlier session stays exactly as it was."
-            : "Add the role you're practising for and we'll generate real competency-based questions."}
-        </p>
-      </div>
-
       {topupNotice && <p className="rounded-lg border bg-muted/50 p-3 text-sm">{topupNotice}</p>}
 
       <InterviewSetupForm

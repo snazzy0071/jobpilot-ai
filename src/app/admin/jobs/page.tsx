@@ -22,11 +22,6 @@ export default async function AdminJobsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Job feed health</h1>
-        <p className="mt-1 text-muted-foreground">{health.totalActiveJobs.toLocaleString()} active listings across every source.</p>
-      </div>
-
-      <div>
         <h2 className="mb-3 text-lg font-semibold tracking-tight">Sources</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {health.sources.map((source) => (

@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import { getReadingTimeMinutes } from "@/lib/blog/reading-time";
 import type { AdviceCategory } from "@/lib/advice/categories";
 import type { AdviceGuide, ContentBlock } from "@/lib/advice/types";
@@ -47,7 +48,7 @@ export function toGuide(row: Row): AdviceGuide {
 
 /** Every live guide. A database error is thrown (and logged), never turned into an empty hub or a 404. */
 export async function getLiveGuides(): Promise<AdviceGuide[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("advice_guides")
     .select(FIELDS)
@@ -63,7 +64,7 @@ export async function getLiveGuides(): Promise<AdviceGuide[]> {
 }
 
 export async function getLiveGuideBySlug(slug: string): Promise<AdviceGuide | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("advice_guides").select(FIELDS).eq("slug", slug).not("published_at", "is", null).lte("published_at", new Date().toISOString()).maybeSingle();
   if (error) {
     console.error("getLiveGuideBySlug failed:", error.message);

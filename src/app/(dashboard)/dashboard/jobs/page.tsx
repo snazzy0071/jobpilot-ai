@@ -78,13 +78,6 @@ export default async function JobFeedPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Job Feed</h1>
-        <p className="mt-1 text-muted-foreground">
-          Jobs synced from Adzuna and Reed, searched locally — no live call to either happens while you browse.
-        </p>
-      </div>
-
       <JobsSectionNav active="feed" />
 
       <JobFeedStatusNotice status={feedStatus} />

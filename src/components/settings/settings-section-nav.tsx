@@ -34,7 +34,7 @@ export function SettingsSectionNav({ items, label = "Settings sections" }: { ite
 
   return (
     <nav aria-label={label} className="max-w-full overflow-x-auto lg:sticky lg:top-0 lg:overflow-visible">
-      <ul className="flex gap-1 rounded-lg bg-muted p-1.5 lg:flex-col lg:gap-0.5">
+      <ul className="flex gap-1 rounded-lg border border-border bg-muted p-1.5 lg:flex-col lg:gap-0.5">
         {items.map((item) => {
           const current = item.id === active;
           return (

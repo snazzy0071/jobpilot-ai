@@ -1,5 +1,5 @@
 import "server-only";
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient as createClient } from "@/lib/supabase/public";
 import { normalizeForMatch } from "@/lib/sponsors/normalize";
 import { SPONSOR_RATINGS } from "@/lib/sponsors/types";
 import type {
@@ -14,16 +14,14 @@ import type {
   SponsorCityCount,
 } from "@/lib/sponsors/types";
 
-// Every function here runs through the request-scoped client
-// (src/lib/supabase/server.ts), never the service-role admin client —
-// this is a public, unauthenticated feature (no requireUser() anywhere
-// in this file), so it must see exactly what an anonymous visitor's own
-// RLS-governed request would see: active sponsors from a completed
-// import only (migrations 0049/0050/0053's own select policies). Using
-// the admin client here would silently leak deactivated sponsors or
-// half-imported rows into a "is this employer a licensed sponsor"
-// checker — the one place that would be actively misleading rather than
-// just incomplete.
+// Every function here runs through createPublicClient() (src/lib/supabase/public.ts) — a plain anon-key client,
+// never the service-role admin client — this is a public, unauthenticated feature (no requireUser() anywhere in
+// this file), so it must see exactly what an anonymous visitor's own RLS-governed request would see: active
+// sponsors from a completed import only (migrations 0049/0050/0053's own select policies). Using the admin client
+// here would silently leak deactivated sponsors or half-imported rows into a "is this employer a licensed sponsor"
+// checker — the one place that would be actively misleading rather than just incomplete. Not the cookie-bound
+// createClient() (src/lib/supabase/server.ts) either — this file has no session/impersonation to resolve, and
+// every public page that calls it can stay eligible for ISR instead of being forced fully dynamic.
 
 const PAGE_SIZE = 20;
 

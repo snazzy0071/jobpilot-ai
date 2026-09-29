@@ -33,10 +33,6 @@ export default async function TestPrepPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Test Prep</h1>
-          <p className="mt-1 text-muted-foreground">Original practice questions in five formats — never copyrighted test items.</p>
-        </div>
         {hasProgress && (
           <Button
             variant="outline"

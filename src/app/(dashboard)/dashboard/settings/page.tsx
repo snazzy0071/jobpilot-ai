@@ -67,8 +67,6 @@ export default async function SettingsPage({
 
   return (
     <div>
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">Settings</h1>
-
       <SettingsTabs defaultValue={initialTab} className="mt-6">
         <SettingsTabsList>
           <SettingsTab value="profile">Profile</SettingsTab>

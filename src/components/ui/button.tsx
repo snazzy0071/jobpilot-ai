@@ -11,7 +11,9 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground shadow-card hover:bg-primary/90 hover:shadow-elevated hover:-translate-y-px",
+          // hover:bg-[var(--primary-hover)] rather than the default opacity-based hover: a flat, exact darker-blue step
+          // reads as "deep, confident SaaS button" better than a 90%-opacity tint of --primary would.
+          "bg-primary text-primary-foreground shadow-card hover:bg-[var(--primary-hover)] hover:shadow-[0_4px_12px_rgba(29,78,216,0.35)] hover:-translate-y-px",
         // Reserved for the one or two genuinely primary "AI does the
         // work" moments per page (e.g. "Generate cover letter") — not a
         // drop-in replacement for `default`. See docs/DESIGN_SYSTEM.md's

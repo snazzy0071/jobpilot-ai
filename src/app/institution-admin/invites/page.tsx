@@ -10,10 +10,6 @@ export default async function InstitutionAdminInvitesPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Invites</h1>
-        <p className="mt-1 text-muted-foreground">Invite students or staff by email — each invite reserves a seat until it&apos;s accepted or revoked.</p>
-      </div>
       <InvitesPanel invites={invites} />
     </div>
   );

@@ -70,6 +70,17 @@ export function JobFeedFilters({
     minScore?: string;
   };
 }) {
+  // Base UI's <Select.Value> only resolves a label from its popup's mounted <Select.Item>s, which
+  // are portal-rendered and don't exist in the DOM until the popup has been opened at least once —
+  // without an explicit `items` map, the trigger shows the raw stored value (e.g. "__all_sources__")
+  // on first paint instead of its label. Every other filter Select in this app already passes one;
+  // this file was the one still missing it.
+  const sourceItems: Record<string, React.ReactNode> = { [ALL_SOURCES]: "All sources", ...Object.fromEntries(sources.map((source) => [source.id, source.name])) };
+  const postedWithinItems: Record<string, React.ReactNode> = Object.fromEntries(POSTED_WITHIN_OPTIONS.map((option) => [option.value, option.label]));
+  const sortItems: Record<string, React.ReactNode> = Object.fromEntries(SORT_OPTIONS.map((option) => [option.value, option.label]));
+  const cvItems: Record<string, React.ReactNode> = { [NO_CV]: "Don't score matches", ...Object.fromEntries(cvs.map((cv) => [cv.id, cv.title])) };
+  const minScoreItems: Record<string, React.ReactNode> = Object.fromEntries(MATCH_THRESHOLD_OPTIONS.map((option) => [option.value, option.label]));
+
   const router = useRouter();
   const [keywords, setKeywords] = useState(defaultValues?.keywords ?? "");
   const [location, setLocation] = useState(defaultValues?.location ?? "");
@@ -123,7 +134,7 @@ export function JobFeedFilters({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="job-source">Source</Label>
-          <Select value={sourceId} onValueChange={(value) => value && setSourceId(value)}>
+          <Select items={sourceItems} value={sourceId} onValueChange={(value) => value && setSourceId(value)}>
             <SelectTrigger id="job-source" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -142,7 +153,7 @@ export function JobFeedFilters({
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="job-posted">Date posted</Label>
-          <Select value={postedWithin} onValueChange={(value) => value && setPostedWithin(value)}>
+          <Select items={postedWithinItems} value={postedWithin} onValueChange={(value) => value && setPostedWithin(value)}>
             <SelectTrigger id="job-posted" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -158,7 +169,7 @@ export function JobFeedFilters({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="job-sort">Sort by</Label>
-          <Select value={sort} onValueChange={(value) => value && setSort(value)}>
+          <Select items={sortItems} value={sort} onValueChange={(value) => value && setSort(value)}>
             <SelectTrigger id="job-sort" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -174,7 +185,7 @@ export function JobFeedFilters({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="job-cv">Match against</Label>
-          <Select value={cvId} onValueChange={(value) => value && setCvId(value)}>
+          <Select items={cvItems} value={cvId} onValueChange={(value) => value && setCvId(value)}>
             <SelectTrigger id="job-cv" className="w-full">
               <SelectValue />
             </SelectTrigger>
@@ -191,7 +202,7 @@ export function JobFeedFilters({
 
         <div className="flex flex-col gap-2">
           <Label htmlFor="job-min-score">Match threshold</Label>
-          <Select value={minScore} onValueChange={(value) => value && setMinScore(value)} disabled={cvId === NO_CV}>
+          <Select items={minScoreItems} value={minScore} onValueChange={(value) => value && setMinScore(value)} disabled={cvId === NO_CV}>
             <SelectTrigger id="job-min-score" className="w-full">
               <SelectValue />
             </SelectTrigger>

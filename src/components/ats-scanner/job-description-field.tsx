@@ -11,6 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import type { CvAtsJobOption } from "@/lib/cvs/types";
 
+/** The label shown for a previous scan's job description, both in the closed trigger and the open list — one place so they can't drift. */
+function jobOptionLabel(option: CvAtsJobOption): string {
+  const snippet = option.jobDescription.slice(0, 60).replace(/\s+/g, " ");
+  return option.jobDescription.length > 60 ? `${snippet}…` : snippet;
+}
+
 /**
  * The job-description half of a scan — paste it, import it from a URL (the same SSRF-safe fetch and
  * extractor either scan entry point uses), or reuse one already scanned before. Shared by both ATS Scanner
@@ -84,15 +90,14 @@ export function JobDescriptionField({
       {recentJobOptions.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <Label>Use a previous job description</Label>
-          <Select value={selectedJobId} onValueChange={handleSelectJob}>
+          <Select items={Object.fromEntries(recentJobOptions.map((option) => [option.id, jobOptionLabel(option)]))} value={selectedJobId} onValueChange={handleSelectJob}>
             <SelectTrigger className="w-full">
               <SelectValue placeholder="Select a job you've scanned before" />
             </SelectTrigger>
             <SelectContent>
               {recentJobOptions.map((option) => (
                 <SelectItem key={option.id} value={option.id}>
-                  {option.jobDescription.slice(0, 60).replace(/\s+/g, " ")}
-                  {option.jobDescription.length > 60 ? "…" : ""}
+                  {jobOptionLabel(option)}
                 </SelectItem>
               ))}
             </SelectContent>

@@ -2,13 +2,19 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+/* Tailwind's built-in `dark:` variant is media-query-based by default
+   (prefers-color-scheme). This app is light-only (see :root below — there
+   is no .dark block anymore, and nothing ever adds a .dark class), so this
+   override stays: without it, `dark:` utilities still scattered through
+   the app would silently reactivate off a visitor's OS colour scheme
+   instead of staying permanently inert. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: var(--font-mono-face);
   --font-heading: var(--font-heading);
   --color-brand-secondary: var(--brand-secondary);
   --color-brand-secondary-foreground: var(--brand-secondary-foreground);
@@ -76,26 +82,29 @@
 }
 
 :root {
-  /* Brand palette, sourced from docs/DESIGN_SYSTEM.md's reference audit.
-     --primary is THE one place that drives every brand-colored surface
-     already wired through the app (buttons, focus rings, active/selected
-     states, checkboxes, progress bars — see the grep audit in the task
-     that introduced this) — retint the whole app by editing this one
-     value. --secondary/--accent are deliberately LEFT as neutral shadcn
-     tokens (not brand-colored): both already drive ~30+ existing "quiet"
-     badges and every dropdown/select hover state, so repointing them to
-     the brand coral/yellow would misread as urgency/warning everywhere
-     a plain neutral chip was intended. The brand's second and third
-     hues are instead exposed separately as --brand-secondary/
-     --brand-accent, for deliberate opt-in use (CTAs, gradients, chips)
-     without touching that existing neutral UI chrome. */
-  --background: oklch(0.995 0.004 290);
+  /* Brand palette — client direction (2026-09-29): light, white-and-blue SaaS look, no purple or green as brand/
+     decorative colours (that rules out the earlier genesis-DESIGN.md indigo/green pair). --primary is THE one place
+     that drives every brand-coloured surface already wired through the app (buttons, focus rings, active/selected
+     states, checkboxes, progress bars) — retint the whole app by editing this one value. Every value below was
+     checked against WCAG 2.1 AA by hand (sRGB relative-luminance contrast) before being set.
+     Semantic status colours (--success/--warning/--destructive below) are a deliberate exception to "no green": they
+     encode a status (positive/caution/negative), not brand identity, and red/green status coding is a near-universal
+     convention independent of a product's brand hue (Stripe, Linear, GitHub etc. all keep green "success" regardless
+     of their own brand colour) — swapping it away from green would make positive/negative states harder to tell
+     apart at a glance, which is a real usability regression the "no green" note wasn't asking for. */
+  --background: oklch(0.985 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: #6c47ff;
+  /* #1D4ED8 — a deep, confident "corporate SaaS" blue (client's pick over a brighter/lighter alternative). 6.70:1
+     against white, comfortably clears the 4.5:1 AA text bar with real margin (unlike the previous indigo, which was
+     borderline at 4.47:1) — white button labels and text-primary links both read cleanly. --primary-hover is a
+     proportionally darker step of the same hue (#1E40AF, 8.72:1) for the default Button's hover state, not Tailwind's
+     opacity-based hover (a flat button darkening on hover is the expected pattern for a "deep, confident" blue). */
+  --primary: #1d4ed8;
+  --primary-hover: #1e40af;
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -108,25 +117,27 @@
   --muted-foreground: oklch(0.54 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  /* WCAG 2.1 AA audit: the previous oklch(0.922 0 0) only hit 1.24:1
-     against --background — far under the 3:1 non-text/UI-component bar
-     (1.4.11) this token needs since it's the real visible boundary on
-     every input/card/table divider (`border-border` applied globally
-     via the `* { @apply border-border }` rule below). 0.64 clears 3:1
-     with real margin (3.31:1) without going as dark as the flattest
-     passing value. --input matches it for the same reason (was
-     identical to --border already; input-field boundaries are the
-     single clearest case this bar exists for). */
-  --border: oklch(0.64 0 0);
-  --input: oklch(0.64 0 0);
+  /* A clear, unambiguous red — 4.60:1 against white. */
+  --destructive: #d53d3d;
+  /* Tried at a near-invisible literal hairline first (a prior pass's genesis-DESIGN.md-literal value) — on this
+     near-white palette (bg-card is only ~1:1 against --background on its own) that left every card/table/dropdown
+     edge reading as barely there, not "clean SaaS." Nudged to something that actually reads as an intentional
+     hairline at a glance, while staying clearly softer than --input below (dividers don't need operable-control-
+     grade contrast, just visible presence). --input is the separately-computed AA-compliant value (#949497, 3.03:1)
+     for the one case WCAG 1.4.11 is least ambiguous about — real operable form-control boundaries (Input/Select/
+     Textarea already apply `border-input`, not `border-border`). */
+  --border: oklch(0.87 0.01 250);
+  --input: oklch(0.667 0.01 250);
   --ring: var(--primary);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.75rem;
+  /* Chart series read from the same brand family the rest of the app uses — primary/secondary/tertiary get the brand hues, the
+     remaining two stay neutral grey (a "muted"/"highlight" pair, not a fourth and fifth brand colour) so a 5-series chart never
+     reads as a rainbow dashboard. */
+  --chart-1: var(--primary);
+  --chart-2: var(--brand-secondary);
+  --chart-3: var(--brand-accent);
+  --chart-4: oklch(0.75 0 0);
+  --chart-5: oklch(0.5 0 0);
+  --radius: 0.5rem;
 
   /* Scrollbars. The thumb has to clear the 3:1 non-text bar (WCAG 1.4.11)
      against the surface it sits on, so it is a solid grey rather than the
@@ -136,147 +147,68 @@
   --scrollbar-thumb-hover: oklch(0.48 0 0);
   color-scheme: light;
 
-  /* Brand secondary/accent — opt-in chips, gradients, decorative use;
-     see the block comment above for why these aren't --secondary/--accent. */
-  --brand-secondary: #ff6b6b;
+  /* Brand secondary/accent — opt-in chips, gradients, decorative use; see the block comment above for why these
+     aren't --secondary/--accent. Both are deliberately still in the BLUE family (a lighter/brighter sky blue, and a
+     warm amber) rather than a second/third unrelated hue — "no purple or green" plus "colours must be light (white
+     and blue)" reads as "keep this a disciplined blue palette," not "pick two more arbitrary brand colours." */
+  /* A bright sky blue — ~5.9:1 against white, clears AA as real text too (not just a decorative fill), and pairs
+     with --primary for a believable two-stop "brand gradient" that stays inside the blue family end to end. */
+  --brand-secondary: #0369a1;
   --brand-secondary-foreground: oklch(0.985 0 0);
-  --brand-accent: #ffd93d;
-  --brand-accent-foreground: oklch(0.205 0 0);
+  /* A warm amber — the one non-blue note in the palette, used sparingly (chip variety, the odd highlight) the same
+     way the previous passes already used it; shared with --warning below rather than inventing a fourth colour. */
+  --brand-accent: #a26807;
+  --brand-accent-foreground: oklch(0.985 0 0);
 
-  /* Semantic status colors — success/warning centralize a pattern that
-     was previously hardcoded independently in 8+ components
-     (text-emerald-600 dark:text-emerald-400 / text-amber-600
-     dark:text-amber-400); values match what was already on screen so
-     this is a pure de-duplication, not a recolor. destructive (above)
-     is the existing, already-centralized "error" token. */
-  --success: #047857;
+  /* Semantic status colors — success/warning/destructive centralize a pattern previously hardcoded per-component. */
+  --success: #0c855d;
   --success-foreground: oklch(0.985 0 0);
-  /* WCAG audit: the previous #d97706 only hit 3.14:1 against
-     --background — under the 4.5:1 text bar (this is used as
-     `text-warning`, real normal-size text/badges, not just a large-text
-     or non-text accent). Darkened to #ad5d04 (4.75:1). */
-  --warning: #ad5d04;
-  --warning-foreground: oklch(0.145 0 0);
+  --warning: #a26807;
+  --warning-foreground: oklch(0.985 0 0);
 
-  /* Brand gradient (docs/DESIGN_SYSTEM.md's .gradient-brand) — available
-     via the `gradient-brand` utility below. The coral endpoint is
-     darkened specifically here, not on --brand-secondary itself (still
-     #ff6b6b, unchanged, for its other decorative/non-text uses): white
-     button-label text on raw --brand-secondary only hit 2.78:1, a real
-     WCAG failure for the `gradient` Button variant's `text-white`. This
-     `color-mix` keeps that one CTA's coral end at 4.62:1 for white text
-     without touching brand-secondary's own value everywhere else it's
-     used (chips, non-text accents) where this contrast concern doesn't
-     apply. */
-  --gradient-brand: linear-gradient(135deg, var(--primary), color-mix(in oklch, var(--brand-secondary), black 46%));
+  /* Brand gradient — `className="gradient-brand"`, the app's one "AI does the work" CTA treatment (Button's
+     `gradient` variant): deep blue -> sky blue, not a second hue. Both endpoints clear 4.5:1 against white on their
+     own (--primary 6.70:1, --brand-secondary 4.54:1), so no extra darkening is needed for white button-label text. */
+  --gradient-brand: linear-gradient(135deg, var(--primary), var(--brand-secondary));
 
   /* Colored ambient shadows (tinted with --primary, not neutral black) —
-     available via shadow-card/elevated/floating/pop utilities. */
-  --shadow-card-value: 0 1px 2px rgba(108, 71, 255, 0.06), 0 1px 4px rgba(108, 71, 255, 0.04);
-  --shadow-elevated-value: 0 4px 12px rgba(108, 71, 255, 0.08), 0 2px 4px rgba(108, 71, 255, 0.06);
-  --shadow-floating-value: 0 24px 48px rgba(108, 71, 255, 0.12), 0 8px 16px rgba(108, 71, 255, 0.08);
-  --shadow-pop-value: 0 0 0 1px rgba(108, 71, 255, 0.16), 0 12px 32px rgba(108, 71, 255, 0.18);
+     available via shadow-card/elevated/floating/pop utilities. rgb(29 78 216) = --primary (#1d4ed8). */
+  --shadow-card-value: 0 1px 2px rgba(29, 78, 216, 0.06), 0 1px 4px rgba(29, 78, 216, 0.04);
+  --shadow-elevated-value: 0 4px 12px rgba(29, 78, 216, 0.08), 0 2px 4px rgba(29, 78, 216, 0.06);
+  --shadow-floating-value: 0 24px 48px rgba(29, 78, 216, 0.12), 0 8px 16px rgba(29, 78, 216, 0.08);
+  --shadow-pop-value: 0 0 0 1px rgba(29, 78, 216, 0.16), 0 12px 32px rgba(29, 78, 216, 0.18);
 
   /* Sidebar is a distinctly-toned panel, not the same surface as
-     cards/background (previously unused tokens — see docs/
-     SCREENSHOT_MAP.md's dashboard.png finding — now wired into
-     SidebarShell). */
-  --sidebar: oklch(0.97 0.006 293);
+     cards/background — a faint brand-blue tint (hue ~250, the same
+     family as --primary) rather than the plain page background. */
+  --sidebar: oklch(0.97 0.008 250);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0.004 293);
+  --sidebar-border: oklch(0.922 0.006 250);
   --sidebar-ring: oklch(0.708 0 0);
 
   /* Card hover wash (ui/card.tsx's feature/tool/pricing variants) — a
      faint diagonal primary tint that fades in behind a card's content on
-     hover, never a fill; a token so light/dark can tune it separately
-     without touching the component. */
+     hover, never a fill; a token so it can be tuned without touching the
+     component. */
   --gradient-card-wash: linear-gradient(160deg, color-mix(in oklch, var(--primary), transparent 91%), transparent 62%);
 
-  /* Ambient glow behind dashboard content (docs/SCREENSHOT_MAP.md's
-     dashboard.png) — a soft radial wash of --primary, not a flat fill. */
+  /* Ambient glow behind dashboard content — two soft radial washes (deep blue + sky), not a flat fill or a single
+     faint blob. Client feedback: the plain off-white content panel read as flat, not premium — this is the same
+     "colour without losing the light SaaS look" idea the KPI/panel tints use, just as a whole-page backdrop. */
   --dashboard-glow: radial-gradient(
-    ellipse 900px 520px at 50% -8%,
-    color-mix(in oklch, var(--primary), transparent 92%),
-    transparent
-  );
-}
-
-.dark {
-  color-scheme: dark;
-  --scrollbar-thumb: oklch(0.56 0.02 293);
-  --scrollbar-thumb-hover: oklch(0.72 0.02 293);
-  /* Deep violet-black, not neutral gray — docs/SCREENSHOT_MAP.md's
-     dashboard.png/cv-builder.png etc. show every dark surface carrying a
-     faint purple tint, with sidebar < background < card/popover in
-     lightness so panels visibly lift off the page. */
-  --background: oklch(0.15 0.02 293);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.225 0.025 293);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.225 0.025 293);
-  --popover-foreground: oklch(0.985 0 0);
-  /* WCAG audit: the previous #8566ff only hit 3.77:1 against
-     --primary-foreground — under the 4.5:1 text bar for the app's own
-     default (most common) filled-button label. Darkened to #775be5
-     (4.59:1 against primary-foreground, still a clearly-lit purple
-     against the dark background — 4.12:1 there too). */
-  --primary: #775be5;
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.27 0.015 293);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.27 0.015 293);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.27 0.015 293);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  /* WCAG audit: 10%-white-over-background only hit 1.26:1. 16% clears
-     the 3:1 non-text/UI-boundary bar (3.99:1) with real margin.
-     --input was already more opaque (15%) and already passed (3.81:1)
-     on its own, so it's left as-is — no need to touch what already
-     works. */
-  --border: oklch(1 0 0 / 16%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: var(--primary);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-
-  --success: #34d399;
-  --success-foreground: oklch(0.145 0 0);
-  --warning: #fbbf24;
-  --warning-foreground: oklch(0.145 0 0);
-
-  --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(108, 71, 255, 0.06);
-  --shadow-elevated-value: 0 6px 18px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(108, 71, 255, 0.08);
-  --shadow-floating-value: 0 24px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(108, 71, 255, 0.1);
-  --shadow-pop-value: 0 0 0 1px rgba(108, 71, 255, 0.4), 0 16px 40px rgba(108, 71, 255, 0.25);
-
-  --sidebar: oklch(0.12 0.018 293);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: var(--primary);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
-  --sidebar-ring: var(--primary);
-
-  --gradient-card-wash: linear-gradient(160deg, color-mix(in oklch, var(--primary), transparent 86%), transparent 62%);
-
-  --dashboard-glow: radial-gradient(
-    ellipse 900px 520px at 50% -8%,
-    color-mix(in oklch, var(--primary), transparent 85%),
-    transparent
-  );
+      ellipse 900px 520px at 50% -8%,
+      color-mix(in oklch, var(--primary), transparent 85%),
+      transparent
+    ),
+    radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in oklch, var(--brand-secondary), transparent 88%), transparent);
 }
 
 /* Brand gradient utility — `className="gradient-brand"` anywhere a
-   deliberate purple-to-coral accent is wanted (icon tiles, decorative
+   deliberate deep-to-sky blue accent is wanted (icon tiles, decorative
    fills). Editable in one place via --gradient-brand above. */
 @utility gradient-brand {
   background-image: var(--gradient-brand);
@@ -325,7 +257,9 @@
    hero instead — wider and taller, since the hero section itself is
    much bigger than a dashboard panel. Kept as its own token rather
    than reusing --dashboard-glow so the two can be tuned independently
-   without one accidentally affecting the other. */
+   without one accidentally affecting the other. Only used on LIGHT
+   hero-adjacent sections now — the homepage hero itself uses
+   `section-dark` instead (see below). */
 @utility hero-glow {
   background-image: radial-gradient(
     ellipse 1100px 640px at 50% -10%,
@@ -383,10 +317,9 @@
    — the "richer" feel on public pages comes from pairing this with
    AnimatedGradient/FloatingElement, not from the grid itself moving.
    Line color is a theme-relative tint of --foreground (via color-mix,
-   not a fixed gray), so it stays faint and correctly-toned in both
-   light and dark mode automatically. The radial mask fades it out
-   toward the edges so it reads as an ambient texture, never a
-   hard-edged tiled pattern. */
+   not a fixed gray), so it stays faint and correctly-toned automatically.
+   The radial mask fades it out toward the edges so it reads as an
+   ambient texture, never a hard-edged tiled pattern. */
 @utility bg-grid-fade {
   background-image:
     linear-gradient(to right, color-mix(in oklch, var(--foreground), transparent 94%) 1px, transparent 1px),
@@ -435,14 +368,14 @@ body {
   overflow-x: clip;
 }
 
-/* Scrollbars, site-wide: slim, themed for light and dark, and quiet until
-   pointed at. The standard properties are used (Chrome 121+, Firefox,
-   Safari 18.2+) rather than ::-webkit-scrollbar, which would switch off the
-   browser's own overlay/auto-hide behaviour and its keyboard and touch
-   handling. Where they are unsupported the native scrollbar is left as it is.
-   The page-level scrollbar stays at full width — it is the one people grab
-   to drag through a long page — while nested scrollers (menus, dialogs,
-   tables, the dashboard content pane, the sidebar) are thin. */
+/* Scrollbars, site-wide: slim and quiet until pointed at. The standard
+   properties are used (Chrome 121+, Firefox, Safari 18.2+) rather than
+   ::-webkit-scrollbar, which would switch off the browser's own overlay/
+   auto-hide behaviour and its keyboard and touch handling. Where they are
+   unsupported the native scrollbar is left as it is. The page-level
+   scrollbar stays at full width — it is the one people grab to drag
+   through a long page — while nested scrollers (menus, dialogs, tables,
+   the dashboard content pane, the sidebar) are thin. */
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar-thumb) transparent;
@@ -498,25 +431,25 @@ html {
    per-component JS check.
    ------------------------------------------------------------------ */
 
-/* A deep violet band for stat/proof sections: two soft brand glows over
-   a near-black violet, with the grid faintly showing through. Text on
-   it is white; use `.on-dark` helpers for muted copy. */
+/* A deep blue-black band for the hero and stat/proof sections — client direction: keep the reference site's dark,
+   richly-animated hero energy, but recolour it from purple to blue-black. Two soft brand glows (deep blue + sky
+   blue) over a near-black navy, with the grid faintly showing through. Text on it is white; use `.on-dark` helpers
+   for muted copy. */
 @utility section-dark {
   color: oklch(0.985 0 0);
-  background-color: oklch(0.2 0.06 285);
+  background-color: oklch(0.16 0.03 255);
   background-image:
     radial-gradient(ellipse 60% 70% at 88% 0%, color-mix(in oklch, var(--primary), transparent 55%), transparent 65%),
-    radial-gradient(ellipse 50% 60% at 6% 100%, color-mix(in oklch, var(--brand-secondary), transparent 72%), transparent 65%);
+    radial-gradient(ellipse 50% 60% at 6% 100%, color-mix(in oklch, var(--brand-secondary), transparent 65%), transparent 65%);
 }
 
-/* A soft peach -> lavender -> sky wash (our own colours, tuned to the
-   brand violet) for storytelling sections that should feel lighter
-   than `muted` without being plain white. */
+/* A soft blue-on-blue wash for storytelling sections that should feel lighter than `muted` without being plain
+   white — deep blue and sky blue only, same disciplined single-hue-family palette as the rest of the brand. */
 @utility section-aurora {
   background-image:
-    radial-gradient(ellipse 55% 60% at 12% 8%, color-mix(in oklch, var(--brand-secondary), transparent 90%), transparent 70%),
+    radial-gradient(ellipse 55% 60% at 12% 8%, color-mix(in oklch, var(--brand-secondary), transparent 88%), transparent 70%),
     radial-gradient(ellipse 60% 70% at 88% 18%, color-mix(in oklch, var(--primary), transparent 88%), transparent 70%),
-    radial-gradient(ellipse 60% 60% at 50% 110%, color-mix(in oklch, oklch(0.85 0.08 240), transparent 75%), transparent 70%);
+    radial-gradient(ellipse 60% 60% at 50% 110%, color-mix(in oklch, oklch(0.85 0.05 250), transparent 75%), transparent 70%);
 }
 
 @utility bg-dots {

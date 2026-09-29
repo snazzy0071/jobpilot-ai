@@ -68,7 +68,10 @@ test("users: search finds an account, filters narrow the list, and the detail pa
   await visit(page, `/admin/users?search=${encodeURIComponent(MEMBER_NAME)}`);
   await page.getByRole("link", { name: MEMBER_NAME }).click();
   await page.waitForURL(/\/admin\/users\/[0-9a-f-]{36}$/);
-  await expect(page.locator("#main-content").getByRole("heading", { level: 1 })).toHaveText(MEMBER_NAME);
+  // Not an <h1> — the shared admin header already renders one for this route ("Users"); the account's name here is
+  // plain text (src/app/admin/users/[id]/page.tsx), kept for exactly this reason (confirming which account you're
+  // on before a destructive action like Delete account) without duplicating the page's real <h1>.
+  await expect(page.locator("#main-content").getByText(MEMBER_NAME, { exact: true })).toBeVisible();
   await expect(page.getByText(member.email, { exact: true })).toBeVisible();
   const subscription = page.locator("[data-slot=card]").filter({ has: page.getByRole("heading", { name: "Subscription" }) });
   await expect(subscription).toContainText("Free");
@@ -131,7 +134,8 @@ test("roles: create a role, grant it, and the permission opens exactly that sect
   // That permission — and only that — now opens Leads for them.
   const holder = await openAs(browser, { user: member, state: memberState });
   await holder.goto("/admin/leads");
-  await expect(holder.locator("#main-content").getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
+  // Not scoped to #main-content — see e2e/leads/leads.spec.ts's own comment on this same assertion.
+  await expect(holder.getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
   await holder.goto("/admin/blog");
   await expect(holder).toHaveURL(/\/admin$/);
   await holder.context().close();

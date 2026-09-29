@@ -9,7 +9,9 @@ import { SponsorStatisticsBreakdown } from "@/components/marketing/sponsor-stati
 import { getSponsorStatistics } from "@/lib/sponsors/queries";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getSponsorStatistics() reads through createPublicClient() (no cookies), so this can be ISR instead of fully
+// dynamic — the register syncs on its own periodic schedule, not sub-request freshness.
+export const revalidate = 3600;
 
 export const metadata = buildMetadata({
   title: "Sponsorship Statistics",

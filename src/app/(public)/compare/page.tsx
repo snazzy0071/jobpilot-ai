@@ -120,8 +120,9 @@ function VersusPreview() {
   );
 }
 
-// Read per request: the "by name" section lists whichever sourced comparisons are published right now.
-export const dynamic = "force-dynamic";
+// getLiveComparisons() reads through createPublicClient() (no cookies), so this can be ISR instead of fully dynamic
+// — the "by name" section doesn't need sub-5-minute freshness on which comparisons are published.
+export const revalidate = 300;
 
 export default async function ComparePage() {
   // A failure here only hides the by-name list; the rest of the page never depends on the database.

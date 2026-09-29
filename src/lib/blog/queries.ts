@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createPublicClient as createClient } from "@/lib/supabase/public";
 import { getReadingTimeMinutes } from "@/lib/blog/reading-time";
 import type { BlogAuthor, BlogCategory, BlogPost, BlogPostSummary, ContentBlock } from "@/lib/blog/types";
 

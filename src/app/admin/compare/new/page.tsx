@@ -7,7 +7,6 @@ export default function NewComparisonPage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/admin/compare"><ArrowLeftIcon /> Comparisons</Link>} />
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">New comparison</h1>
       <ComparisonForm />
     </div>
   );

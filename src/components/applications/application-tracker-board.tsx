@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { AlertCircleIcon, Bell, Building2, Calendar, FileText, Lock, MapPin, Pencil, Plus, Wallet } from "lucide-react";
+import { AlertCircleIcon, Bell, Briefcase, Building2, Calendar, FileText, Lock, MapPin, Pencil, Plus, Wallet } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ApplicationTrackerFilters } from "@/components/applications/application-tracker-filters";
@@ -327,20 +328,22 @@ export function ApplicationTrackerBoard({
 
   if (items.length === 0) {
     return (
-      <Card className="items-center gap-3 p-10 text-center" data-testid="tracker-empty">
-        <p className="font-medium">Nothing tracked yet</p>
-        <p className="max-w-md text-sm text-muted-foreground">
-          Add a role you&apos;re planning to apply for or have already applied to, or use “Add to tracker” on any job in the job feed.
-        </p>
-        <div className="flex flex-wrap justify-center gap-2">
-          <Button render={<Link href="/dashboard/applications/new" />}>
-            <Plus className="size-4" /> Add application
-          </Button>
-          <Button variant="outline" render={<Link href="/dashboard/jobs" />}>
-            Browse the job feed
-          </Button>
-        </div>
-      </Card>
+      <EmptyState
+        data-testid="tracker-empty"
+        icon={Briefcase}
+        title="Nothing tracked yet"
+        description="Add a role you're planning to apply for or have already applied to, or use “Add to tracker” on any job in the job feed."
+        actions={
+          <>
+            <Button render={<Link href="/dashboard/applications/new" />}>
+              <Plus className="size-4" /> Add application
+            </Button>
+            <Button variant="outline" render={<Link href="/dashboard/jobs" />}>
+              Browse the job feed
+            </Button>
+          </>
+        }
+      />
     );
   }
 

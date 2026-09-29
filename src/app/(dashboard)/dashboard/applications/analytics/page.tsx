@@ -17,8 +17,6 @@ export default async function ApplicationAnalyticsPage() {
         <Button variant="ghost" size="sm" className="mb-2" render={<Link href="/dashboard/applications" />}>
           <ArrowLeft className="size-3.5" /> Back to applications
         </Button>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Funnel analytics</h1>
-        <p className="mt-1 text-muted-foreground">Computed from your own tracked applications — never example data.</p>
       </div>
 
       <ApplicationFunnelStats analytics={analytics} />

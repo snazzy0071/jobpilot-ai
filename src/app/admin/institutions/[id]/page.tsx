@@ -18,11 +18,6 @@ export default async function AdminInstitutionDetailPage({ params }: { params: P
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/admin/institutions"><ArrowLeftIcon /> Institutions</Link>} />
 
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">{institution.name}</h1>
-        <p className="mt-1 text-muted-foreground">{institution.slug}</p>
-      </div>
-
       <LicencePanel institutionId={institution.id} licence={institution.licence} plans={plans} seatsUsed={institution.seatsUsed} />
       <DomainsAdminPanel domains={institution.domains} />
       <AddAdminForm institutionId={institution.id} admins={institution.admins} />

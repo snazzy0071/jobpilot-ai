@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { PlusIcon, TrendingUpIcon } from "lucide-react";
+import { MessagesSquareIcon, PlusIcon, TrendingUpIcon } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { requireUser } from "@/lib/auth/session";
 import { listInterviewSessions } from "@/lib/interviews/queries";
 import {
@@ -37,10 +38,6 @@ export default async function InterviewSessionsPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Interview Coach</h1>
-          <p className="mt-1 text-muted-foreground">Practice competency-based interviews and review your questions.</p>
-        </div>
         <div className="flex items-center gap-2">
           {hasCompletedSession && (
             <Button
@@ -57,9 +54,12 @@ export default async function InterviewSessionsPage() {
       </div>
 
       {sessions.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">You haven&apos;t started a mock interview yet.</p>
-        </div>
+        <EmptyState
+          icon={MessagesSquareIcon}
+          title="You haven't started a mock interview yet"
+          description="Set up a session against a real role and CV, and practise competency-based questions with feedback after each answer."
+          actions={<Button render={<Link href="/dashboard/interview/new"><PlusIcon /> New session</Link>} />}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sessions.map((session) => (

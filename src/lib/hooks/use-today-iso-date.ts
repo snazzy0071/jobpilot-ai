@@ -23,9 +23,9 @@ function getServerSnapshot(): undefined {
  * hydration happen at different wall-clock moments, and if those straddle
  * a UTC midnight rollover the two computed strings differ by a day.
  * `useSyncExternalStore`'s server-snapshot argument is the React-
- * sanctioned way to avoid that (same pattern as theme-toggle.tsx and
- * use-consent.ts in this codebase) — no subscription is needed since
- * nothing should re-render when the date changes mid-session.
+ * sanctioned way to avoid that (same pattern as use-consent.ts in this
+ * codebase) — no subscription is needed since nothing should re-render
+ * when the date changes mid-session.
  */
 export function useTodayIsoDate(): string | undefined {
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);

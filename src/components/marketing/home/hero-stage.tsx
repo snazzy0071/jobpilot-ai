@@ -19,8 +19,13 @@ function Layer({
   delay: number;
   floatDelay?: number;
 }) {
+  // text-card-foreground: these chips are plain divs styled to look like a Card (bg-card/border/shadow) without
+  // actually being one, so they never got the Card component's own text-color reset. Invisible on the old light
+  // hero (inherited foreground was already near-black there) but on this dark hero's section-dark ancestor
+  // (color: near-white) any chip text with no explicit colour class silently inherited white-on-white — real,
+  // present text rendering invisible, not a loading/animation artifact.
   return (
-    <div className={`absolute z-10 ${className}`}>
+    <div className={`absolute z-10 text-card-foreground ${className}`}>
       <Reveal delay={delay} distance={10}>
         <FloatingElement delay={floatDelay}>{children}</FloatingElement>
       </Reveal>
@@ -42,7 +47,12 @@ export function HeroStage() {
         aria-hidden="true"
       />
 
-      <Layer className="-top-3 -left-14 hidden w-48 lg:block" delay={0.5} floatDelay={1}>
+      {/* Every floating chip below is pushed clear of the card's own edges (not just nudged a few px past them) —
+          they used to graze the card, which was invisible on the old light hero (white chip over a white card has
+          no visible seam) but reads as broken text truncation now that the hero sits on a dark background (a hard-
+          edged white chip cutting off "Alex Morgan" or "EXPERIENCE" mid-word). Offsets below clear the card's real
+          text instead of overlapping it. */}
+      <Layer className="-top-12 -left-20 hidden w-48 lg:block" delay={0.5} floatDelay={1}>
         <div className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-elevated">
           <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <BriefcaseIcon className="size-4" />
@@ -56,7 +66,7 @@ export function HeroStage() {
 
       <CvPreview animated />
 
-      <Layer className="-top-5 -right-3 sm:-right-10" delay={0.7}>
+      <Layer className="-top-8 -right-4 sm:-right-16" delay={0.7}>
         <div className="flex items-center gap-2 rounded-xl border bg-card p-2 pr-3 shadow-floating">
           <ScoreRing value={94} size={44} stroke={5} />
           <div>
@@ -66,7 +76,7 @@ export function HeroStage() {
         </div>
       </Layer>
 
-      <Layer className="top-[44%] -left-6 hidden sm:block sm:-left-14" delay={0.9} floatDelay={2}>
+      <Layer className="top-[42%] -left-10 hidden sm:block sm:-left-32" delay={0.9} floatDelay={2}>
         <div className="flex flex-col gap-1.5 rounded-xl border bg-card p-2.5 shadow-elevated">
           {["SQL", "Stakeholder mgmt"].map((word) => (
             <span key={word} className="flex items-center gap-1.5 text-[11px] font-medium text-primary">
@@ -79,7 +89,7 @@ export function HeroStage() {
         </div>
       </Layer>
 
-      <Layer className="-bottom-4 -left-3 sm:-left-10" delay={1.1} floatDelay={3}>
+      <Layer className="-bottom-8 -left-6 sm:-left-20" delay={1.1} floatDelay={3}>
         <div className="flex items-center gap-2 rounded-xl border bg-card px-3 py-2 shadow-floating">
           <span className="flex size-7 items-center justify-center rounded-full bg-success/10 text-success">
             <ShieldCheckIcon className="size-3.5" />
@@ -88,7 +98,7 @@ export function HeroStage() {
         </div>
       </Layer>
 
-      <Layer className="-right-3 -bottom-7 hidden sm:block sm:-right-8" delay={1.3} floatDelay={1.5}>
+      <Layer className="-right-6 -bottom-12 hidden sm:block sm:-right-20" delay={1.3} floatDelay={1.5}>
         <div className="flex items-center gap-1.5 rounded-full border bg-card px-3 py-1.5 text-[11px] font-medium shadow-elevated">
           <BadgeCheckIcon className="size-3.5 text-primary" />
           UK format: A4 · 2 pages

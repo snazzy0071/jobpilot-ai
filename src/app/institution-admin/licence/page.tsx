@@ -23,11 +23,6 @@ export default async function InstitutionAdminLicencePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Licence</h1>
-        <p className="mt-1 text-muted-foreground">Your institution&apos;s current plan and seat allowance.</p>
-      </div>
-
       {licence ? (
         <Card variant="admin" className="gap-4 p-6">
           <div className="flex flex-wrap items-center justify-between gap-2">

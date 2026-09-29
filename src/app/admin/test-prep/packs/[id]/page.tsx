@@ -21,8 +21,6 @@ export default async function QuestionPackQuestionsPage({ params }: { params: Pr
           <Link href={`/admin/test-prep/test-types/${pack.testTypeId}`} className="text-sm text-muted-foreground hover:underline">
             ← Back
           </Link>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">{pack.name}</h1>
-          <p className="mt-1 text-muted-foreground">{pack.description ?? "Questions in this pack."}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" render={<Link href={`/admin/test-prep/packs/${id}/import`}>Import JSON</Link>} />

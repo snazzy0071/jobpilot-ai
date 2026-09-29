@@ -13,10 +13,6 @@ export default async function AdminBlogPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Blog</h1>
-          <p className="mt-1 text-muted-foreground">{posts.length} post{posts.length === 1 ? "" : "s"}.</p>
-        </div>
         <Button render={<Link href="/admin/blog/new"><PlusIcon /> New post</Link>} />
       </div>
 

@@ -10,7 +10,6 @@ import { SkipLink } from "@/components/layout/skip-link";
 import { UserMenu } from "@/components/layout/user-menu";
 import { MobileNavTrigger } from "@/components/layout/mobile-nav-trigger";
 import { CurrentPageTitle } from "@/components/layout/current-page-title";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
 import { Logo } from "@/components/layout/logo";
 
@@ -46,8 +45,7 @@ export default async function InstitutionAdminLayout({
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <Badge variant="secondary" className="hidden sm:inline-flex">Institution admin</Badge>
-            <ViewPublicSiteLink variant="header" />
-<ThemeToggle />
+            <ViewPublicSiteLink />
             <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
           </div>
         </header>

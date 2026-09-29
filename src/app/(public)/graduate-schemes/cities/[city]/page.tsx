@@ -7,12 +7,20 @@ import { Section } from "@/components/marketing/section";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { SchemeCard } from "@/components/graduate-schemes/scheme-parts";
 import { getGraduateSchemes } from "@/lib/graduate-schemes/queries";
-import { findCity, schemesForCity } from "@/lib/graduate-schemes/cities";
+import { cityCounts, findCity, schemesForCity } from "@/lib/graduate-schemes/cities";
 import { sortSchemes } from "@/lib/graduate-schemes/filter";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getGraduateSchemes() reads through createPublicClient() (no cookies), so this can be ISR instead of fully dynamic.
+export const revalidate = 300;
+
+// Required for a dynamic segment to actually join the ISR cache at all — `revalidate` alone still renders every
+// request fresh without this (see blog/[slug]'s own comment for how that was verified).
+export async function generateStaticParams() {
+  const cities = cityCounts(await getGraduateSchemes());
+  return cities.map((city) => ({ city: city.slug }));
+}
 
 export async function generateMetadata({ params }: { params: Promise<{ city: string }> }) {
   const { city: slug } = await params;

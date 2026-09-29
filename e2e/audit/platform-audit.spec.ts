@@ -133,7 +133,7 @@ test.describe("1-2. role-aware login", () => {
 });
 
 test.describe("3-4. admin sidebar and public-site link", () => {
-  test("the admin sidebar holds only admin navigation, plus View Public Website", async ({ openAs }) => {
+  test("the admin sidebar holds only admin navigation — View Public Website and sign out live in the header instead", async ({ openAs }) => {
     const page = await openAs("admin", { viewport: { width: 1360, height: 900 } });
     await page.goto("/admin");
 
@@ -144,17 +144,20 @@ test.describe("3-4. admin sidebar and public-site link", () => {
       await expect(sidebar.getByRole("link", { name: label })).toHaveCount(0);
     }
     await expect(sidebar.locator('a[href^="/dashboard"]')).toHaveCount(0);
-    for (const label of ["Dashboard", "Users", "Institutions", "Plans/Subscriptions", "Access Codes", "AI Usage", "Sponsors", "Graduate Schemes", "Deadlines", "Jobs", "Test Prep", "Advice Hub", "Blog", "Comparisons", "Auto-Apply", "Leads", "Roles", "Audit Log", "Settings", "System Health"]) {
+    for (const label of ["Dashboard", "Users", "Institutions", "Plans/Subscriptions", "Access Codes", "AI Usage", "Sponsors", "Graduate Schemes", "Deadlines", "Jobs", "Test Prep", "Advice Hub", "Blog", "Comparisons", "Auto-Apply", "Leads", "Roles", "Settings", "System Health"]) {
       await expect(sidebar.getByRole("link", { name: label, exact: true })).toBeVisible();
     }
-    await expect(sidebar.getByRole("button", { name: /sign out|log out/i })).toBeVisible();
+    // Not duplicated in the sidebar — just the one copy of each, in the header.
+    await expect(sidebar.getByRole("link", { name: /View Public Website/ })).toHaveCount(0);
+    await expect(sidebar.getByRole("button", { name: /sign out|log out/i })).toHaveCount(0);
 
     const publicLinks = page.getByRole("link", { name: /View Public Website/ });
-    expect(await publicLinks.count(), "sidebar + header links").toBeGreaterThanOrEqual(2);
-    for (let i = 0; i < (await publicLinks.count()); i++) {
-      await expect(publicLinks.nth(i)).toHaveAttribute("href", "/");
-      await expect(publicLinks.nth(i)).toHaveAttribute("target", "_blank");
-    }
+    await expect(publicLinks, "header-only link").toHaveCount(1);
+    await expect(publicLinks.first()).toHaveAttribute("href", "/");
+    await expect(publicLinks.first()).toHaveAttribute("target", "_blank");
+
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await expect(page.getByRole("menuitem", { name: "Sign out" })).toBeVisible();
   });
 
   test("View Public Website is also on the user dashboard", async ({ openAs }) => {
@@ -525,7 +528,8 @@ test.describe("14. mobile", () => {
     const menu = page.getByRole("dialog");
     await expect(menu.getByText("Administration")).toBeVisible();
     await expect(menu.getByText("User Workspace")).toHaveCount(0);
-    await expect(menu.getByRole("link", { name: /View Public Website/ })).toBeVisible();
+    // Not duplicated in the nav menu — View Public Website lives in the header only (icon-only at this width, reachable without opening the menu).
+    await expect(menu.getByRole("link", { name: /View Public Website/ })).toHaveCount(0);
   });
 
   test("the user dashboard has no horizontal overflow at 375px", async ({ openAs }) => {

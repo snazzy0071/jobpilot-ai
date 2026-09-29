@@ -1,7 +1,5 @@
 import { SidebarNav, type SidebarNavItem } from "@/components/layout/sidebar-nav";
 import { SidebarShell } from "@/components/layout/sidebar-shell";
-import { SignOutButton } from "@/components/layout/sign-out-button";
-import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
 import type { AdminPermission } from "@/lib/admin/permission-types";
 
 type AdminNavItem = SidebarNavItem & { permission?: AdminPermission };
@@ -31,7 +29,6 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   { href: "/admin/auto-apply", label: "Auto-Apply", icon: "send", permission: "view_auto_apply" },
   { href: "/admin/leads", label: "Leads", icon: "mail", permission: "view_leads" },
   { href: "/admin/roles", label: "Roles", icon: "shield-check", permission: "manage_admin_roles" },
-  { href: "/admin/audit-log", label: "Audit Log", icon: "history", permission: "view_audit_logs" },
   { href: "/admin/settings", label: "Settings", icon: "settings", permission: "manage_settings" },
   { href: "/admin/system-health", label: "System Health", icon: "activity", permission: "view_system_health" },
 ];
@@ -46,8 +43,9 @@ export const ADMIN_UNLISTED_PAGES: SidebarNavItem[] = [{ href: "/admin/email-log
  * security boundary, but a nav item nobody can act on is a worse UI than
  * a shorter, honest list.
  *
- * The sidebar is admin-only: a link to the public marketing site, then
- * this account's management pages, with sign out in the footer. The
+ * The sidebar is admin-only: just this account's management pages. The
+ * public-site link and sign out both still live in the header
+ * (ViewPublicSiteLink, UserMenu) rather than duplicated here. The
  * user-workspace routes (/dashboard/*) still exist and keep their own
  * guards; they just aren't linked from here.
  */
@@ -55,8 +53,7 @@ export function AdminSidebar({ permissions }: { permissions: Set<AdminPermission
   const visibleItems = ADMIN_NAV_ITEMS.filter((item) => !item.permission || permissions.has(item.permission));
 
   return (
-    <SidebarShell footer={<SignOutButton />}>
-      <ViewPublicSiteLink />
+    <SidebarShell>
       <SidebarNav items={visibleItems} title="Administration" />
     </SidebarShell>
   );

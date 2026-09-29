@@ -77,13 +77,17 @@ export function SidebarNav({
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors",
+              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors",
               active
                 ? "bg-primary font-medium text-primary-foreground shadow-card"
                 : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground",
             )}
           >
-            <Icon className="h-4 w-4" />
+            {/* Tried a filled icon tile (gradient background) here — read as too heavy/dark. Just the glyph itself in
+                brand blue now, no background, so nav rows still carry colour at rest without the visual weight of a
+                filled tile on every row. Active rows keep a plain white icon (inherits the row's own white text
+                colour), same as before. */}
+            <Icon className={cn("h-4 w-4 shrink-0", !active && "text-primary")} />
             {label}
           </Link>
         );

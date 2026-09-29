@@ -16,7 +16,9 @@ import { relatedGuides } from "@/lib/advice/search";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 
-export const dynamic = "force-dynamic";
+// getLiveGuideBySlug()/getLiveGuides() read through createPublicClient() (no cookies), so this can be ISR instead
+// of fully dynamic.
+export const revalidate = 300;
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;

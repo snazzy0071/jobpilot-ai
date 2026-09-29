@@ -51,7 +51,7 @@ function CreateInviteForm() {
         </div>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="invite-role">Role</Label>
-          <Select name="role" value={role} onValueChange={(value) => value && setRole(value as InstitutionMemberRole)}>
+          <Select name="role" items={{ admin: "Admin", member: "Member" }} value={role} onValueChange={(value) => value && setRole(value as InstitutionMemberRole)}>
             <SelectTrigger id="invite-role" className="w-36">
               <SelectValue />
             </SelectTrigger>

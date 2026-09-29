@@ -50,13 +50,6 @@ export default async function AdminSponsorsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Sponsor register sync</h1>
-        <p className="mt-1 text-muted-foreground">
-          The Home Office&apos;s published register of licensed sponsors, imported daily. Sponsors that leave the register are kept but hidden from the public directory.
-        </p>
-      </div>
-
       <Card className="flex-row flex-wrap items-start justify-between gap-4 p-5">
         <div className="flex max-w-2xl flex-col gap-2">
           <div className="flex items-center gap-2">

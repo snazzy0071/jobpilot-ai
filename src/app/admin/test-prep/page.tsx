@@ -16,10 +16,6 @@ export default async function AdminTestPrepPage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Test Prep</h1>
-          <p className="mt-1 text-muted-foreground">Original practice content only — never copyrighted test items.</p>
-        </div>
         <Button render={<Link href="/admin/test-prep/test-types/new" />}>
           <Plus className="size-4" /> Add test type
         </Button>

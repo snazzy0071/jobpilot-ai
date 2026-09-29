@@ -24,7 +24,7 @@ const USER_PAGES = [
 const ADMIN_PAGES = [
   "/admin", "/admin/users", "/admin/institutions", "/admin/plans", "/admin/access-codes", "/admin/ai-usage", "/admin/sponsors", "/admin/graduate-schemes", "/admin/graduate-schemes/new",
   "/admin/deadlines", "/admin/jobs", "/admin/test-prep", "/admin/advice-hub", "/admin/advice-hub/new", "/admin/blog", "/admin/blog/new", "/admin/compare", "/admin/compare/new",
-  "/admin/auto-apply", "/admin/leads", "/admin/roles", "/admin/roles/new", "/admin/audit-log", "/admin/settings", "/admin/system-health", "/admin/email-logs",
+  "/admin/auto-apply", "/admin/leads", "/admin/roles", "/admin/roles/new", "/admin/settings", "/admin/system-health", "/admin/email-logs",
 ];
 const INSTITUTION_PAGES = ["/institution-admin", "/institution-admin/members", "/institution-admin/seats", "/institution-admin/invites", "/institution-admin/domains", "/institution-admin/licence", "/institution-admin/branding", "/institution-admin/analytics"];
 

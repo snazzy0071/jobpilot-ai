@@ -26,7 +26,7 @@ export default async function QuickScanResultPage({ params }: { params: Promise<
   if (!result) notFound();
 
   return (
-    <Section className="hero-glow pt-24 pb-24 sm:pt-32">
+    <Section decorative={false} className="hero-glow pt-24 pb-24 sm:pt-32">
       <Card className="mx-auto w-full max-w-xl p-8 shadow-floating">
         <div className="flex flex-col gap-4">
           {/* Real <h1> — this page previously had zero headings at any

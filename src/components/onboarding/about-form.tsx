@@ -35,7 +35,7 @@ export function AboutForm({
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-2">
         <Label htmlFor="careerStage">Career stage</Label>
-        <Select name="careerStage" required defaultValue={defaultCareerStage ?? undefined}>
+        <Select name="careerStage" required items={CAREER_STAGE_LABELS} defaultValue={defaultCareerStage ?? undefined}>
           <SelectTrigger id="careerStage" className="w-full">
             <SelectValue placeholder="Choose your career stage" />
           </SelectTrigger>
@@ -51,7 +51,7 @@ export function AboutForm({
 
       <div className="flex flex-col gap-2">
         <Label htmlFor="primaryGoal">What&apos;s your main goal right now?</Label>
-        <Select name="primaryGoal" required defaultValue={defaultPrimaryGoal ?? undefined}>
+        <Select name="primaryGoal" required items={PRIMARY_GOAL_LABELS} defaultValue={defaultPrimaryGoal ?? undefined}>
           <SelectTrigger id="primaryGoal" className="w-full">
             <SelectValue placeholder="Choose your main goal" />
           </SelectTrigger>

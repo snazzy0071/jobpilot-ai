@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { PlusIcon } from "lucide-react";
+import { MailIcon, PlusIcon } from "lucide-react";
 import { requireUser } from "@/lib/auth/session";
 import { listCoverLetters } from "@/lib/cover-letters/queries";
 import { COVER_LETTER_TONE_LABELS, COVER_LETTER_LENGTH_LABELS } from "@/lib/cover-letters/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const dynamic = "force-dynamic";
 
@@ -19,17 +20,16 @@ export default async function CoverLettersPage() {
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">Cover Letters</h1>
-          <p className="mt-1 text-muted-foreground">Tailored drafts generated from your CV and a job description.</p>
-        </div>
         <Button render={<Link href="/dashboard/cover-letters/new"><PlusIcon /> New cover letter</Link>} />
       </div>
 
       {letters.length === 0 ? (
-        <div className="rounded-xl border border-dashed p-8 text-center">
-          <p className="text-muted-foreground">You haven&apos;t generated a cover letter yet.</p>
-        </div>
+        <EmptyState
+          icon={MailIcon}
+          title="You haven't generated a cover letter yet"
+          description="Pick a CV, paste or import a job description, and get a draft grounded only in what's really on your CV."
+          actions={<Button render={<Link href="/dashboard/cover-letters/new"><PlusIcon /> New cover letter</Link>} />}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {letters.map((letter) => (

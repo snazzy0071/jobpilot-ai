@@ -4,6 +4,7 @@ import { AlertTriangleIcon, CheckCircle2Icon, CircleOffIcon, XCircleIcon } from 
 import { Card } from "@/components/ui/card";
 import { AnimatedBar } from "@/components/dashboard/animated-bar";
 import { StackedBar } from "@/components/admin/overview/stacked-bar";
+import { METRIC_TINTS, type MetricTint } from "@/components/admin/overview/metric-card";
 import { formatCount, formatDateTime, timeAgo } from "@/components/admin/overview/format";
 import type {
   BillingOverview,
@@ -48,15 +49,19 @@ export function Panel({
   action,
   children,
   className,
+  tint,
 }: {
   title: string;
   description?: string;
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** Same tint family MetricCard's KPI tiles use — opt-in, for panels that sit directly under a matching metric
+      (so the colour grouping reads as intentional, not just decoration) rather than every panel on the page. */
+  tint?: MetricTint;
 }) {
   return (
-    <Card className={cn("gap-4 p-4", className)}>
+    <Card className={cn("gap-4 p-4", tint && METRIC_TINTS[tint].card, className)}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="font-heading text-base font-semibold tracking-tight">{title}</h2>
@@ -117,7 +122,7 @@ export function AttentionPanel({ items }: { items: AttentionItem[] }) {
     );
   }
   return (
-    <Card className="gap-2 border-warning/40 p-4" role="region" aria-label="Needs attention">
+    <Card className={cn("gap-2 p-4", METRIC_TINTS.amber.card)} role="region" aria-label="Needs attention">
       <h2 className="flex items-center gap-2 font-heading text-base font-semibold tracking-tight">
         <AlertTriangleIcon className="size-4 text-warning" aria-hidden /> Needs attention
         <span className="text-xs font-normal text-muted-foreground">({items.length})</span>
@@ -542,14 +547,7 @@ export function HealthPanel({ checks }: { checks: HealthCheckResult[] }) {
 
 export function ActivityPanel({ entries }: { entries: AdminAuditLogEntry[] }) {
   return (
-    <Panel
-      title="Recent admin activity"
-      action={
-        <Link href="/admin/audit-log" className="text-xs font-medium text-primary hover:underline">
-          Audit log
-        </Link>
-      }
-    >
+    <Panel title="Recent admin activity">
       {entries.length === 0 ? (
         <p className="text-sm text-muted-foreground">No admin actions have been logged yet.</p>
       ) : (

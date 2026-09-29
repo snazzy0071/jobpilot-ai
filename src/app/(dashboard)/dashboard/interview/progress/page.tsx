@@ -70,14 +70,6 @@ export default async function InterviewProgressPage() {
       <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/dashboard/interview"><ArrowLeftIcon /> All sessions</Link>} />
 
       <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Your progress</h1>
-        <p className="mt-1 text-muted-foreground">
-          Overall score and competency trends across your {progress.sessions.length} completed{" "}
-          {progress.sessions.length === 1 ? "interview" : "interviews"}.
-        </p>
-      </div>
-
-      <div>
         <h2 className="mb-4 text-lg font-semibold tracking-tight">Overall score</h2>
         <Card className="p-6">
           <ScoreTrendChart points={trendPoints} />

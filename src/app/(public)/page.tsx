@@ -46,13 +46,14 @@ export const metadata = buildMetadata({
   path: "/",
 });
 
-// getTotalSponsorCount() (src/lib/sponsors/queries.ts) goes through the
-// cookie-bound server client (the only client this app's sponsor reads
-// use — same as /visa-sponsors itself), which makes this route dynamic
-// regardless of any `revalidate` value, so this states that explicitly
-// rather than leaving an unused/misleading revalidate export. The query
-// itself is a cheap `count: "exact", head: true` read — no rows fetched.
-export const dynamic = "force-dynamic";
+// getTotalSponsorCount() (src/lib/sponsors/queries.ts) now reads through
+// createPublicClient() — a plain anon-key client with no cookies — so
+// this page no longer gets force-opted into dynamic rendering just for
+// that read. ISR instead: the sponsor count only moves when a sync
+// completes (a periodic admin job, not per-request), so a 5-minute
+// cache is invisible to a real visitor and saves a full server render
+// (plus every query on this page) for every repeat/CDN-served hit.
+export const revalidate = 300;
 
 // Short, real capability highlights per tool (condensed from each
 // FeaturePage's own `capabilities` array) plus the illustrative preview
@@ -150,26 +151,30 @@ export default async function HomePage() {
 
   return (
     <>
-      {/* Hero */}
-      <Section className="hero-glow relative pt-24 sm:pt-32">
+      {/* Hero — deliberately the one dark, richly-animated band on the homepage (client direction: keep the reference
+          site's dark-hero energy, recoloured from purple to blue-black; section-dark already handles the
+          background/glows, so everything below just needs on-dark text/border overrides where the shared
+          components default to light-surface styling). */}
+      <Section tone="dark" decorative={false} className="relative overflow-hidden pt-24 sm:pt-32">
+        <div className="bg-grid-fade pointer-events-none absolute inset-0 opacity-30" aria-hidden="true" />
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-          <div className="animate-orb absolute top-24 right-[6%] size-72 rounded-full bg-primary/15 blur-3xl" />
-          <div className="animate-orb absolute bottom-10 left-[4%] size-64 rounded-full bg-brand-secondary/15 blur-3xl [animation-delay:-7s]" />
+          <div className="animate-orb absolute top-24 right-[6%] size-72 rounded-full bg-primary/25 blur-3xl" />
+          <div className="animate-orb absolute bottom-10 left-[4%] size-64 rounded-full bg-brand-secondary/25 blur-3xl [animation-delay:-7s]" />
         </div>
         <div className="grid items-center gap-12 lg:grid-cols-2">
           <Reveal className="flex flex-col items-center gap-6 text-center lg:items-start lg:text-left">
-            <Eyebrow>Built for the UK job market</Eyebrow>
-            <h1 className="font-heading text-4xl font-semibold tracking-tight sm:text-5xl lg:text-6xl">
+            <Eyebrow className="text-blue-300">Built for the UK job market</Eyebrow>
+            <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">
               Everything between your CV and the offer, handled.
             </h1>
-            <p className="max-w-xl text-lg text-muted-foreground">
+            <p className="max-w-xl text-lg text-white/70">
               {siteConfig.name} builds you a UK-standard CV, scores it against a real job
               before you apply, and shows you exactly which employers can sponsor you — all
               in one place.
             </p>
             <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
               <Button size="lg" variant="gradient" className="btn-shine" render={<Link href="/free-ats-checker">Score my CV free</Link>} />
-              <Button size="lg" variant="outline" render={<Link href="/signup">Get started</Link>} />
+              <Button size="lg" variant="outline" className="border-white/25 bg-white/5 text-white hover:bg-white/10 hover:text-white" render={<Link href="/signup">Get started</Link>} />
             </div>
             <HeroStatChips sponsorCount={sponsorCount} />
           </Reveal>

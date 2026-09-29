@@ -31,7 +31,13 @@ const cardVariants = cva(
   {
     variants: {
       variant: {
-        plain: "border-border bg-card shadow-card",
+        // genesis-DESIGN.md says cards rest flat and only pick up a shadow on hover — tried literally (shadow-none at rest)
+        // first, but on this palette bg-card (#FFFFFF) sits at only ~1:1 contrast against --background (#FAFAFA) and
+        // --border is deliberately near-invisible too (see its own comment in globals.css), so a truly shadow-less card
+        // had no visual presence at all against the page. Keeping shadow-card at rest, same as every other variant below,
+        // and reserving the stronger shadow for hover instead.
+        plain:
+          "border-border bg-card shadow-card transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]",
         feature: `${WASH} border-border bg-card shadow-card transition-all duration-300 ease-out hover:-translate-y-1 hover:border-primary/40 hover:shadow-pop`,
         tool: `${WASH} border-border bg-card shadow-elevated transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-primary/50 hover:shadow-floating`,
         metric:

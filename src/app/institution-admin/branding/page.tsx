@@ -14,10 +14,6 @@ export default async function InstitutionAdminBrandingPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Branding</h1>
-        <p className="mt-1 text-muted-foreground">Co-brand your students&apos; onboarding — this never affects JobPilot&apos;s own theme for anyone else.</p>
-      </div>
       <BrandingForm institution={overview.institution} />
     </div>
   );

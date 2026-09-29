@@ -27,8 +27,6 @@ export default async function LinkedinDraftPage({ params }: { params: Promise<{ 
         }
       />
 
-      <h1 className="font-heading text-2xl font-semibold tracking-tight">{draft.title}</h1>
-
       {/* Keyed by updatedAt so a whole-draft "Regenerate everything" (which
           replaces headline variants, About, and every Experience bullet —
           new ids included) forces a clean remount with fresh server data,

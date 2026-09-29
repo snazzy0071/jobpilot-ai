@@ -12,11 +12,6 @@ export default async function AdminInstitutionsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Institutions</h1>
-        <p className="mt-1 text-muted-foreground">Provision a new institution, its licence, and its first admin.</p>
-      </div>
-
       <CreateInstitutionForm />
 
       {institutions.length === 0 ? (

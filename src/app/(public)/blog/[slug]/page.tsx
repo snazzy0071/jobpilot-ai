@@ -10,14 +10,25 @@ import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { ArticleBody } from "@/components/content/article-body";
 import { TableOfContents } from "@/components/content/table-of-contents";
 import { PostCard } from "@/components/blog/post-card";
-import { getBlogPostBySlug, getRelatedPosts } from "@/lib/blog/queries";
+import { getBlogPostBySlug, getBlogPosts, getRelatedPosts } from "@/lib/blog/queries";
 import { formatBlogDate, getInitials } from "@/lib/blog/format";
 import { siteConfig } from "@/config/site";
 import { buildArticleMetadata } from "@/lib/seo/metadata";
 
-// Same reasoning as /blog: DB-backed with no admin CMS yet, so this stays
-// server-rendered per request rather than statically generated.
-export const dynamic = "force-dynamic";
+// getBlogPostBySlug() reads through createPublicClient() (no cookies), so this can be ISR instead of fully
+// dynamic — no admin CMS yet, but a published post doesn't need sub-5-minute freshness either.
+export const revalidate = 300;
+
+// Without this, `revalidate` alone doesn't actually put a dynamic-segment route ([slug]) into the ISR cache —
+// every request still renders fresh (verified: no `x-nextjs-cache` header and a `no-store` Cache-Control without
+// this function, even with `revalidate` set). Every published post is pre-rendered at build time as a bonus (zero
+// cold-start latency for its first visitor, not just after); any slug published later than the last build/deploy
+// still works via `dynamicParams` (defaults to true) — it just renders on the *first* request instead, then joins
+// the cache like every other slug here.
+export async function generateStaticParams() {
+  const posts = await getBlogPosts();
+  return posts.map((post) => ({ slug: post.slug }));
+}
 
 export async function generateMetadata({
   params,

@@ -28,7 +28,6 @@ const REQUIRED_MENU = [
   "Auto-Apply",
   "Leads",
   "Roles",
-  "Audit Log",
   "Settings",
   "System Health",
 ];

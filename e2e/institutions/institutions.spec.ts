@@ -364,7 +364,10 @@ test.describe("seats, invites and licence expiry", () => {
     const student = members[2];
     const studentPage = await loginPage(browser, student, /\/dashboard/);
     await studentPage.goto("/dashboard/auto-apply");
-    await expect(studentPage.locator("#main-content").getByRole("heading", { name: "Auto-Apply", exact: true })).toBeVisible();
+    // Not scoped to #main-content — the page's own duplicate "Auto-Apply" heading was removed for the unlocked
+    // state (the shared dashboard header already renders one for this route); the locked/upsell state still has
+    // its own distinct heading ("Auto-Apply is on Premium and Elite"), which this exact match correctly excludes.
+    await expect(studentPage.getByRole("heading", { name: "Auto-Apply", exact: true })).toBeVisible();
     await expect(studentPage.getByTestId("auto-apply-locked")).toHaveCount(0);
     expect((await db().rpc("get_institution_licence_plan", { p_user_id: student.id })).data).toMatchObject({ slug: "premium" });
 

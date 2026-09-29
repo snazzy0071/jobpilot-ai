@@ -122,18 +122,8 @@ export default async function AdminOverviewPage() {
     });
   }
 
-  const updated = new Date(overview.generatedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
-
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Admin overview</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Live figures from the database, updated {updated} (UK time). Daily charts use UTC days. &ldquo;Active&rdquo; means a user did at least one
-          recorded action: an AI call, CV, ATS scan, interview, cover letter or application.
-        </p>
-      </div>
-
       {loadError && (
         <Card className="flex-row items-start gap-2 border-destructive/40 p-3 text-sm" role="alert">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
@@ -150,6 +140,7 @@ export default async function AdminOverviewPage() {
             icon={UsersIcon}
             value={hasSnapshot ? users.total : null}
             caption={hasDaily ? `${n(users.new7d)} joined in the last 7 days` : undefined}
+            tint="blue"
           />
           <MetricCard
             label="New users (30d)"
@@ -157,6 +148,7 @@ export default async function AdminOverviewPage() {
             value={hasDaily ? users.new30d : null}
             trend={trend(current.newUsers, previous.newUsers)}
             spark={series("newUsers")}
+            tint="sky"
           />
           <MetricCard
             label="Active users (30d)"
@@ -164,12 +156,14 @@ export default async function AdminOverviewPage() {
             value={hasSnapshot ? users.active30d : null}
             caption={`${n(users.active7d)} in 7 days · ${n(users.active1d)} in 24 hours`}
             spark={series("activeUsers")}
+            tint="cyan"
           />
           <MetricCard
             label="Paying subscriptions"
             icon={CreditCardIcon}
             value={hasSnapshot ? billing.activePaid : null}
             caption={`${billing.trialing} trialing · ${billing.pastDue} past due`}
+            tint="amber"
           />
           <MetricCard
             label="MRR"
@@ -177,6 +171,7 @@ export default async function AdminOverviewPage() {
             value={hasSnapshot ? billing.mrrPence : null}
             kind="gbp"
             caption={`ARR ${formatCount(billing.arrPence, "gbp")} · active paid plans only`}
+            tint="rose"
           />
         </div>
 
@@ -189,6 +184,7 @@ export default async function AdminOverviewPage() {
             caption={`${n(ai.calls30d)} calls${ai.successRate !== null ? ` · ${ai.successRate}% succeeded` : ""}`}
             trend={trend(current.aiCostUsd, previous.aiCostUsd, "neutral")}
             spark={series("aiCostUsd")}
+            tint="blue"
           />
           <MetricCard
             label="ATS scans (30d)"
@@ -197,6 +193,7 @@ export default async function AdminOverviewPage() {
             caption={hasSnapshot ? `${n(product.atsScans)} all time${product.atsAvgMatch30d !== null ? ` · avg match ${product.atsAvgMatch30d}%` : ""}` : undefined}
             trend={trend(current.atsScans, previous.atsScans)}
             spark={series("atsScans")}
+            tint="sky"
           />
           <MetricCard
             label="CVs created (30d)"
@@ -205,6 +202,7 @@ export default async function AdminOverviewPage() {
             caption={hasSnapshot ? `${n(product.cvs)} in total` : undefined}
             trend={trend(current.cvsCreated, previous.cvsCreated)}
             spark={series("cvsCreated")}
+            tint="cyan"
           />
           <MetricCard
             label="Interviews (30d)"
@@ -213,6 +211,7 @@ export default async function AdminOverviewPage() {
             caption={hasSnapshot ? `${n(product.interviews)} in total · ${n(product.interviewsCompleted)} completed` : undefined}
             trend={trend(current.interviews, previous.interviews)}
             spark={series("interviews")}
+            tint="amber"
           />
           <MetricCard
             label="Applications (30d)"
@@ -221,19 +220,20 @@ export default async function AdminOverviewPage() {
             caption={hasSnapshot ? `${n(product.applications)} tracked in total` : undefined}
             trend={trend(current.applicationsCreated, previous.applicationsCreated)}
             spark={series("applicationsCreated")}
+            tint="rose"
           />
         </div>
       </section>
 
       {hasDaily ? (
         <section aria-label="Trends" className="grid gap-3 lg:grid-cols-3">
-          <Panel title="New sign-ups" description="Per day, last 30 days">
+          <Panel title="New sign-ups" description="Per day, last 30 days" tint="sky">
             <DailyBarChart data={daily.map((p) => ({ day: p.day, value: p.newUsers }))} unit="sign-ups" />
           </Panel>
-          <Panel title="Daily active users" description="Distinct users with a recorded action that day">
+          <Panel title="Daily active users" description="Distinct users with a recorded action that day" tint="cyan">
             <DailyBarChart data={daily.map((p) => ({ day: p.day, value: p.activeUsers }))} unit="active users" />
           </Panel>
-          <Panel title="AI calls" description="Per day. Red is the share that failed">
+          <Panel title="AI calls" description="Per day. Red is the share that failed" tint="blue">
             <DailyBarChart data={daily.map((p) => ({ day: p.day, value: p.aiCalls, flagged: p.aiFailed }))} unit="calls" flaggedLabel="failed" />
           </Panel>
         </section>

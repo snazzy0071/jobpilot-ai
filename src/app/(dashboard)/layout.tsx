@@ -8,7 +8,6 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { SkipLink } from "@/components/layout/skip-link";
 import { MobileNavTrigger } from "@/components/layout/mobile-nav-trigger";
 import { CurrentPageTitle } from "@/components/layout/current-page-title";
-import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
 import { Logo } from "@/components/layout/logo";
 import { Badge } from "@/components/ui/badge";
@@ -43,17 +42,21 @@ export default async function DashboardLayout({
   // stays put; only <main> below scrolls, with the header pinned above it — so there is a single scrollbar, at the
   // right-hand edge of the content, and nothing scrolls the sidebar away. Below md the page scrolls normally and the
   // sidebar is the drawer, exactly as before.
+  //
+  // At md+, the content column is a distinct rounded, bordered, shadowed panel inset from the sidebar and the window
+  // edges (bg-sidebar showing through the gap) rather than flush against the sidebar with just a hairline border — the
+  // sidebar stays flush against the true left edge (bg-sidebar bleeds to it), so only the panel side gets the gap.
   return (
     <div className="flex min-h-screen flex-1 flex-col md:h-dvh md:min-h-0 md:flex-none md:overflow-hidden">
       {impersonation && (
         <ImpersonationBanner targetLabel={profile?.full_name ?? user.email ?? "this user"} />
       )}
-      <div className="flex flex-1 md:min-h-0">
+      <div className="flex flex-1 bg-sidebar md:min-h-0 md:gap-3 md:py-3 md:pr-3">
         <SkipLink />
         <div className="hidden md:flex md:h-full md:shrink-0">
           <DashboardSidebar plan={plan} />
         </div>
-        <div className="flex min-w-0 flex-1 flex-col md:min-h-0">
+        <div className="flex min-w-0 flex-1 flex-col bg-background md:min-h-0 md:overflow-hidden md:rounded-2xl md:border md:border-border md:shadow-card">
           <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
             <div className="flex items-center gap-3">
               <MobileNavTrigger>
@@ -70,8 +73,7 @@ export default async function DashboardLayout({
               <Badge variant="secondary" className="hidden capitalize sm:inline-flex">
                 {plan} plan
               </Badge>
-              <ViewPublicSiteLink variant="header" />
-              <ThemeToggle />
+              <ViewPublicSiteLink />
               <UserMenu
                 email={user.email ?? null}
                 fullName={profile?.full_name ?? null}

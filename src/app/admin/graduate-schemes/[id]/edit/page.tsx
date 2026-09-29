@@ -12,11 +12,6 @@ export default async function EditGraduateSchemePage({ params }: { params: Promi
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-8">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Edit graduate scheme</h1>
-        <p className="mt-1 text-muted-foreground">{scheme.employer} — {scheme.schemeName}</p>
-      </div>
-
       <GraduateSchemeForm scheme={scheme} />
       <AssessmentManager schemeId={scheme.id} assessments={scheme.assessments} schemeSourceUrl={scheme.sourceUrl} />
     </div>

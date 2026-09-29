@@ -21,17 +21,19 @@ export function HeroStatChips({ sponsorCount }: { sponsorCount: number }) {
     { icon: FileTextIcon, title: "UK-format CVs", caption: "A4, two pages, no photo" },
   ];
 
+  // Styled for the hero's dark band specifically (its only caller) — the same frosted-glass-on-dark treatment
+  // StatBand's own chips use, not the light-surface `border`/`bg-card`/`text-muted-foreground` tokens.
   return (
     <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
       {items.map((item, index) => (
         <Reveal
           key={item.caption}
           delay={Math.min(index * 0.08, 0.3)}
-          className="flex flex-col gap-1 rounded-xl border bg-card/60 p-3 text-left backdrop-blur-sm"
+          className="flex flex-col gap-1 rounded-xl border border-white/15 bg-white/[0.06] p-3 text-left text-white backdrop-blur-sm"
         >
-          <item.icon className="size-4 text-primary" />
+          <item.icon className="size-4 text-blue-300" />
           <p className="text-sm font-semibold">{item.title}</p>
-          <p className="text-[11px] text-muted-foreground">{item.caption}</p>
+          <p className="text-[11px] text-white/70">{item.caption}</p>
         </Reveal>
       ))}
     </div>

@@ -31,17 +31,6 @@ export default async function InstitutionAdminSeatsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Seats</h1>
-        <p className="mt-1 text-muted-foreground">
-          {seatsTotal !== null
-            ? `${seatsUsed} of ${seatsTotal} seats in use.`
-            : licence?.state === "expired"
-              ? "Your licence has expired, so no seats are available."
-              : "Your institution has no active licence, so no seats are available."}
-        </p>
-      </div>
-
       {licence && seatsTotal !== null ? (
         <Card variant="admin" className="gap-4 p-6">
           <SeatBar label="In use" count={seatsUsed} total={seatsTotal} />

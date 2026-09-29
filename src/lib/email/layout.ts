@@ -13,7 +13,7 @@
 import { siteConfig } from "@/config/site";
 import { escapeHtml } from "@/lib/email/escape-html";
 
-const BRAND_COLOR = "#6c47ff"; // globals.css's own light-mode --primary — the one place this app's real brand colour is defined; kept in sync by eye, not imported, since CSS custom properties aren't reachable from a plain-text email anyway.
+const BRAND_COLOR = "#1e73be"; // globals.css's own light-mode --primary — the one place this app's real brand colour is defined; kept in sync by eye, not imported, since CSS custom properties aren't reachable from a plain-text email anyway.
 
 /**
  * Wraps `bodyHtml` (built by the caller, e.g. with the block helpers

@@ -52,11 +52,6 @@ export default async function AdminSystemHealthPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">System health</h1>
-        <p className="mt-1 text-muted-foreground">Live checks, full detail — the public /status page shows a safe summary of the same data.</p>
-      </div>
-
       {canSeeEmailLogs && (
         <p className="text-sm">
           <Link href="/admin/email-logs" className="font-medium text-primary hover:underline">

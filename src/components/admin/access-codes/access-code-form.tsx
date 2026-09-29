@@ -62,7 +62,7 @@ export function AccessCodeForm({ institutions, plans }: { institutions: AdminAcc
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="ac-institution">Institution</Label>
-            <Select name="institutionId" value={institutionId} onValueChange={(value) => value && setInstitutionId(value)}>
+            <Select name="institutionId" items={{ [NONE]: "None", ...Object.fromEntries(institutions.map((institution) => [institution.id, institution.name])) }} value={institutionId} onValueChange={(value) => value && setInstitutionId(value)}>
               <SelectTrigger id="ac-institution" className="w-full">
                 <SelectValue />
               </SelectTrigger>
@@ -78,7 +78,7 @@ export function AccessCodeForm({ institutions, plans }: { institutions: AdminAcc
           </div>
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="ac-plan">Grants plan</Label>
-            <Select name="grantedPlanId" value={grantedPlanId} onValueChange={(value) => value && setGrantedPlanId(value)}>
+            <Select name="grantedPlanId" items={{ [NONE]: "None (redemption only)", ...Object.fromEntries(plans.map((plan) => [plan.id, plan.name])) }} value={grantedPlanId} onValueChange={(value) => value && setGrantedPlanId(value)}>
               <SelectTrigger id="ac-plan" className="w-full">
                 <SelectValue />
               </SelectTrigger>

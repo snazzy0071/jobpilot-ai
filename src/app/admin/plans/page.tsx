@@ -34,11 +34,6 @@ export default async function AdminPlansPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Plans &amp; subscriptions</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Plans as configured, who is on them, and the revenue Stripe is actually billing. Read-only.</p>
-      </div>
-
       {error && (
         <Card className="flex-row items-start gap-2 border-destructive/40 p-3 text-sm" role="alert">
           <AlertTriangleIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />

@@ -27,17 +27,27 @@ import { cn } from "@/lib/utils";
  * Shapes are small (max 40px) and low-opacity (8-10%) on purpose — "no
  * huge blobs" was explicit; this reads as ambient texture, not a
  * decorative hero illustration competing with real content.
+ *
+ * `grid` and `glow` default OFF: a tiled dot pattern plus a soft colour wash behind *every*
+ * default-tone section (most sections on every public page, several in a row on a page like the
+ * homepage) compounded into the whole page reading as a hazy, low-contrast fog rather than a
+ * crisp, confident one — exactly what a "neutral white, brand colour as an accent, not flooding
+ * every surface" direction argues against. A page's few genuinely decorative moments (a hero, a
+ * dark stat band, an "aurora" storytelling section) already opt in explicitly via their own
+ * `hero-glow`/`section-dark`/`tone="aurora"` treatment; ordinary content sections default to
+ * plain now, with only the two tiny floating shapes left on as ambient texture. Pass `grid`/`glow`
+ * explicitly for the rare section that wants them without a full custom treatment.
  */
 export function SectionBackground({
   className,
-  grid = true,
-  glow = true,
+  grid = false,
+  glow = false,
   shapes = true,
 }: {
   className?: string;
-  /** The faint dot/line texture — usually left on; turn off for tone="primary"/"muted" sections where it would clash with an already-colored surface. */
+  /** The faint dot/line texture — off by default (see the component doc above); opt in per section. */
   grid?: boolean;
-  /** A soft, slowly-panning brand-gradient wash. */
+  /** A soft, slowly-panning brand-gradient wash — off by default (see the component doc above); opt in per section. */
   glow?: boolean;
   /** The 2 small floating accent circles. */
   shapes?: boolean;

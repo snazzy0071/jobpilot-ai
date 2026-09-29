@@ -23,8 +23,6 @@ export default async function TestTypePacksPage({ params }: { params: Promise<{ 
           <Link href="/admin/test-prep" className="text-sm text-muted-foreground hover:underline">
             ← Test Prep
           </Link>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">{testType.name}</h1>
-          <p className="mt-1 text-muted-foreground">{testType.description ?? "Question packs under this test type."}</p>
         </div>
         <Button render={<Link href={`/admin/test-prep/packs/new?testTypeId=${id}`} />}>
           <Plus className="size-4" /> Add pack

@@ -13,9 +13,6 @@ export default async function EditAdminRolePage({ params }: { params: Promise<{ 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/admin/roles"><ArrowLeftIcon /> Roles</Link>} />
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Edit {role.name}</h1>
-      </div>
       <RoleForm role={role} />
     </div>
   );

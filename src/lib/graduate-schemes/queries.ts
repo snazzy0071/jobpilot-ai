@@ -1,5 +1,6 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { createPublicClient } from "@/lib/supabase/public";
 import type { AssessmentType, GraduateScheme, SchemeAssessment } from "@/lib/graduate-schemes/types";
 
 // Public, unauthenticated feature — always the anon-respecting client (src/lib/supabase/server.ts), never the
@@ -104,7 +105,7 @@ export function toGraduateScheme(row: GraduateSchemeRow): GraduateScheme {
 
 /** Every published scheme, as an anonymous visitor would see it. A database error yields an empty list (logged), so a public page degrades instead of crashing. */
 export async function getGraduateSchemes(): Promise<GraduateScheme[]> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase
     .from("graduate_schemes")
     .select(SCHEME_FIELDS)
@@ -122,7 +123,7 @@ export async function getGraduateSchemes(): Promise<GraduateScheme[]> {
 
 /** One published scheme by its URL slug, or null (unknown, or a draft). */
 export async function getPublishedSchemeBySlug(slug: string): Promise<GraduateScheme | null> {
-  const supabase = await createClient();
+  const supabase = createPublicClient();
   const { data, error } = await supabase.from("graduate_schemes").select(SCHEME_FIELDS).eq("slug", slug).eq("is_published", true).maybeSingle();
   if (error) {
     // A database failure must not look like "no such scheme" (a 404 that search engines would keep).

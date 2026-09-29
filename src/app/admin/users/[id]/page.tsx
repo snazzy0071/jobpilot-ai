@@ -23,9 +23,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
       <Button variant="ghost" size="sm" className="w-fit" render={<Link href="/admin/users"><ArrowLeftIcon /> Users</Link>} />
 
       <div className="flex flex-wrap items-center justify-between gap-4">
+        {/* Not an <h1> — the shared layout header already renders one for this route ("Users"). This is still real,
+            necessary identifying text: it's what confirms which account the destructive actions below (Delete
+            account) actually target, and nothing else on the page shows the account's name or email. */}
         <div>
-          <h1 className="font-heading text-2xl font-semibold tracking-tight">{user.fullName ?? user.email ?? "Unnamed account"}</h1>
-          <p className="mt-1 text-muted-foreground">{user.email}</p>
+          <p className="font-heading text-xl font-semibold tracking-tight">{user.fullName ?? user.email ?? "Unnamed account"}</p>
+          <p className="text-sm text-muted-foreground">{user.email}</p>
         </div>
         <Badge variant={user.role === "admin" ? "tinted" : "outline"}>{user.role}</Badge>
       </div>

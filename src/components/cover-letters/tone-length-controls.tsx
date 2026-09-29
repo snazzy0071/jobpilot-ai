@@ -48,6 +48,7 @@ export function ToneLengthControls({
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="cover-letter-tone-control">Tone</Label>
         <Select
+          items={COVER_LETTER_TONE_LABELS}
           value={tone}
           onValueChange={(value) => {
             if (!value) return;
@@ -72,6 +73,7 @@ export function ToneLengthControls({
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="cover-letter-length-control">Length</Label>
         <Select
+          items={COVER_LETTER_LENGTH_LABELS}
           value={length}
           onValueChange={(value) => {
             if (!value) return;

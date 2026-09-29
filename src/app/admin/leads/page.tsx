@@ -29,11 +29,6 @@ export default async function AdminLeadsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-heading text-2xl font-semibold tracking-tight">Leads</h1>
-        <p className="mt-1 text-muted-foreground">Newsletter, contact, demo, and partner submissions — public forms, never readable by anyone but admin tooling.</p>
-      </div>
-
       <Tabs defaultValue="newsletter">
         <TabsList>
           <TabsTrigger value="newsletter">Newsletter ({subscribers.length})</TabsTrigger>

@@ -6,13 +6,22 @@ import { PageHero } from "@/components/marketing/page-hero";
 import { Breadcrumbs } from "@/components/marketing/breadcrumbs";
 import { CtaSection } from "@/components/marketing/cta-section";
 import { ComparisonView, formatCheckedDate } from "@/components/comparisons/comparison-view";
-import { getLiveComparisonBySlug } from "@/lib/comparisons/queries";
+import { getLiveComparisonBySlug, getLiveComparisons } from "@/lib/comparisons/queries";
 import { siteConfig } from "@/config/site";
 import { buildMetadata } from "@/lib/seo/metadata";
 import type { ComparisonPage } from "@/lib/comparisons/types";
 
-// Per request: an admin can publish, correct or withdraw a comparison at any time.
-export const dynamic = "force-dynamic";
+// getLiveComparisonBySlug() reads through createPublicClient() (no cookies), so this can be ISR instead of fully
+// dynamic — an admin publish/correct/withdraw propagates within 5 minutes, not instantly, which is fine here.
+export const revalidate = 300;
+
+// Required for a dynamic segment to actually join the ISR cache at all — `revalidate` alone still renders every
+// request fresh without this (see blog/[slug]'s own comment for how that was verified). A slug published after
+// the last build still works via `dynamicParams` (default true); it just renders on its first request instead.
+export async function generateStaticParams() {
+  const pages = await getLiveComparisons();
+  return pages.map((page) => ({ slug: page.slug }));
+}
 
 /** A description made only of what the page actually contains — no claims added for SEO. */
 function describe(page: ComparisonPage): string {
