@@ -1,6 +1,7 @@
 import { Section } from "@/components/marketing/section";
 import { Eyebrow } from "@/components/marketing/eyebrow";
 import { Reveal } from "@/components/motion/reveal";
+import { HeroBackdrop } from "@/components/marketing/hero-backdrop";
 import { cn } from "@/lib/utils";
 
 /**
@@ -50,7 +51,7 @@ export function PageHero({
     >
       {badge}
       {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
-      <h1 className="font-heading text-4xl font-semibold tracking-tight text-balance sm:text-5xl lg:text-6xl">{title}</h1>
+      <h1 className="font-heading text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">{title}</h1>
       {description && <div className="max-w-2xl text-lg text-pretty text-muted-foreground">{description}</div>}
       {actions && (
         <div className={cn("flex flex-wrap gap-3", centered ? "justify-center" : "justify-center lg:justify-start")}>
@@ -65,12 +66,13 @@ export function PageHero({
     // and positioned specifically for a hero) — layering Section's own default SectionBackground glow
     // underneath it doubled up the blur behind the one composition (the product mockup/floating
     // cards) where a clean, uncluttered backdrop matters most.
-    <Section decorative={false} className={cn("hero-glow pt-24 pb-12 sm:pt-32 sm:pb-20", className)}>
+    <Section decorative={false} className={cn("-mt-[68px] overflow-hidden pt-36 pb-14 sm:pt-44 sm:pb-24", className)}>
+      <HeroBackdrop intensity="soft" />
       {breadcrumbs && <div className="mb-8">{breadcrumbs}</div>}
       {visual ? (
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
           {copy}
-          <Reveal delay={0.15} direction="left" distance={24}>
+          <Reveal delay={0.15} direction="left" distance={24} className="relative">
             {visual}
           </Reveal>
         </div>

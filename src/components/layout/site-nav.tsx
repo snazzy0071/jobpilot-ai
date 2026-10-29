@@ -38,8 +38,8 @@ function NavLinkItem({
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "text-sm transition-colors",
-        active ? "font-medium text-foreground" : "text-muted-foreground hover:text-foreground",
+        "rounded-full px-3.5 py-2 text-sm font-medium transition-colors",
+        active ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-primary/[0.06] hover:text-foreground",
         className,
       )}
     >
@@ -55,14 +55,14 @@ export function SiteNav() {
 
   return (
     <>
-      <nav aria-label="Primary" className="hidden items-center gap-6 md:flex">
+      <nav aria-label="Primary" className="hidden items-center gap-1 rounded-full border border-border/70 bg-white/70 p-1 shadow-card backdrop-blur md:flex">
         <DropdownMenu>
           <DropdownMenuTrigger
             className={cn(
-              "flex items-center gap-1 rounded-md text-sm outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
+              "flex items-center gap-1 rounded-full px-3.5 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-3 focus-visible:ring-ring/50",
               featuresActive
-                ? "font-medium text-foreground"
-                : "text-muted-foreground hover:text-foreground",
+                ? "bg-primary/10 text-primary"
+                : "text-foreground/70 hover:bg-primary/[0.06] hover:text-foreground",
             )}
           >
             Features

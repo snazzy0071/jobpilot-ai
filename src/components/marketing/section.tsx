@@ -4,10 +4,12 @@ import { cn } from "@/lib/utils";
 
 const TONE_CLASSES = {
   default: "bg-background",
-  muted: "bg-muted/40",
+  muted: "bg-linear-to-b from-[#f4f7ff] to-[#fbfcff]",
   primary: "bg-primary text-primary-foreground",
   aurora: "bg-background section-aurora",
-  dark: "section-dark",
+  // Kept as a tone name for older callers, but now a light colourful mesh: the client doesn't want dark sections.
+  dark: "section-mesh",
+  mesh: "section-mesh",
 } as const;
 
 export function Section({
@@ -35,7 +37,7 @@ export function Section({
   const showBackground = decorative ?? tone === "default";
 
   return (
-    <section className={cn("relative py-16 sm:py-24", TONE_CLASSES[tone], className)}>
+    <section className={cn("relative py-20 sm:py-28", TONE_CLASSES[tone], className)}>
       {showBackground && <SectionBackground />}
       <Container className={cn("relative", containerClassName)}>{children}</Container>
     </section>

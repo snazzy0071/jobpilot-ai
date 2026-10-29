@@ -28,12 +28,23 @@ const COLUMNS: { title: string; links: NavLink[] }[] = [
 
 export function SiteFooter() {
   return (
-    <footer className="border-t bg-background">
-      <Container className="py-12">
+    <footer className="relative overflow-hidden bg-linear-to-b from-background to-[#eef2ff]">
+      <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-vivid)] opacity-60" aria-hidden="true" />
+      <div className="animate-blob pointer-events-none absolute -bottom-40 -left-24 size-96 bg-brand-cyan/15 blur-3xl" aria-hidden="true" />
+      <div className="animate-blob pointer-events-none absolute -right-24 -bottom-40 size-96 bg-primary/10 blur-3xl [animation-delay:-9s]" aria-hidden="true" />
+      <Container className="relative py-16">
+        <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
+        <div className="flex max-w-sm flex-col gap-4">
+          <Logo />
+          <p className="text-sm text-muted-foreground">
+            The UK career toolkit for students and graduates: a UK-standard CV, an honest ATS score and real visa sponsor
+            data, in one place.
+          </p>
+        </div>
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-4">
           {COLUMNS.map((column) => (
             <div key={column.title} className="flex flex-col gap-3">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <p className="text-xs font-semibold tracking-wide text-foreground uppercase">
                 {column.title}
               </p>
               <nav aria-label={column.title} className="flex flex-col gap-2">
@@ -41,7 +52,7 @@ export function SiteFooter() {
                   <Link
                     key={link.href}
                     href={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground"
+                    className="w-fit text-sm text-muted-foreground transition-colors hover:text-primary"
                   >
                     {link.label}
                   </Link>
@@ -50,10 +61,10 @@ export function SiteFooter() {
             </div>
           ))}
         </div>
+        </div>
 
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t pt-8 text-sm text-muted-foreground sm:flex-row">
+        <div className="mt-14 flex flex-col items-center justify-between gap-4 border-t pt-8 text-sm text-muted-foreground sm:flex-row">
           <div className="flex flex-col items-center gap-1 sm:items-start">
-            <Logo />
             <p>
               &copy; {new Date().getFullYear()} {siteConfig.company}. All rights reserved.
               {" · "}

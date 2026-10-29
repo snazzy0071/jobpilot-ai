@@ -28,19 +28,19 @@ export function PricingCard({
     <Card
       variant="pricing"
       animatedAccent={popular}
-      className={cn("card-ring h-full", popular && "border-primary shadow-pop")}
+      className={cn("card-ring h-full", popular && "border-animated shadow-pop lg:-translate-y-3 lg:hover:-translate-y-5")}
     >
       {popular && (
         // Inside the card's top-right corner, not straddling its top
         // edge: Card clips overflow (needed for its rounded corners and
         // the animated accent), which cut a half-outside badge in two.
-        <Badge className="absolute top-4 right-4 z-20">Popular</Badge>
+        <Badge className="gradient-brand absolute top-4 right-4 z-20 border-0 text-white shadow-glow">Most popular</Badge>
       )}
       <CardHeader>
         <CardTitle className="text-lg">{name}</CardTitle>
         <CardDescription>{description}</CardDescription>
         <div className="mt-3 flex items-baseline gap-1">
-          <span className="font-heading text-4xl font-semibold tracking-tight">{price}</span>
+          <span className={cn("font-heading text-5xl font-bold tracking-tight", popular && "text-gradient")}>{price}</span>
           <span className="text-sm text-muted-foreground">{period}</span>
         </div>
       </CardHeader>
@@ -48,13 +48,16 @@ export function PricingCard({
         <ul className="flex flex-1 flex-col gap-2.5">
           {features.map((feature) => (
             <li key={feature} className="flex items-start gap-2 text-sm">
-              <Check className="mt-0.5 size-4 shrink-0 text-primary" />
+              <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                <Check className="size-3" strokeWidth={3} />
+              </span>
               <span>{feature}</span>
             </li>
           ))}
         </ul>
         <Button
-          variant={popular ? "default" : "outline"}
+          size="lg"
+          variant={popular ? "gradient" : "outline"}
           className={popular ? "btn-shine" : undefined}
           render={
             <Link href={ctaHref}>

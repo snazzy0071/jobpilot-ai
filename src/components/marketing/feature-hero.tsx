@@ -29,7 +29,7 @@ export function FeatureHero({
       // two-level Home > Title trail rather than an unlinkable middle crumb.
       breadcrumbs={<Breadcrumbs items={[{ label: "Home", href: "/" }, { label: title }]} />}
       badge={
-        <span className="gradient-brand flex size-14 items-center justify-center rounded-2xl text-white shadow-elevated">
+        <span className="gradient-brand flex size-14 items-center justify-center rounded-2xl text-white shadow-glow">
           <Icon className="size-7" />
         </span>
       }
@@ -44,11 +44,8 @@ export function FeatureHero({
       visual={
         demo ? (
           <ProductFrame>
-            <div
-              className="animate-orb pointer-events-none absolute -top-10 -right-8 -z-10 size-40 rounded-full bg-brand-secondary/20 blur-3xl"
-              aria-hidden="true"
-            />
-            {demo}
+            <div className="animate-blob pointer-events-none absolute -inset-10 -z-10 bg-radial from-primary/30 via-brand-cyan/20 to-transparent blur-3xl" aria-hidden="true" />
+            <div className="rounded-[1.4rem] border border-white/80 bg-white/60 p-2 shadow-floating backdrop-blur sm:p-3">{demo}</div>
           </ProductFrame>
         ) : undefined
       }

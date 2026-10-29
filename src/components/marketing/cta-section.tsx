@@ -1,10 +1,9 @@
 import { CheckIcon } from "lucide-react";
 import { Container } from "@/components/marketing/container";
-import { AnimatedGradient } from "@/components/motion/animated-gradient";
 import { FloatingElement } from "@/components/motion/floating-element";
 import { Reveal } from "@/components/motion/reveal";
 
-// Renders on a solid --primary background: pass buttons with a variant
+// Renders as a big rounded brand-gradient card: pass buttons with a variant
 // that contrasts against it (e.g. Button variant="secondary"), not the
 // default variant, which is the same color as this background.
 //
@@ -24,25 +23,23 @@ export function CtaSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="relative overflow-hidden bg-primary py-16 text-primary-foreground sm:py-24">
+    <section className="relative px-4 py-20 sm:px-8 sm:py-28">
+      <div className="gradient-brand relative mx-auto max-w-[1240px] overflow-hidden rounded-[2rem] py-16 text-primary-foreground shadow-floating sm:rounded-[2.5rem] sm:py-24">
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <AnimatedGradient
-          className="absolute inset-0 opacity-70"
-          gradient="radial-gradient(ellipse 60% 80% at 100% 0%, rgb(255 255 255 / 0.14), transparent 60%), radial-gradient(ellipse 55% 70% at 0% 100%, color-mix(in oklch, var(--brand-secondary), transparent 62%), transparent 65%)"
-        />
-        <div className="bg-grid-fade absolute inset-0 opacity-60" />
-        <div className="animate-orb absolute top-1/4 left-[12%] size-56 rounded-full bg-brand-secondary/30 blur-3xl" />
-        <div className="animate-orb absolute right-[10%] bottom-0 size-64 rounded-full bg-white/15 blur-3xl [animation-delay:-6s]" />
-        <FloatingElement className="absolute -top-24 -right-16 size-72 rounded-full border border-white/15 sm:size-96">
-          <div className="size-full rounded-full border border-white/10 [transform:scale(0.66)]" />
+        <div className="bg-grid-fade absolute inset-0 opacity-40 invert" />
+        <div className="animate-blob absolute -top-24 -left-16 size-80 bg-brand-cyan/50 blur-3xl" />
+        <div className="animate-blob absolute -right-10 -bottom-24 size-96 bg-white/25 blur-3xl [animation-delay:-7s]" />
+        <div className="animate-blob absolute top-10 right-[30%] size-56 bg-brand-cyan/30 blur-3xl [animation-delay:-12s]" />
+        <FloatingElement className="absolute -top-24 -right-16 size-72 rounded-full border border-white/20 sm:size-96">
+          <div className="size-full rounded-full border border-white/15 [transform:scale(0.66)]" />
         </FloatingElement>
-        <FloatingElement delay={2} className="absolute -bottom-28 -left-20 size-64 rounded-full border border-white/15">
+        <FloatingElement delay={2} className="absolute -bottom-28 -left-20 size-64 rounded-full border border-white/20">
           <div className="size-full" />
         </FloatingElement>
       </div>
       <Container className="relative">
         <Reveal className="flex flex-col items-center gap-4 text-center">
-          <h2 className="font-heading text-3xl font-semibold tracking-tight text-balance sm:text-4xl lg:text-5xl">
+          <h2 className="font-heading text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             {title}
           </h2>
           {description && <p className="max-w-xl text-lg text-pretty text-primary-foreground/80">{description}</p>}
@@ -59,6 +56,7 @@ export function CtaSection({
           )}
         </Reveal>
       </Container>
+      </div>
     </section>
   );
 }

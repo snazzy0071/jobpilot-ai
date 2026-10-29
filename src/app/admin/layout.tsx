@@ -37,8 +37,8 @@ export default async function AdminLayout({
       <div className="hidden md:flex md:h-full md:shrink-0">
         <AdminSidebar permissions={permissions} />
       </div>
-      <div className="flex min-w-0 flex-1 flex-col bg-background md:min-h-0 md:overflow-hidden md:rounded-2xl md:border md:border-border md:shadow-card">
-        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b px-4 md:px-6">
+      <div className="flex min-w-0 flex-1 flex-col bg-background md:min-h-0 md:overflow-hidden md:rounded-3xl md:border md:border-border/70 md:shadow-elevated">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/70 bg-white/70 px-4 backdrop-blur md:px-6">
           <div className="flex items-center gap-3">
             <MobileNavTrigger>
               <AdminSidebar permissions={permissions} />

@@ -1,7 +1,7 @@
 import { BadgeCheckIcon, FileTextIcon, ScanSearchIcon } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
 import { SkipLink } from "@/components/layout/skip-link";
-import { SectionBackground } from "@/components/backgrounds/section-background";
+import { HeroBackdrop } from "@/components/marketing/hero-backdrop";
 import { FloatingCardStack } from "@/components/marketing/floating-card-stack";
 import { GradientText } from "@/components/marketing/gradient-text";
 
@@ -15,12 +15,12 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <>
       <SkipLink />
       <main id="main-content" className="grid min-h-screen flex-1 lg:grid-cols-[1fr_1.1fr]">
-        <div className="relative hidden overflow-hidden border-r bg-muted/30 lg:flex lg:flex-col lg:justify-between lg:p-12">
-          <SectionBackground />
+        <div className="section-mesh relative hidden overflow-hidden border-r lg:flex lg:flex-col lg:justify-between lg:p-12">
+          <HeroBackdrop intensity="soft" />
           <Logo className="relative w-fit" />
           <div className="relative flex flex-col gap-10">
             <div className="flex max-w-md flex-col gap-3">
-              <p className="font-heading text-4xl font-semibold tracking-tight text-balance">
+              <p className="font-heading text-5xl leading-[1.05] font-bold tracking-tight text-balance">
                 Everything between your CV and <GradientText>the offer</GradientText>.
               </p>
               <p className="text-muted-foreground">

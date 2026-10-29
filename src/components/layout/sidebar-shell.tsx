@@ -14,7 +14,7 @@ export function SidebarShell({
     <nav
       aria-label="Main"
       className={cn(
-        "flex h-full w-64 flex-col gap-4 border-r border-sidebar-border bg-sidebar p-4 text-sidebar-foreground",
+        "flex h-full w-64 flex-col gap-5 border-r border-sidebar-border bg-linear-to-b from-[#f5f7ff] via-[#f3f8ff] to-[#fff6f1] p-4 text-sidebar-foreground",
         className,
       )}
     >

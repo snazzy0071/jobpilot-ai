@@ -28,6 +28,11 @@
   --shadow-elevated: var(--shadow-elevated-value);
   --shadow-floating: var(--shadow-floating-value);
   --shadow-pop: var(--shadow-pop-value);
+  --shadow-glow: var(--shadow-glow-value);
+  --color-brand-cyan: var(--brand-cyan);
+  --color-brand-coral: var(--brand-coral);
+  --color-brand-sun: var(--brand-sun);
+  --color-brand-pink: var(--brand-pink);
   --text-display-1: 3.75rem;
   --text-display-1--line-height: 1.05;
   --text-display-1--letter-spacing: -0.02em;
@@ -92,31 +97,34 @@
      convention independent of a product's brand hue (Stripe, Linear, GitHub etc. all keep green "success" regardless
      of their own brand colour) — swapping it away from green would make positive/negative states harder to tell
      apart at a glance, which is a real usability regression the "no green" note wasn't asking for. */
-  --background: oklch(0.985 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
+  /* 2026-10 refresh: a brighter, more colourful light theme. Near-white with a hint of blue for the page, deep navy
+     (#0f1a3d, 17:1) for text instead of flat black, and an electric blue primary with cyan and warm coral accents. */
+  --background: #fbfcff;
+  --foreground: #0f1a3d;
+  --card: #ffffff;
+  --card-foreground: #0f1a3d;
+  --popover: #ffffff;
+  --popover-foreground: #0f1a3d;
   /* #1D4ED8 — a deep, confident "corporate SaaS" blue (client's pick over a brighter/lighter alternative). 6.70:1
      against white, comfortably clears the 4.5:1 AA text bar with real margin (unlike the previous indigo, which was
      borderline at 4.47:1) — white button labels and text-primary links both read cleanly. --primary-hover is a
      proportionally darker step of the same hue (#1E40AF, 8.72:1) for the default Button's hover state, not Tailwind's
      opacity-based hover (a flat button darkening on hover is the expected pattern for a "deep, confident" blue). */
-  --primary: #1d4ed8;
-  --primary-hover: #1e40af;
+  /* Electric blue, 5.63:1 on white. */
+  --primary: #3350ff;
+  --primary-hover: #2438e0;
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --secondary: #eef2ff;
+  --secondary-foreground: #1b2a6b;
+  --muted: #f2f5fc;
   /* WCAG audit: against --muted itself (the surface this token is
      most often read on — muted panels/badges, not just the plain page
      background), the old 0.556 only hit 4.34:1, just under the 4.5:1
      text bar. 0.54 clears it (4.64:1) with a barely-perceptible
      darkening. */
-  --muted-foreground: oklch(0.54 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --muted-foreground: #5b6784;
+  --accent: #eef2ff;
+  --accent-foreground: #1b2a6b;
   /* A clear, unambiguous red — 4.60:1 against white. */
   --destructive: #d53d3d;
   /* Tried at a near-invisible literal hairline first (a prior pass's genesis-DESIGN.md-literal value) — on this
@@ -126,7 +134,7 @@
      grade contrast, just visible presence). --input is the separately-computed AA-compliant value (#949497, 3.03:1)
      for the one case WCAG 1.4.11 is least ambiguous about — real operable form-control boundaries (Input/Select/
      Textarea already apply `border-input`, not `border-border`). */
-  --border: oklch(0.87 0.01 250);
+  --border: #e2e7f3;
   --input: oklch(0.667 0.01 250);
   --ring: var(--primary);
   /* Chart series read from the same brand family the rest of the app uses — primary/secondary/tertiary get the brand hues, the
@@ -137,7 +145,7 @@
   --chart-3: var(--brand-accent);
   --chart-4: oklch(0.75 0 0);
   --chart-5: oklch(0.5 0 0);
-  --radius: 0.5rem;
+  --radius: 0.75rem;
 
   /* Scrollbars. The thumb has to clear the 3:1 non-text bar (WCAG 1.4.11)
      against the surface it sits on, so it is a solid grey rather than the
@@ -153,11 +161,16 @@
      and blue)" reads as "keep this a disciplined blue palette," not "pick two more arbitrary brand colours." */
   /* A bright sky blue — ~5.9:1 against white, clears AA as real text too (not just a decorative fill), and pairs
      with --primary for a believable two-stop "brand gradient" that stays inside the blue family end to end. */
-  --brand-secondary: #0369a1;
+  --brand-secondary: #0b6fb8;
   --brand-secondary-foreground: oklch(0.985 0 0);
   /* A warm amber — the one non-blue note in the palette, used sparingly (chip variety, the odd highlight) the same
      way the previous passes already used it; shared with --warning below rather than inventing a fourth colour. */
-  --brand-accent: #a26807;
+  --brand-accent: #c2410c;
+  /* Decorative-only colours (fills, glows, gradients, never body text): bright cyan, warm coral, sunny yellow and a soft pink. */
+  --brand-cyan: #12b5e5;
+  --brand-coral: #ff6a3d;
+  --brand-sun: #ffb020;
+  --brand-pink: #ff5c8a;
   --brand-accent-foreground: oklch(0.985 0 0);
 
   /* Semantic status colors — success/warning/destructive centralize a pattern previously hardcoded per-component. */
@@ -169,25 +182,30 @@
   /* Brand gradient — `className="gradient-brand"`, the app's one "AI does the work" CTA treatment (Button's
      `gradient` variant): deep blue -> sky blue, not a second hue. Both endpoints clear 4.5:1 against white on their
      own (--primary 6.70:1, --brand-secondary 4.54:1), so no extra darkening is needed for white button-label text. */
-  --gradient-brand: linear-gradient(135deg, var(--primary), var(--brand-secondary));
+  --gradient-brand: linear-gradient(120deg, #3350ff 0%, #1f6bff 55%, #0a78cc 100%);
+  /* Headline highlight: blue to cyan and back, so the slow shimmer loops cleanly. Large display text only. */
+  --gradient-text: linear-gradient(100deg, #3350ff 0%, #0891d1 50%, #3350ff 100%);
+  /* Decorative multi-colour gradient for borders, bars and glows. */
+  --gradient-vivid: linear-gradient(120deg, #3350ff, #12b5e5 45%, #ffb020 75%, #ff6a3d);
 
   /* Colored ambient shadows (tinted with --primary, not neutral black) —
      available via shadow-card/elevated/floating/pop utilities. rgb(29 78 216) = --primary (#1d4ed8). */
-  --shadow-card-value: 0 1px 2px rgba(29, 78, 216, 0.06), 0 1px 4px rgba(29, 78, 216, 0.04);
-  --shadow-elevated-value: 0 4px 12px rgba(29, 78, 216, 0.08), 0 2px 4px rgba(29, 78, 216, 0.06);
-  --shadow-floating-value: 0 24px 48px rgba(29, 78, 216, 0.12), 0 8px 16px rgba(29, 78, 216, 0.08);
-  --shadow-pop-value: 0 0 0 1px rgba(29, 78, 216, 0.16), 0 12px 32px rgba(29, 78, 216, 0.18);
+  --shadow-card-value: 0 1px 2px rgba(15, 26, 61, 0.04), 0 4px 14px -4px rgba(51, 80, 255, 0.1);
+  --shadow-elevated-value: 0 2px 4px rgba(15, 26, 61, 0.04), 0 14px 32px -8px rgba(51, 80, 255, 0.18);
+  --shadow-floating-value: 0 4px 8px rgba(15, 26, 61, 0.04), 0 32px 64px -16px rgba(51, 80, 255, 0.28);
+  --shadow-pop-value: 0 0 0 1px rgba(51, 80, 255, 0.18), 0 18px 40px -10px rgba(51, 80, 255, 0.32);
+  --shadow-glow-value: 0 10px 30px -6px rgba(51, 80, 255, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.25) inset;
 
   /* Sidebar is a distinctly-toned panel, not the same surface as
      cards/background — a faint brand-blue tint (hue ~250, the same
      family as --primary) rather than the plain page background. */
-  --sidebar: oklch(0.97 0.008 250);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar: #f5f7ff;
+  --sidebar-foreground: #0f1a3d;
+  --sidebar-primary: #3350ff;
   --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0.006 250);
+  --sidebar-accent: #e8edff;
+  --sidebar-accent-foreground: #1b2a6b;
+  --sidebar-border: #e2e7f3;
   --sidebar-ring: oklch(0.708 0 0);
 
   /* Card hover wash (ui/card.tsx's feature/tool/pricing variants) — a
@@ -261,11 +279,10 @@
    hero-adjacent sections now — the homepage hero itself uses
    `section-dark` instead (see below). */
 @utility hero-glow {
-  background-image: radial-gradient(
-    ellipse 1100px 640px at 50% -10%,
-    color-mix(in oklch, var(--primary), transparent 90%),
-    transparent
-  );
+  background-image:
+    radial-gradient(ellipse 700px 480px at 15% -10%, color-mix(in oklch, var(--brand-cyan), transparent 80%), transparent),
+    radial-gradient(ellipse 800px 520px at 85% -10%, color-mix(in oklch, var(--primary), transparent 84%), transparent),
+    radial-gradient(ellipse 600px 400px at 60% 110%, color-mix(in oklch, var(--brand-coral), transparent 90%), transparent);
   background-repeat: no-repeat;
 }
 
@@ -431,25 +448,24 @@ html {
    per-component JS check.
    ------------------------------------------------------------------ */
 
-/* A deep blue-black band for the hero and stat/proof sections — client direction: keep the reference site's dark,
-   richly-animated hero energy, but recolour it from purple to blue-black. Two soft brand glows (deep blue + sky
-   blue) over a near-black navy, with the grid faintly showing through. Text on it is white; use `.on-dark` helpers
-   for muted copy. */
-@utility section-dark {
-  color: oklch(0.985 0 0);
-  background-color: oklch(0.16 0.03 255);
+/* Light, colourful "mesh" band for heroes and highlight sections (client direction 2026-10: no dark sections, bright and
+   attractive colour). Blue, cyan, sun and coral washes over near-white; text stays the normal navy foreground. */
+@utility section-mesh {
+  background-color: var(--background);
   background-image:
-    radial-gradient(ellipse 60% 70% at 88% 0%, color-mix(in oklch, var(--primary), transparent 55%), transparent 65%),
-    radial-gradient(ellipse 50% 60% at 6% 100%, color-mix(in oklch, var(--brand-secondary), transparent 65%), transparent 65%);
+    radial-gradient(ellipse 50% 55% at 12% 10%, color-mix(in oklch, var(--brand-cyan), transparent 78%), transparent 70%),
+    radial-gradient(ellipse 45% 50% at 88% 6%, color-mix(in oklch, var(--primary), transparent 80%), transparent 70%),
+    radial-gradient(ellipse 40% 45% at 75% 85%, color-mix(in oklch, var(--brand-coral), transparent 84%), transparent 70%),
+    radial-gradient(ellipse 40% 45% at 20% 90%, color-mix(in oklch, var(--brand-sun), transparent 86%), transparent 70%);
 }
 
 /* A soft blue-on-blue wash for storytelling sections that should feel lighter than `muted` without being plain
    white — deep blue and sky blue only, same disciplined single-hue-family palette as the rest of the brand. */
 @utility section-aurora {
   background-image:
-    radial-gradient(ellipse 55% 60% at 12% 8%, color-mix(in oklch, var(--brand-secondary), transparent 88%), transparent 70%),
-    radial-gradient(ellipse 60% 70% at 88% 18%, color-mix(in oklch, var(--primary), transparent 88%), transparent 70%),
-    radial-gradient(ellipse 60% 60% at 50% 110%, color-mix(in oklch, oklch(0.85 0.05 250), transparent 75%), transparent 70%);
+    radial-gradient(ellipse 55% 60% at 8% 10%, color-mix(in oklch, var(--brand-cyan), transparent 88%), transparent 70%),
+    radial-gradient(ellipse 60% 70% at 92% 20%, color-mix(in oklch, var(--primary), transparent 90%), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 60% 110%, color-mix(in oklch, var(--brand-coral), transparent 90%), transparent 70%);
 }
 
 @utility bg-dots {
@@ -472,7 +488,7 @@ html {
     inset: -1px;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, var(--primary), var(--brand-secondary) 55%, transparent 80%);
+    background: var(--gradient-vivid);
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -551,7 +567,7 @@ html {
     inset: 0;
     border-radius: inherit;
     padding: 1px;
-    background: linear-gradient(135deg, var(--primary), var(--brand-secondary) 55%, transparent 80%);
+    background: var(--gradient-vivid);
     -webkit-mask:
       linear-gradient(#000 0 0) content-box,
       linear-gradient(#000 0 0);
@@ -565,4 +581,118 @@ html {
   &:hover::after {
     opacity: 1;
   }
+}
+
+/* ------------------------------------------------------------------
+   2026-10 premium refresh: extra motion and colour utilities.
+   All CSS-only; the global prefers-reduced-motion rule above stops them.
+   ------------------------------------------------------------------ */
+
+/* Gradient headline text (blue -> cyan). Large text only. */
+@utility text-gradient {
+  background-image: var(--gradient-text);
+  background-size: 200% auto;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-shimmer 8s ease-in-out infinite;
+}
+@keyframes text-shimmer {
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Big soft colour blobs that slowly morph and drift behind heroes. */
+@keyframes blob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+    border-radius: 42% 58% 60% 40% / 45% 45% 55% 55%;
+  }
+  33% {
+    transform: translate3d(30px, -40px, 0) scale(1.08);
+    border-radius: 60% 40% 38% 62% / 55% 60% 40% 45%;
+  }
+  66% {
+    transform: translate3d(-24px, 24px, 0) scale(0.95);
+    border-radius: 38% 62% 55% 45% / 40% 55% 45% 60%;
+  }
+}
+@utility animate-blob {
+  animation: blob 18s ease-in-out infinite;
+}
+
+/* Endless horizontal scroll for logo/feature rows. Duplicate the content once inside. */
+@keyframes marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+@utility animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+@utility marquee-fade {
+  mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+}
+
+/* A rotating conic border: wrap content in an element with this class and give the inner element its own background. */
+@property --border-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+@keyframes border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+@utility border-animated {
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--card), var(--card)) padding-box,
+    conic-gradient(from var(--border-angle), #3350ff, #12b5e5, #ffb020, #ff6a3d, #ff5c8a, #3350ff) border-box;
+  animation: border-spin 6s linear infinite;
+}
+
+/* Frosted glass panel for floating UI over colourful backgrounds. */
+@utility glass {
+  background-color: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(14px) saturate(1.6);
+  -webkit-backdrop-filter: blur(14px) saturate(1.6);
+  border: 1px solid rgb(255 255 255 / 0.8);
+}
+
+/* Small pulsing "live" dot. */
+@keyframes ping-soft {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  80%,
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+@utility animate-ping-soft {
+  animation: ping-soft 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* Fine line grid that fades out from the top centre, for light heroes. */
+@utility bg-grid-light {
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--primary), transparent 92%) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--primary), transparent 92%) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 80%);
 }

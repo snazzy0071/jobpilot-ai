@@ -27,7 +27,7 @@ const WASH =
   "isolate relative before:pointer-events-none before:absolute before:inset-0 before:-z-10 before:bg-[image:var(--gradient-card-wash)] before:opacity-0 before:transition-opacity before:duration-300 hover:before:opacity-100"
 
 const cardVariants = cva(
-  "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-xl border py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-xl *:[img:last-child]:rounded-b-xl",
+  "group/card flex flex-col gap-(--card-spacing) overflow-hidden rounded-2xl border py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0 has-[>img:first-child]:pt-0 data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0 *:[img:first-child]:rounded-t-2xl *:[img:last-child]:rounded-b-2xl",
   {
     variants: {
       variant: {
@@ -37,7 +37,7 @@ const cardVariants = cva(
         // had no visual presence at all against the page. Keeping shadow-card at rest, same as every other variant below,
         // and reserving the stronger shadow for hover instead.
         plain:
-          "border-border bg-card shadow-card transition-all duration-300 ease-out hover:-translate-y-0.5 hover:shadow-[0_8px_30px_rgba(0,0,0,0.08)]",
+          "border-border/80 bg-card shadow-card transition-all duration-300 ease-out hover:shadow-elevated",
         feature: `${WASH} border-border bg-card shadow-card transition-all duration-300 ease-out hover:-translate-y-1 hover:border-primary/40 hover:shadow-pop`,
         tool: `${WASH} border-border bg-card shadow-elevated transition-all duration-300 ease-out hover:-translate-y-1.5 hover:border-primary/50 hover:shadow-floating`,
         metric:
@@ -104,7 +104,7 @@ function CardIcon({
     <div
       data-slot="card-icon"
       className={cn(
-        "flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/15 transition-transform duration-300 group-hover/card:scale-110 group-hover/card:-rotate-3",
+        "flex size-11 items-center justify-center rounded-2xl bg-linear-to-br from-primary/12 to-brand-cyan/15 text-primary ring-1 ring-primary/15 transition-transform duration-300 group-hover/card:scale-110 group-hover/card:-rotate-6",
         className
       )}
     >

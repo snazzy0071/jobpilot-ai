@@ -13,16 +13,16 @@ const buttonVariants = cva(
         default:
           // hover:bg-[var(--primary-hover)] rather than the default opacity-based hover: a flat, exact darker-blue step
           // reads as "deep, confident SaaS button" better than a 90%-opacity tint of --primary would.
-          "bg-primary text-primary-foreground shadow-card hover:bg-[var(--primary-hover)] hover:shadow-[0_4px_12px_rgba(29,78,216,0.35)] hover:-translate-y-px",
+          "bg-primary text-primary-foreground shadow-[0_6px_16px_-6px_rgba(51,80,255,0.55)] hover:bg-[var(--primary-hover)] hover:shadow-[0_10px_24px_-8px_rgba(51,80,255,0.65)] hover:-translate-y-0.5",
         // Reserved for the one or two genuinely primary "AI does the
         // work" moments per page (e.g. "Generate cover letter") — not a
         // drop-in replacement for `default`. See docs/DESIGN_SYSTEM.md's
         // .gradient-brand and docs/SCREENSHOT_MAP.md's
         // create-cover-letter.png.
         gradient:
-          "gradient-brand text-white shadow-card hover:shadow-elevated hover:-translate-y-px",
+          "gradient-brand bg-size-[200%_auto] bg-left text-white shadow-glow duration-500 hover:bg-right hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-8px_rgba(51,80,255,0.7)]",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-white shadow-card hover:border-primary/40 hover:bg-white hover:text-primary hover:-translate-y-0.5 aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:
@@ -36,7 +36,8 @@ const buttonVariants = cva(
           "h-9 gap-1.5 px-3.5 has-data-[icon=inline-end]:pr-3 has-data-[icon=inline-start]:pl-3",
         xs: "h-6 gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1 rounded-[min(var(--radius-md),12px)] px-3 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-10 gap-1.5 px-5 has-data-[icon=inline-end]:pr-4 has-data-[icon=inline-start]:pl-4",
+        lg: "h-11 gap-2 px-6 text-[0.95rem] has-data-[icon=inline-end]:pr-5 has-data-[icon=inline-start]:pl-5",
+        xl: "h-13 gap-2 rounded-xl px-7 text-base font-semibold has-data-[icon=inline-end]:pr-6 has-data-[icon=inline-start]:pl-6",
         icon: "size-9",
         "icon-xs":
           "size-6 rounded-[min(var(--radius-md),10px)] in-data-[slot=button-group]:rounded-lg [&_svg:not([class*='size-'])]:size-3",
