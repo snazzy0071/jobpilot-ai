@@ -696,3 +696,26 @@ html {
   background-size: 56px 56px;
   mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 20%, transparent 80%);
 }
+
+/* Auth pages: little colour bubbles that drift upwards and fade. */
+@keyframes rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.6);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.9;
+  }
+  100% {
+    transform: translate3d(var(--drift, 20px), -110vh, 0) scale(1.1);
+    opacity: 0;
+  }
+}
+@utility animate-rise {
+  animation: rise var(--rise-duration, 16s) linear infinite;
+}
+
+/* Slow full rotation for decorative rings. */
+@utility animate-spin-slow {
+  animation: spin 40s linear infinite;
+}

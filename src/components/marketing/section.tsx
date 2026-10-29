@@ -17,6 +17,7 @@ export function Section({
   containerClassName,
   className,
   decorative,
+  background,
   children,
 }: {
   tone?: keyof typeof TONE_CLASSES;
@@ -32,12 +33,15 @@ export function Section({
    * override either way.
    */
   decorative?: boolean;
+  /** A full-bleed background layer (e.g. HeroBackdrop) drawn behind the content, edge to edge. */
+  background?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const showBackground = decorative ?? tone === "default";
 
   return (
     <section className={cn("relative py-20 sm:py-28", TONE_CLASSES[tone], className)}>
+      {background}
       {showBackground && <SectionBackground />}
       <Container className={cn("relative", containerClassName)}>{children}</Container>
     </section>

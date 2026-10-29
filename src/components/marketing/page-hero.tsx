@@ -66,8 +66,11 @@ export function PageHero({
     // and positioned specifically for a hero) — layering Section's own default SectionBackground glow
     // underneath it doubled up the blur behind the one composition (the product mockup/floating
     // cards) where a clean, uncluttered backdrop matters most.
-    <Section decorative={false} className={cn("-mt-[68px] overflow-hidden pt-36 pb-14 sm:pt-44 sm:pb-24", className)}>
-      <HeroBackdrop intensity="soft" />
+    <Section
+      decorative={false}
+      background={<HeroBackdrop intensity="soft" />}
+      className={cn("-mt-[68px] overflow-hidden pt-36 pb-14 sm:pt-44 sm:pb-24", className)}
+    >
       {breadcrumbs && <div className="mb-8">{breadcrumbs}</div>}
       {visual ? (
         <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
