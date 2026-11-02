@@ -19,8 +19,8 @@ export function HeaderShell({ children }: { children: React.ReactNode }) {
       className={cn(
         "sticky top-0 z-50 border-b transition-all duration-300",
         scrolled
-          ? "border-border/70 bg-white/80 shadow-[0_8px_30px_-12px_rgba(15,26,61,0.15)] backdrop-blur-xl backdrop-saturate-150"
-          : "border-transparent bg-white/40 backdrop-blur-md",
+          ? "border-border/70 bg-surface/80 shadow-[0_8px_30px_-12px_rgba(15,26,61,0.15)] backdrop-blur-xl backdrop-saturate-150"
+          : "border-transparent bg-surface/40 backdrop-blur-md",
       )}
     >
       {children}

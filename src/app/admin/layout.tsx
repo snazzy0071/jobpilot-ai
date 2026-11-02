@@ -9,6 +9,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { MobileNavTrigger } from "@/components/layout/mobile-nav-trigger";
 import { CurrentPageTitle } from "@/components/layout/current-page-title";
 import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Logo } from "@/components/layout/logo";
 
 // See src/app/(dashboard)/layout.tsx's own comment on why this is set
@@ -38,7 +39,7 @@ export default async function AdminLayout({
         <AdminSidebar permissions={permissions} />
       </div>
       <div className="flex min-w-0 flex-1 flex-col bg-background md:min-h-0 md:overflow-hidden md:rounded-3xl md:border md:border-border/70 md:shadow-elevated">
-        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/70 bg-white/70 px-4 backdrop-blur md:px-6">
+        <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/70 bg-surface/70 px-4 backdrop-blur md:px-6">
           <div className="flex items-center gap-3">
             <MobileNavTrigger>
               <AdminSidebar permissions={permissions} />
@@ -53,7 +54,8 @@ export default async function AdminLayout({
           <div className="flex items-center gap-2 sm:gap-3">
             <Badge variant="secondary" className="hidden sm:inline-flex">Admin</Badge>
             <ViewPublicSiteLink />
-            <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
+            <ThemeToggle />
+              <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
           </div>
         </header>
         <main id="main-content" className="dashboard-glow flex-1 p-6 md:min-h-0 md:scroll-pt-6 md:overflow-y-auto">

@@ -14,7 +14,7 @@ export function PersonaCards({ personas }: { personas: Persona[] }) {
         <Reveal key={persona.who} delay={Math.min(index * 0.07, 0.3)} className="h-full">
           <Link
             href={persona.href}
-            className="card-sheen group flex h-full flex-col gap-3 rounded-3xl border border-white bg-white/80 p-7 shadow-elevated backdrop-blur focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="card-sheen group flex h-full flex-col gap-3 rounded-3xl border border-[var(--glass-border)] bg-surface/80 p-7 shadow-elevated backdrop-blur focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           >
             <span className={cn("flex size-12 items-center justify-center rounded-2xl text-white transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110", tileGradient(index))}>
               <persona.icon className="size-5" aria-hidden="true" />

@@ -59,7 +59,7 @@ export function TemplateCard({
           type="button"
           onClick={onPreview}
           aria-label={`Preview the ${template.name} template with your CV`}
-          className="relative block overflow-hidden rounded-md border bg-white text-left shadow-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+          className="paper relative block overflow-hidden rounded-md border bg-white text-left shadow-sm outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           <div className="origin-top transition-transform duration-300 ease-out motion-safe:group-hover/card:scale-[1.035] motion-safe:group-focus-within/card:scale-[1.035]">
             <TemplateRenderer templateSlug={template.slug} data={CV_TEMPLATE_SAMPLE_DATA} mode="thumbnail" />

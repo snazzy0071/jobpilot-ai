@@ -1,5 +1,6 @@
 import { BadgeCheckIcon, FileTextIcon, ScanSearchIcon, SparklesIcon } from "lucide-react";
 import { Logo } from "@/components/layout/logo";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { SkipLink } from "@/components/layout/skip-link";
 import { AuthBackdrop } from "@/components/auth/auth-backdrop";
 import { HeroStage } from "@/components/marketing/home/hero-stage";
@@ -58,15 +59,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </div>
 
         <div className="relative flex flex-col items-center justify-center gap-8 px-4 py-12 sm:py-16">
+          <ThemeToggle className="absolute top-5 right-5" />
           <Logo className="lg:hidden" />
           <Reveal delay={0.1} distance={24} className="w-full max-w-md">
             <div
               className={cn(
                 "border-animated rounded-[1.75rem] shadow-[0_40px_80px_-24px_rgba(51,80,255,0.35)]",
                 // Restyle each page's Card into a roomy glass panel without touching the pages.
-                "[&>[data-slot=card]]:rounded-[1.65rem] [&>[data-slot=card]]:border-0 [&>[data-slot=card]]:bg-white/85 [&>[data-slot=card]]:px-3 [&>[data-slot=card]]:py-8 [&>[data-slot=card]]:shadow-none [&>[data-slot=card]]:backdrop-blur-xl sm:[&>[data-slot=card]]:px-5",
+                "[&>[data-slot=card]]:rounded-[1.65rem] [&>[data-slot=card]]:border-0 [&>[data-slot=card]]:bg-surface/85 [&>[data-slot=card]]:px-3 [&>[data-slot=card]]:py-8 [&>[data-slot=card]]:shadow-none [&>[data-slot=card]]:backdrop-blur-xl sm:[&>[data-slot=card]]:px-5",
                 "[&_[data-slot=card-title]]:font-heading [&_[data-slot=card-title]]:text-2xl [&_[data-slot=card-title]]:font-bold [&_[data-slot=card-title]]:tracking-tight",
-                "[&_input]:h-11 [&_input]:rounded-xl [&_input]:bg-white [&_input]:transition-shadow [&_input:focus-visible]:shadow-[0_0_0_4px_rgba(51,80,255,0.12)]",
+                "[&_input]:h-11 [&_input]:rounded-xl [&_input]:bg-surface [&_input]:transition-shadow [&_input:focus-visible]:shadow-[0_0_0_4px_rgba(51,80,255,0.12)]",
                 "[&_button[type=submit]]:h-11 [&_button[type=submit]]:rounded-xl [&_button[type=submit]]:text-[0.95rem] [&_button[type=submit]]:font-semibold [&_button[type=submit]]:bg-[image:var(--gradient-brand)] [&_button[type=submit]]:shadow-glow",
               )}
             >

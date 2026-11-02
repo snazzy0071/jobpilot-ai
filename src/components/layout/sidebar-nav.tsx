@@ -80,7 +80,7 @@ export function SidebarNav({
               "group/nav flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm transition-all duration-200",
               active
                 ? "gradient-brand font-medium text-white shadow-[0_8px_20px_-8px_rgba(51,80,255,0.7)]"
-                : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-white hover:text-sidebar-foreground hover:shadow-card",
+                : "text-sidebar-foreground/75 hover:translate-x-0.5 hover:bg-surface hover:text-sidebar-foreground hover:shadow-card",
             )}
           >
             {/* Tried a filled icon tile (gradient background) here — read as too heavy/dark. Just the glyph itself in

@@ -20,7 +20,7 @@ export function ToolMarquee() {
       {ITEMS.map((item) => (
         <li
           key={item.label}
-          className="flex items-center gap-2.5 rounded-full border border-border/80 bg-white px-4 py-2 text-sm font-medium whitespace-nowrap shadow-card"
+          className="flex items-center gap-2.5 rounded-full border border-border/80 bg-surface px-4 py-2 text-sm font-medium whitespace-nowrap shadow-card"
         >
           <span className={`flex size-7 items-center justify-center rounded-full ${item.tone}`}>
             <item.icon className="size-3.5" />

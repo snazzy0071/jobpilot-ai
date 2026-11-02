@@ -9,6 +9,7 @@ import { SkipLink } from "@/components/layout/skip-link";
 import { MobileNavTrigger } from "@/components/layout/mobile-nav-trigger";
 import { CurrentPageTitle } from "@/components/layout/current-page-title";
 import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Logo } from "@/components/layout/logo";
 import { Badge } from "@/components/ui/badge";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
@@ -57,7 +58,7 @@ export default async function DashboardLayout({
           <DashboardSidebar plan={plan} />
         </div>
         <div className="flex min-w-0 flex-1 flex-col bg-background md:min-h-0 md:overflow-hidden md:rounded-3xl md:border md:border-border/70 md:shadow-elevated">
-          <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/70 bg-white/70 px-4 backdrop-blur md:px-6">
+          <header className="flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border/70 bg-surface/70 px-4 backdrop-blur md:px-6">
             <div className="flex items-center gap-3">
               <MobileNavTrigger>
                 <DashboardSidebar plan={plan} />
@@ -74,6 +75,7 @@ export default async function DashboardLayout({
                 {plan} plan
               </Badge>
               <ViewPublicSiteLink />
+              <ThemeToggle />
               <UserMenu
                 email={user.email ?? null}
                 fullName={profile?.full_name ?? null}

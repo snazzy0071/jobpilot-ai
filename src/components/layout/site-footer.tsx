@@ -28,7 +28,7 @@ const COLUMNS: { title: string; links: NavLink[] }[] = [
 
 export function SiteFooter() {
   return (
-    <footer className="relative overflow-hidden bg-linear-to-b from-background to-[#eef2ff]">
+    <footer className="relative overflow-hidden bg-linear-to-b from-background to-[#eef2ff] dark:to-[#0d1430]">
       <div className="absolute inset-x-0 top-0 h-px bg-[image:var(--gradient-vivid)] opacity-60" aria-hidden="true" />
       <div className="animate-blob pointer-events-none absolute -bottom-40 -left-24 size-96 bg-brand-cyan/15 blur-3xl" aria-hidden="true" />
       <div className="animate-blob pointer-events-none absolute -right-24 -bottom-40 size-96 bg-primary/10 blur-3xl [animation-delay:-9s]" aria-hidden="true" />

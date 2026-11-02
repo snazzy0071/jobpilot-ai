@@ -35,7 +35,7 @@ export function CoverLetterTemplateRenderer({
 
   if (mode === "print") {
     return (
-      <div className="pdf-export bg-white text-black">
+      <div className="paper pdf-export bg-white text-black">
         <Layout data={data} />
       </div>
     );

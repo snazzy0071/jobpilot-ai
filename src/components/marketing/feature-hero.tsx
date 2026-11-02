@@ -45,7 +45,7 @@ export function FeatureHero({
         demo ? (
           <ProductFrame>
             <div className="animate-blob pointer-events-none absolute -inset-10 -z-10 bg-radial from-primary/30 via-brand-cyan/20 to-transparent blur-3xl" aria-hidden="true" />
-            <div className="rounded-[1.4rem] border border-white/80 bg-white/60 p-2 shadow-floating backdrop-blur sm:p-3">{demo}</div>
+            <div className="rounded-[1.4rem] border border-[var(--glass-border)] bg-surface/60 p-2 shadow-floating backdrop-blur sm:p-3">{demo}</div>
           </ProductFrame>
         ) : undefined
       }

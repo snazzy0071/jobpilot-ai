@@ -55,7 +55,7 @@ export function SiteNav() {
 
   return (
     <>
-      <nav aria-label="Primary" className="hidden items-center gap-1 rounded-full border border-border/70 bg-white/70 p-1 shadow-card backdrop-blur md:flex">
+      <nav aria-label="Primary" className="hidden items-center gap-1 rounded-full border border-border/70 bg-surface/70 p-1 shadow-card backdrop-blur md:flex">
         <DropdownMenu>
           <DropdownMenuTrigger
             className={cn(

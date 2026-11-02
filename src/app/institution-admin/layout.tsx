@@ -11,6 +11,7 @@ import { UserMenu } from "@/components/layout/user-menu";
 import { MobileNavTrigger } from "@/components/layout/mobile-nav-trigger";
 import { CurrentPageTitle } from "@/components/layout/current-page-title";
 import { ViewPublicSiteLink } from "@/components/layout/view-public-site-link";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Logo } from "@/components/layout/logo";
 
 // See src/app/(dashboard)/layout.tsx's own comment on why this is set
@@ -46,6 +47,7 @@ export default async function InstitutionAdminLayout({
           <div className="flex items-center gap-2 sm:gap-3">
             <Badge variant="secondary" className="hidden sm:inline-flex">Institution admin</Badge>
             <ViewPublicSiteLink />
+            <ThemeToggle />
             <UserMenu email={user.email ?? null} fullName={profile?.full_name ?? null} />
           </div>
         </header>

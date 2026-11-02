@@ -22,7 +22,7 @@ const buttonVariants = cva(
         gradient:
           "gradient-brand bg-size-[200%_auto] bg-left text-white shadow-glow duration-500 hover:bg-right hover:-translate-y-0.5 hover:shadow-[0_16px_36px_-8px_rgba(51,80,255,0.7)]",
         outline:
-          "border-border bg-white shadow-card hover:border-primary/40 hover:bg-white hover:text-primary hover:-translate-y-0.5 aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-surface shadow-card hover:border-primary/40 hover:bg-surface hover:text-primary hover:-translate-y-0.5 aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         ghost:

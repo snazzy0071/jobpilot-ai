@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 
 const TONE_CLASSES = {
   default: "bg-background",
-  muted: "bg-linear-to-b from-[#f4f7ff] to-[#fbfcff]",
+  muted: "bg-linear-to-b from-[#f4f7ff] to-[#fbfcff] dark:from-[#0d1430] dark:to-[#0a0f1f]",
   primary: "bg-primary text-primary-foreground",
   aurora: "bg-background section-aurora",
   // Kept as a tone name for older callers, but now a light colourful mesh: the client doesn't want dark sections.

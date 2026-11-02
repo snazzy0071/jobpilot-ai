@@ -74,13 +74,17 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // to suppress for it. suppressHydrationWarning stays for the one remaining, unrelated reason:
     // some browser extensions inject their own attributes into the live DOM before React hydrates
     // (see strip-extension-attrs.js and its own comment on <body> below).
-    <html lang="en" className={`${dmSans.variable} ${jetbrainsMono.variable} ${generalSans.variable} h-full antialiased`}>
+    <html lang="en" className={`${dmSans.variable} ${jetbrainsMono.variable} ${generalSans.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Strips browser-extension-injected attributes (bis_skin_checked and friends) before they can cause a hydration
             mismatch — see the file's own comment. Deliberately synchronous, not async/defer: it has to run during HTML
             parsing, before hydration, and a same-origin <script src> needs no `unsafe-inline` CSP carve-out to do that. */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/strip-extension-attrs.js" />
+        {/* Applies a saved dark-mode choice before first paint (same synchronous same-origin pattern as above), so the
+            `dark` class it may add to <html> is why <html> also carries suppressHydrationWarning. */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/theme-init.js" />
       </head>
       {/*
         suppressHydrationWarning here (and not just <html>): some browser extensions (Bitdefender's Anti-tracker and

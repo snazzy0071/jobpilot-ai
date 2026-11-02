@@ -5,6 +5,7 @@ import { Logo } from "@/components/layout/logo";
 import { Container } from "@/components/marketing/container";
 import { SiteNav } from "@/components/layout/site-nav";
 import { HeaderShell } from "@/components/layout/header-shell";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 
 export function SiteHeader() {
   return (
@@ -12,7 +13,11 @@ export function SiteHeader() {
       <Container className="flex h-[68px] items-center justify-between gap-4">
         <Logo />
         <SiteNav />
+        <div className="flex items-center gap-2 md:hidden">
+          <ThemeToggle />
+        </div>
         <div className="hidden items-center gap-2 md:flex">
+          <ThemeToggle className="mr-1" />
           <Button variant="ghost" className="rounded-full px-4" render={<Link href="/login">Sign in</Link>} />
           <Button
             variant="gradient"

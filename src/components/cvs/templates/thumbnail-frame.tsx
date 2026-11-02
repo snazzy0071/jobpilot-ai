@@ -27,7 +27,7 @@ export function TemplateThumbnailFrame({ children, backgroundImage }: { children
   }, []);
 
   return (
-    <div ref={containerRef} className="relative w-full overflow-hidden bg-white" style={{ aspectRatio: "210 / 297" }} aria-hidden inert>
+    <div ref={containerRef} className="paper relative w-full overflow-hidden bg-white" style={{ aspectRatio: "210 / 297" }} aria-hidden inert>
       <div
         className="pointer-events-none absolute top-0 left-0 origin-top-left overflow-hidden text-black"
         style={{ width: PAGE_WIDTH, height: PAGE_HEIGHT, transform: `scale(${scale})`, backgroundColor: "#ffffff", backgroundImage }}

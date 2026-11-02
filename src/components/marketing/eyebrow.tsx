@@ -5,7 +5,7 @@ export function Eyebrow({ className, children }: { className?: string; children:
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-white/80 px-3 py-1 text-xs font-semibold tracking-wide text-primary uppercase shadow-[0_2px_10px_-2px_rgba(51,80,255,0.18)] backdrop-blur",
+        "inline-flex w-fit items-center gap-2 rounded-full border border-primary/15 bg-surface/80 px-3 py-1 text-xs font-semibold tracking-wide text-primary uppercase shadow-[0_2px_10px_-2px_rgba(51,80,255,0.18)] backdrop-blur",
         className,
       )}
     >

@@ -190,7 +190,7 @@ export function A4Page({
           return (
             <div
               key={pageIndex}
-              className="relative overflow-hidden bg-white text-black shadow-md"
+              className="paper relative overflow-hidden bg-white text-black shadow-md"
               style={{ width: PAGE_WIDTH * scale, height: PAGE_HEIGHT * scale }}
               // Every page after the first holds a duplicate of the document — keep it out of the tab order and the accessibility tree.
               inert={!first}

@@ -60,7 +60,7 @@ export function FeatureSplit({
           aria-hidden="true"
         />
         <ProductFrame>
-          <div className="rounded-[1.4rem] border border-white/80 bg-white/60 p-2 shadow-floating backdrop-blur sm:p-3">{visual}</div>
+          <div className="rounded-[1.4rem] border border-[var(--glass-border)] bg-surface/60 p-2 shadow-floating backdrop-blur sm:p-3">{visual}</div>
         </ProductFrame>
       </Reveal>
     </div>

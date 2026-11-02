@@ -2,12 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Tailwind's built-in `dark:` variant is media-query-based by default
-   (prefers-color-scheme). This app is light-only (see :root below — there
-   is no .dark block anymore, and nothing ever adds a .dark class), so this
-   override stays: without it, `dark:` utilities still scattered through
-   the app would silently reactivate off a visitor's OS colour scheme
-   instead of staying permanently inert. */
+/* `dark:` follows the `.dark` class on <html> (set by the theme toggle, see public/theme-init.js), not the OS
+   setting: light is the default, and dark is only ever the visitor's own choice. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -29,6 +25,7 @@
   --shadow-floating: var(--shadow-floating-value);
   --shadow-pop: var(--shadow-pop-value);
   --shadow-glow: var(--shadow-glow-value);
+  --color-surface: var(--surface);
   --color-brand-cyan: var(--brand-cyan);
   --color-brand-coral: var(--brand-coral);
   --color-brand-sun: var(--brand-sun);
@@ -186,6 +183,10 @@
   /* Headline highlight: blue to cyan and back, so the slow shimmer loops cleanly. Large display text only. */
   --gradient-text: linear-gradient(100deg, #3350ff 0%, #0891d1 50%, #3350ff 100%);
   /* Decorative multi-colour gradient for borders, bars and glows. */
+  --glass-bg: rgb(255 255 255 / 0.72);
+  --glass-border: rgb(255 255 255 / 0.8);
+  /* Solid "raised" surface: pure white in light mode, navy card in dark. */
+  --surface: #ffffff;
   --gradient-vivid: linear-gradient(120deg, #3350ff, #12b5e5 45%, #ffb020 75%, #ff6a3d);
 
   /* Colored ambient shadows (tinted with --primary, not neutral black) —
@@ -223,6 +224,65 @@
       transparent
     ),
     radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in oklch, var(--brand-secondary), transparent 88%), transparent);
+}
+
+/* Dark mode (2026-11): opt-in via the header toggle, which puts `.dark` on <html>. Light stays the default because
+   the client prefers it. Deep navy surfaces, the same brand hues brightened a step so they read on dark, and text
+   contrast kept at WCAG AA. Decorative tokens (cyan/sun/coral/pink, gradients) are shared with light mode. */
+.dark {
+  color-scheme: dark;
+  --background: #0a0f1f;
+  --foreground: #e8ecf8;
+  --card: #111934;
+  --card-foreground: #e8ecf8;
+  --popover: #121a36;
+  --popover-foreground: #e8ecf8;
+  --primary: #4d68ff;
+  --primary-hover: #6680ff;
+  --primary-foreground: #ffffff;
+  --secondary: #1a2348;
+  --secondary-foreground: #dbe2ff;
+  --muted: #151d3b;
+  --muted-foreground: #9aa6c6;
+  --accent: #1c2650;
+  --accent-foreground: #dbe2ff;
+  --destructive: #ff6b6b;
+  --border: #243058;
+  --input: #46527d;
+  --brand-secondary: #38bdf8;
+  --brand-accent: #ff9a6b;
+  --success: #34d399;
+  --warning: #fbbf24;
+  --scrollbar-thumb: #3a4670;
+  --scrollbar-thumb-hover: #56638f;
+  --sidebar: #0d1430;
+  --sidebar-foreground: #e8ecf8;
+  --sidebar-primary: #4d68ff;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1a2348;
+  --sidebar-accent-foreground: #e8ecf8;
+  --sidebar-border: #1f2a52;
+  --sidebar-ring: #4d68ff;
+  --gradient-text: linear-gradient(100deg, #7d93ff 0%, #38c8f0 50%, #7d93ff 100%);
+  --shadow-card-value: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 14px -4px rgba(0, 0, 0, 0.5);
+  --shadow-elevated-value: 0 2px 4px rgba(0, 0, 0, 0.4), 0 14px 32px -8px rgba(0, 0, 0, 0.6);
+  --shadow-floating-value: 0 4px 8px rgba(0, 0, 0, 0.4), 0 32px 64px -16px rgba(0, 0, 0, 0.7);
+  --shadow-pop-value: 0 0 0 1px rgba(77, 104, 255, 0.35), 0 18px 40px -10px rgba(77, 104, 255, 0.35);
+  --glass-bg: rgb(17 25 52 / 0.7);
+  --glass-border: rgb(255 255 255 / 0.08);
+  --surface: #111934;
+}
+
+/* CV and cover-letter pages are paper: always white with dark ink, even in dark mode. */
+.dark .paper {
+  color-scheme: light;
+  --foreground: #0f1a3d;
+  --card: #ffffff;
+  --card-foreground: #0f1a3d;
+  --muted: #f2f5fc;
+  --muted-foreground: #5b6784;
+  --border: #e2e7f3;
+  --primary: #3350ff;
 }
 
 /* Brand gradient utility — `className="gradient-brand"` anywhere a
@@ -666,10 +726,10 @@ html {
 
 /* Frosted glass panel for floating UI over colourful backgrounds. */
 @utility glass {
-  background-color: rgb(255 255 255 / 0.72);
+  background-color: var(--glass-bg);
   backdrop-filter: blur(14px) saturate(1.6);
   -webkit-backdrop-filter: blur(14px) saturate(1.6);
-  border: 1px solid rgb(255 255 255 / 0.8);
+  border: 1px solid var(--glass-border);
 }
 
 /* Small pulsing "live" dot. */
