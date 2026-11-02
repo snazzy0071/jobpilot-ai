@@ -1,9 +1,13 @@
-// Applies the visitor's saved theme before first paint, so a dark-mode visitor never sees a white flash.
-// Light is the default; dark only applies when the visitor chose it with the theme toggle.
+// Applies the theme before first paint, so nobody sees a flash of the wrong colours.
+// Dark is the default; light applies only when the visitor chose it with the theme toggle.
+// /print/* pages (rendered to PDF) always stay light.
 (function () {
+  var dark = true;
   try {
-    if (localStorage.getItem("theme") === "dark") document.documentElement.classList.add("dark");
+    if (localStorage.getItem("theme") === "light") dark = false;
   } catch {
-    // Storage blocked: stay on light.
+    // Storage blocked: keep the default.
   }
+  if (location.pathname.indexOf("/print/") === 0) dark = false;
+  if (dark) document.documentElement.classList.add("dark");
 })();

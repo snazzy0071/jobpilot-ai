@@ -17,7 +17,7 @@ function applyTheme(theme: Theme) {
 
 /**
  * Light / dark switch. The saved choice is applied before paint by public/theme-init.js; this only reads it back
- * and flips it. Light is the default.
+ * and flips it. Dark is the default.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const [theme, setTheme] = useState<Theme | null>(null);

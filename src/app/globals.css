@@ -3,7 +3,7 @@
 @import "shadcn/tailwind.css";
 
 /* `dark:` follows the `.dark` class on <html> (set by the theme toggle, see public/theme-init.js), not the OS
-   setting: light is the default, and dark is only ever the visitor's own choice. */
+   setting: dark is the default, and light is the visitor's own choice. */
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
@@ -226,8 +226,7 @@
     radial-gradient(ellipse 700px 500px at 100% 0%, color-mix(in oklch, var(--brand-secondary), transparent 88%), transparent);
 }
 
-/* Dark mode (2026-11): opt-in via the header toggle, which puts `.dark` on <html>. Light stays the default because
-   the client prefers it. Deep navy surfaces, the same brand hues brightened a step so they read on dark, and text
+/* Dark mode (2026-11): the default theme (public/theme-init.js puts `.dark` on <html>); the header toggle switches to light. Deep navy surfaces, the same brand hues brightened a step so they read on dark, and text
    contrast kept at WCAG AA. Decorative tokens (cyan/sun/coral/pink, gradients) are shared with light mode. */
 .dark {
   color-scheme: dark;
