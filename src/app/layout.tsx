@@ -4,6 +4,7 @@ import { DM_Sans, JetBrains_Mono } from "next/font/google";
 import { siteConfig } from "@/config/site";
 import { CookieConsentBanner } from "@/components/consent/cookie-consent-banner";
 import { MotionProvider } from "@/components/motion/motion-provider";
+import { ThemeSync } from "@/components/layout/theme-sync";
 import "./globals.css";
 
 // Body/UI typeface (genesis-DESIGN.md: "Body Font: DM Sans"). Regular and medium weights only —
@@ -68,12 +69,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    // No theme/dark-mode class here on purpose — genesis-DESIGN.md is a light-only design system
-    // (globals.css no longer defines a `.dark` palette, and nothing in the app ever adds that
-    // class), so there's no pre-hydration theme choice left to apply and no class-list mismatch
-    // to suppress for it. suppressHydrationWarning stays for the one remaining, unrelated reason:
-    // some browser extensions inject their own attributes into the live DOM before React hydrates
-    // (see strip-extension-attrs.js and its own comment on <body> below).
+    // No `dark` class here: public/theme-init.js adds it before paint (dark is the default), and <ThemeSync /> puts it
+    // back if React ever rebuilds <html> on the client. suppressHydrationWarning covers that class and the attributes
+    // some browser extensions inject before React hydrates (see strip-extension-attrs.js and the comment on <body>).
     <html lang="en" className={`${dmSans.variable} ${jetbrainsMono.variable} ${generalSans.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
         {/* Strips browser-extension-injected attributes (bis_skin_checked and friends) before they can cause a hydration
@@ -95,6 +93,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         with that class of extension installed, and only the noted attributes, never real content.
       */}
       <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        <ThemeSync />
         <MotionProvider>
           {children}
           <CookieConsentBanner />

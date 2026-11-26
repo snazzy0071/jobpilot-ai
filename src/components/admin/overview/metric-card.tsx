@@ -8,13 +8,14 @@ import { cn } from "@/lib/utils";
 // Blue-family + amber + rose only — no purple/indigo/green, per the client's brand direction. A plain white card with
 // a small tinted icon read as "still just a white card" ("admin cards must be colourful... not simple white bg"),
 // so the tint now colours the whole card — a soft gradient wash at rest, not just a hover effect — plus a solid
-// icon chip, not just the icon glyph.
+// icon chip, not just the icon glyph. In dark mode the wash is the same hue at low opacity over the navy card, so the
+// light card text stays readable.
 export const METRIC_TINTS = {
-  blue: { card: "border-blue-200/70 bg-gradient-to-br from-blue-50 to-white", icon: "bg-blue-600 text-white" },
-  sky: { card: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white", icon: "bg-sky-600 text-white" },
-  cyan: { card: "border-cyan-200/70 bg-gradient-to-br from-cyan-50 to-white", icon: "bg-cyan-600 text-white" },
-  amber: { card: "border-amber-200/70 bg-gradient-to-br from-amber-50 to-white", icon: "bg-amber-600 text-white" },
-  rose: { card: "border-rose-200/70 bg-gradient-to-br from-rose-50 to-white", icon: "bg-rose-600 text-white" },
+  blue: { card: "border-blue-200/70 bg-gradient-to-br from-blue-50 to-white dark:border-blue-400/25 dark:from-blue-500/15 dark:to-card", icon: "bg-blue-600 text-white" },
+  sky: { card: "border-sky-200/70 bg-gradient-to-br from-sky-50 to-white dark:border-sky-400/25 dark:from-sky-500/15 dark:to-card", icon: "bg-sky-600 text-white" },
+  cyan: { card: "border-cyan-200/70 bg-gradient-to-br from-cyan-50 to-white dark:border-cyan-400/25 dark:from-cyan-500/15 dark:to-card", icon: "bg-cyan-600 text-white" },
+  amber: { card: "border-amber-200/70 bg-gradient-to-br from-amber-50 to-white dark:border-amber-400/25 dark:from-amber-500/15 dark:to-card", icon: "bg-amber-600 text-white" },
+  rose: { card: "border-rose-200/70 bg-gradient-to-br from-rose-50 to-white dark:border-rose-400/25 dark:from-rose-500/15 dark:to-card", icon: "bg-rose-600 text-white" },
 } as const;
 export type MetricTint = keyof typeof METRIC_TINTS;
 
