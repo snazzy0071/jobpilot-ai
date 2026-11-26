@@ -26,8 +26,18 @@ const RATE_LIMIT_MESSAGE = "Too many attempts — wait a few minutes and try aga
  *   enumerating accounts, not brute force, so a looser hourly cap is
  *   the right shape rather than a tight per-minute one.
  */
+/**
+ * Sign-in limits FAIL OPEN when the counter store itself is broken
+ * (unlike the email-sending forms below, which stay fail-closed). A
+ * misconfigured SUPABASE_SERVICE_ROLE_KEY or a missing migration used to
+ * turn every single login — admin included — into "Too many attempts"
+ * on the very first try, locking everyone out of the app. Supabase Auth
+ * already rate-limits password grants server-side, so letting a sign-in
+ * through when our own extra counter is unavailable is a safe default;
+ * the failure is still logged by consumeAnonymousRateLimit.
+ */
 export async function consumeSignInRateLimit(): Promise<boolean> {
-  return consumeIpRateLimit("auth_sign_in", { windowSeconds: FIVE_MINUTES_SECONDS, maxRequests: 10 });
+  return consumeIpRateLimit("auth_sign_in", { windowSeconds: FIVE_MINUTES_SECONDS, maxRequests: 10, failOpen: true });
 }
 
 /**
@@ -38,6 +48,7 @@ export async function consumeSignInRateLimit(): Promise<boolean> {
 export async function consumeSignInAccountRateLimit(email: string): Promise<boolean> {
   const key = createHash("sha256").update(email.trim().toLowerCase()).digest("hex");
   const outcome = await consumeAnonymousRateLimit("auth_sign_in_account", key, getFixedWindowStart(15 * 60), 20);
+  if (outcome.failed) return true; // fail open — see consumeSignInRateLimit
   return outcome.allowed;
 }
 

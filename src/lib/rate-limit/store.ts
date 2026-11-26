@@ -1,7 +1,14 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-export type RateLimitOutcome = { allowed: boolean; requestCount: number };
+/**
+ * `failed` is true when the counter itself couldn't be checked (the RPC
+ * errored: wrong service-role key, migration missing, Supabase down).
+ * In that case `allowed` is false (fail closed) — callers that would
+ * rather fail open for a specific surface can check `failed` instead of
+ * treating a broken store as "this caller is over the limit".
+ */
+export type RateLimitOutcome = { allowed: boolean; requestCount: number; failed?: boolean };
 
 /**
  * The one place that calls `try_consume_anonymous_rate_limit` (migration
@@ -34,7 +41,7 @@ export async function consumeAnonymousRateLimit(
     // Fail closed: if the rate-limit check itself can't run, don't let
     // an unmetered request through anyway.
     console.error(`consumeAnonymousRateLimit(${scope}) failed:`, error.message);
-    return { allowed: false, requestCount: 0 };
+    return { allowed: false, requestCount: 0, failed: true };
   }
 
   const row = (Array.isArray(data) ? data[0] : data) as { allowed: boolean; request_count: number } | undefined;
