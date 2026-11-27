@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getAdminUserDetail } from "@/lib/admin/users/queries";
 import { UserDangerActions } from "@/components/admin/users/user-danger-actions";
+import { ChangePlanForm } from "@/components/admin/users/change-plan-form";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,8 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
   const { id } = await params;
   const user = await getAdminUserDetail(id);
   if (!user) notFound();
+  const { data: planRows } = await createAdminClient().from("plans").select("slug, name").eq("is_active", true).order("tier_order");
+  const plans = planRows ?? [];
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
@@ -94,9 +98,12 @@ export default async function AdminUserDetailPage({ params }: { params: Promise<
         ) : (
           <p className="text-sm text-muted-foreground">Free plan — no subscription on record.</p>
         )}
-        <p className="text-xs text-muted-foreground">
-          Status shown here is exactly what Stripe last told this app via webhook — never editable directly from this page.
-        </p>
+        <ChangePlanForm
+          userId={user.id}
+          currentPlanSlug={user.planSlug}
+          plans={plans}
+          billedThroughStripe={!!user.subscription?.stripeSubscriptionId && user.subscription.status !== "canceled"}
+        />
       </Card>
 
       <Card variant="admin" className="gap-3 p-6">

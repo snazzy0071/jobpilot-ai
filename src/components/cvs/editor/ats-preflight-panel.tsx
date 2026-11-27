@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Loader2Icon, AlertCircleIcon, CheckCircle2Icon, LinkIcon, SparklesIcon, PlusIcon } from "lucide-react";
 import { useCvPreview } from "@/components/cvs/editor/preview-context";
 import { jumpToSection } from "@/components/cvs/editor/jump-to-section";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { callActionOrError } from "@/components/cvs/editor/call-action";
 import { computeFormatIssues, buildCvPlainText } from "@/lib/cvs/ats-format-checks";
 import {
   buildAtsRecommendations,
@@ -187,7 +187,7 @@ export function AtsPreflightPanel({
     }
 
     setLoading(true);
-    const result = await callAction(() =>
+    const result = await callActionOrError(() =>
       runAtsScan({
         versionId,
         jobDescription: description,
@@ -222,7 +222,7 @@ export function AtsPreflightPanel({
     const cvText = buildCvPlainText(updatedData);
     setError(null);
     setLoading(true);
-    const result = await callAction(() =>
+    const result = await callActionOrError(() =>
       runAtsScan({
         versionId,
         jobDescription: scan.jobDescription,
@@ -315,7 +315,7 @@ export function AtsPreflightPanel({
       const formData = new FormData();
       formData.set("versionId", versionId);
       formData.set("content", suggestion);
-      const saveResult = await callAction(() => saveSummary(undefined, formData));
+      const saveResult = await callActionOrError(() => saveSummary(undefined, formData));
       if (saveResult && "error" in saveResult) {
         setKeywordAction({ ...keywordAction, loading: false, error: saveResult.error });
         return;
@@ -335,7 +335,7 @@ export function AtsPreflightPanel({
       if (role.endDate) formData.set("endDate", role.endDate);
       formData.set("isCurrent", role.isCurrent ? "on" : "off");
       formData.set("description", suggestion);
-      const saveResult = await callAction(() => saveExperience(undefined, formData));
+      const saveResult = await callActionOrError(() => saveExperience(undefined, formData));
       if (saveResult && "error" in saveResult) {
         setKeywordAction({ ...keywordAction, loading: false, error: saveResult.error });
         return;
@@ -360,7 +360,7 @@ export function AtsPreflightPanel({
     const formData = new FormData();
     formData.set("versionId", versionId);
     formData.set("name", item.keywordTerm);
-    const saveResult = await callAction(() => saveSkill(undefined, formData));
+    const saveResult = await callActionOrError(() => saveSkill(undefined, formData));
     if (saveResult && "error" in saveResult) {
       setKeywordAction({ recommendationId: item.id, loading: false, error: saveResult.error, result: null });
       return;
