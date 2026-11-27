@@ -42,10 +42,10 @@ export function CtaSection({
           <h2 className="font-heading text-4xl font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">
             {title}
           </h2>
-          {description && <p className="max-w-xl text-lg text-pretty text-primary-foreground/80">{description}</p>}
+          {description && <p className="max-w-xl text-lg text-pretty text-primary-foreground/95">{description}</p>}
           <div className="mt-3 flex flex-wrap justify-center gap-3 [&_a]:btn-shine">{children}</div>
           {points && points.length > 0 && (
-            <ul className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-primary-foreground/85">
+            <ul className="mt-2 flex flex-wrap justify-center gap-x-6 gap-y-2 text-sm text-primary-foreground/95">
               {points.map((point) => (
                 <li key={point} className="inline-flex items-center gap-1.5">
                   <CheckIcon className="size-4" aria-hidden="true" />

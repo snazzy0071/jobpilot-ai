@@ -347,7 +347,7 @@ export default async function HomePage() {
               <div className="animate-blob pointer-events-none absolute -top-16 -right-10 size-56 bg-brand-cyan/50 blur-3xl" aria-hidden="true" />
               <div className="animate-blob pointer-events-none absolute -bottom-20 left-10 size-48 bg-brand-coral/40 blur-3xl [animation-delay:-8s]" aria-hidden="true" />
               <div className="relative flex flex-col gap-2">
-                <p className="text-xs font-semibold tracking-widest text-white/85 uppercase">Not sure where to start?</p>
+                <p className="text-xs font-semibold tracking-widest text-white/95 uppercase">Not sure where to start?</p>
                 <h3 className="font-heading text-2xl font-semibold tracking-tight text-balance">Tell us your situation and we&apos;ll point you to the right tool</h3>
               </div>
               <span className="relative inline-flex items-center gap-1 text-sm font-semibold">

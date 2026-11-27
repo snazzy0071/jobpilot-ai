@@ -179,7 +179,7 @@
   /* Brand gradient — `className="gradient-brand"`, the app's one "AI does the work" CTA treatment (Button's
      `gradient` variant): deep blue -> sky blue, not a second hue. Both endpoints clear 4.5:1 against white on their
      own (--primary 6.70:1, --brand-secondary 4.54:1), so no extra darkening is needed for white button-label text. */
-  --gradient-brand: linear-gradient(120deg, #3350ff 0%, #1f6bff 55%, #0a78cc 100%);
+  --gradient-brand: linear-gradient(120deg, #3350ff 0%, #1f6bff 55%, #0a70c0 100%);
   /* Headline highlight: blue to cyan and back, so the slow shimmer loops cleanly. Large display text only. */
   --gradient-text: linear-gradient(100deg, #3350ff 0%, #0891d1 50%, #3350ff 100%);
   /* Decorative multi-colour gradient for borders, bars and glows. */
@@ -236,8 +236,11 @@
   --card-foreground: #e8ecf8;
   --popover: #121a36;
   --popover-foreground: #e8ecf8;
-  --primary: #4d68ff;
-  --primary-hover: #6680ff;
+  /* Fill colour (buttons, chips, bars): white labels on it clear 4.5:1. Text and icons use --primary-text below,
+     because no single blue is both dark enough for white text and light enough to read on navy. */
+  --primary: #4762f5;
+  --primary-hover: #5a74ff;
+  --primary-text: #8599ff;
   --primary-foreground: #ffffff;
   --secondary: #1a2348;
   --secondary-foreground: #dbe2ff;
@@ -270,6 +273,22 @@
   --glass-bg: rgb(17 25 52 / 0.7);
   --glass-border: rgb(255 255 255 / 0.08);
   --surface: #111934;
+}
+
+/* `text-primary` (links, eyebrows, stats) reads on navy only in a lighter blue; see --primary-text above. `:where()`
+   keeps this at the utility's own specificity, so state variants such as hover:text-white still win over it. */
+@layer utilities {
+  :where(.dark) .text-primary,
+  :where(.dark) .hover\:text-primary:hover,
+  :where(.dark) .group-hover\:text-primary:is(:where(.group):hover *),
+  :where(.dark) .focus\:text-primary:focus {
+    color: var(--primary-text);
+  }
+  /* Still the deep blue where the text sits on paper or on a white button (the CTA band's "Create free account"). */
+  :where(.dark) .paper .text-primary,
+  :where(.dark) .bg-white.text-primary {
+    color: var(--primary);
+  }
 }
 
 /* CV and cover-letter pages are paper: always white with dark ink, even in dark mode. */
