@@ -14,11 +14,15 @@ import { consumeAnonymousRateLimit } from "@/lib/rate-limit/store";
  * closed belongs to consumeAnonymousRateLimit's own already-fail-closed
  * behavior when the durable store itself can't be reached.
  */
-export async function consumeIpRateLimit(scope: string, options: { windowSeconds: number; maxRequests: number }): Promise<boolean> {
+export async function consumeIpRateLimit(
+  scope: string,
+  options: { windowSeconds: number; maxRequests: number; failOpen?: boolean },
+): Promise<boolean> {
   const ip = await getRequestIp();
   if (!ip) return true;
 
   const outcome = await consumeAnonymousRateLimit(scope, ip, getFixedWindowStart(options.windowSeconds), options.maxRequests);
+  if (outcome.failed && options.failOpen) return true;
   return outcome.allowed;
 }
 
