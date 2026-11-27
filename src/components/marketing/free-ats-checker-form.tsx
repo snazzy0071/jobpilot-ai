@@ -38,8 +38,16 @@ export function FreeAtsCheckerForm() {
 
     const formData = new FormData(event.currentTarget);
     setLoading(true);
-    const response = await runQuickScan(formData);
-    setLoading(false);
+    let response: Awaited<ReturnType<typeof runQuickScan>>;
+    try {
+      response = await runQuickScan(formData);
+    } catch {
+      // A crashed or timed-out request used to leave the button on "Scanning…" forever.
+      setError("Something went wrong on our side and the scan didn't finish. Please try again in a moment.");
+      return;
+    } finally {
+      setLoading(false);
+    }
 
     if ("error" in response) {
       setError(response.error);

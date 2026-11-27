@@ -143,8 +143,8 @@ test.describe("edits save reliably", () => {
     await page.getByLabel("Headline").fill("This save will fail");
 
     await expect(saveState(page)).toHaveAttribute("data-save-state", "error", { timeout: 15_000 });
-    await expect(saveState(page)).toContainText("Couldn't reach the server");
-    await expect(page.getByRole("alert").filter({ hasText: "Couldn't reach the server" }).first()).toBeVisible();
+    await expect(saveState(page)).toContainText("the save didn't go through");
+    await expect(page.getByRole("alert").filter({ hasText: "the save didn't go through" }).first()).toBeVisible();
     expect((await db().from("cv_personal").select("headline").eq("cv_version_id", versionId).single()).data?.headline).toBe("Senior Platform Engineer");
 
     await page.unroute("**/dashboard/cvs/**");

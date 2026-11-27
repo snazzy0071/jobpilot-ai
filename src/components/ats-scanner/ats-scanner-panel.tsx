@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2Icon, AlertCircleIcon, ScanSearchIcon, HistoryIcon } from "lucide-react";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { callActionOrError } from "@/components/cvs/editor/call-action";
 import { runAtsScan } from "@/lib/cvs/ats-actions";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -87,7 +87,7 @@ export function AtsScannerPanel({
     }
 
     setLoading(true);
-    const result = await callAction(() =>
+    const result = await callActionOrError(() =>
       runAtsScan({
         versionId,
         jobDescription: description,

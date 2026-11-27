@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Loader2Icon, AlertCircleIcon, ScanSearchIcon, CheckIcon, AlertTriangleIcon } from "lucide-react";
-import { callAction } from "@/components/cvs/editor/call-action";
+import { callActionOrError } from "@/components/cvs/editor/call-action";
 import { runManualAtsScan } from "@/lib/cvs/ats-actions";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,7 +59,7 @@ export function ManualScanPanel({ recentJobOptions }: { recentJobOptions: CvAtsJ
     else formData.set("cvText", pastedText);
 
     setLoading(true);
-    const result = await callAction(() => runManualAtsScan(formData));
+    const result = await callActionOrError(() => runManualAtsScan(formData));
     setLoading(false);
 
     if ("error" in result) {

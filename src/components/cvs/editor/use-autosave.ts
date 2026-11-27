@@ -8,7 +8,9 @@ export type AutosaveStatus = SaveStatus;
 
 type SaveResult = { error: string } | { success: string; id?: string } | void;
 
-const UNREACHABLE_MESSAGE = "Couldn't reach the server, so this change isn't saved yet. Check your connection and try again.";
+// Shown when the save request itself fails (a dropped connection OR a server-side crash/timeout). It used to blame
+// the user's connection, which sent people hunting for a Wi-Fi problem when the server was at fault.
+const UNREACHABLE_MESSAGE = "This change isn't saved yet — the save didn't go through. Your text is still here; it will retry when you edit again.";
 
 /**
  * Debounced autosave for a whole `<form>`: call `scheduleSave(formData)`

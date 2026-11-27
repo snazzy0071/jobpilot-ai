@@ -18,7 +18,7 @@ function useAction() {
   function run(action: () => Promise<{ error: string } | { ok: true }>, after?: (result: { ok: true }) => void) {
     setError("");
     startTransition(async () => {
-      const result = await action();
+      const result = await action().catch(() => ({ error: "Something went wrong on our side. Please try again in a moment." }) as const);
       if ("error" in result) {
         setError(result.error);
         return;
@@ -100,7 +100,9 @@ export function InterviewStarter({ schemeId, resumeLabel }: { schemeId: string; 
   function start() {
     setError("");
     startTransition(async () => {
-      const result = await startSchemeInterview({ schemeId, mode, difficulty });
+      const result = await startSchemeInterview({ schemeId, mode, difficulty }).catch(
+        () => ({ error: "Something went wrong on our side. Please try again in a moment." }) as const,
+      );
       if ("error" in result) {
         setError(result.error);
         return;
