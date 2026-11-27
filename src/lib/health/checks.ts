@@ -48,6 +48,9 @@ export async function checkAi(): Promise<HealthCheckResult> {
     getAIEnv();
     return result("ai", "AI (Claude)", "operational", "ANTHROPIC_API_KEY is configured.");
   } catch (error) {
+    if (process.env.GROQ_API_KEY?.trim()) {
+      return result("ai", "AI (Claude)", "operational", "Using the Groq (Llama) test fallback — ANTHROPIC_API_KEY isn't set.");
+    }
     return result("ai", "AI (Claude)", "not_configured", error instanceof Error ? error.message : "Not configured.");
   }
 }

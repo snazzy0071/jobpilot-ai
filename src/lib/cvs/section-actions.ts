@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { unstable_rethrow } from "next/navigation";
 import { requireUser } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { assertOwnsVersion, nextDisplayOrder } from "@/lib/cvs/internal";
@@ -31,7 +32,7 @@ function editorPath(cvId: string) {
   return `/dashboard/cvs/${cvId}`;
 }
 
-export async function savePersonal(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function savePersonalImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const parsed = personalSchema.safeParse({
     versionId: formData.get("versionId"),
@@ -75,7 +76,7 @@ export async function savePersonal(_prevState: SectionActionResult, formData: Fo
   return { success: "Saved." };
 }
 
-export async function saveSummary(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function saveSummaryImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const parsed = summarySchema.safeParse({
     versionId: formData.get("versionId"),
@@ -103,7 +104,7 @@ export async function saveSummary(_prevState: SectionActionResult, formData: For
   return { success: "Saved." };
 }
 
-export async function saveExperience(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function saveExperienceImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const parsed = experienceSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -156,15 +157,15 @@ export async function saveExperience(_prevState: SectionActionResult, formData: 
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteExperience(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function deleteExperienceImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return deleteSectionRow("cv_experience", formData);
 }
 
-export async function reorderExperience(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function reorderExperienceImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return reorderSectionRows("cv_experience", formData);
 }
 
-export async function saveEducation(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function saveEducationImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const parsed = educationSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -221,15 +222,15 @@ export async function saveEducation(_prevState: SectionActionResult, formData: F
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteEducation(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function deleteEducationImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return deleteSectionRow("cv_education", formData);
 }
 
-export async function reorderEducation(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function reorderEducationImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return reorderSectionRows("cv_education", formData);
 }
 
-export async function saveSkill(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function saveSkillImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const parsed = skillSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -272,15 +273,15 @@ export async function saveSkill(_prevState: SectionActionResult, formData: FormD
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteSkill(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function deleteSkillImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return deleteSectionRow("cv_skills", formData);
 }
 
-export async function reorderSkills(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function reorderSkillsImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return reorderSectionRows("cv_skills", formData);
 }
 
-export async function saveProject(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function saveProjectImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const technologiesRaw = String(formData.get("technologies") ?? "");
   const parsed = projectSchema.safeParse({
@@ -337,15 +338,15 @@ export async function saveProject(_prevState: SectionActionResult, formData: For
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteProject(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function deleteProjectImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return deleteSectionRow("cv_projects", formData);
 }
 
-export async function reorderProjects(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function reorderProjectsImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return reorderSectionRows("cv_projects", formData);
 }
 
-export async function saveCertification(
+async function saveCertificationImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
@@ -403,21 +404,21 @@ export async function saveCertification(
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteCertification(
+async function deleteCertificationImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return deleteSectionRow("cv_certifications", formData);
 }
 
-export async function reorderCertifications(
+async function reorderCertificationsImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return reorderSectionRows("cv_certifications", formData);
 }
 
-export async function saveLanguage(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function saveLanguageImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   const user = await requireUser();
   const parsed = languageSchema.safeParse({
     id: formData.get("id") || undefined,
@@ -460,15 +461,15 @@ export async function saveLanguage(_prevState: SectionActionResult, formData: Fo
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteLanguage(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function deleteLanguageImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return deleteSectionRow("cv_languages", formData);
 }
 
-export async function reorderLanguages(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
+async function reorderLanguagesImpl(_prevState: SectionActionResult, formData: FormData): Promise<SectionActionResult> {
   return reorderSectionRows("cv_languages", formData);
 }
 
-export async function saveCustomSection(
+async function saveCustomSectionImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
@@ -518,14 +519,14 @@ export async function saveCustomSection(
   return { success: "Saved.", id: savedId ?? undefined };
 }
 
-export async function deleteCustomSection(
+async function deleteCustomSectionImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return deleteSectionRow("cv_custom_sections", formData);
 }
 
-export async function reorderCustomSections(
+async function reorderCustomSectionsImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
@@ -594,35 +595,35 @@ async function toggleSectionRowVisibility(table: string, formData: FormData): Pr
   return { success: parsed.data.isVisible ? "Shown on CV." : "Hidden from CV." };
 }
 
-export async function toggleSkillVisibility(
+async function toggleSkillVisibilityImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return toggleSectionRowVisibility("cv_skills", formData);
 }
 
-export async function toggleProjectVisibility(
+async function toggleProjectVisibilityImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return toggleSectionRowVisibility("cv_projects", formData);
 }
 
-export async function toggleCertificationVisibility(
+async function toggleCertificationVisibilityImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return toggleSectionRowVisibility("cv_certifications", formData);
 }
 
-export async function toggleLanguageVisibility(
+async function toggleLanguageVisibilityImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
   return toggleSectionRowVisibility("cv_languages", formData);
 }
 
-export async function toggleCustomSectionVisibility(
+async function toggleCustomSectionVisibilityImpl(
   _prevState: SectionActionResult,
   formData: FormData,
 ): Promise<SectionActionResult> {
@@ -662,4 +663,132 @@ async function reorderSectionRows(table: string, formData: FormData): Promise<Se
 
   revalidatePath(editorPath(owned.cvId));
   return { success: "Reordered." };
+}
+
+// ---- exported actions ------------------------------------------------------
+// Every action goes through guardSection(): an unexpected exception (a dropped database connection, a bug) is logged
+// with the action name and returned as a readable error instead of crashing the request — a crashed Server Action
+// reaches the browser only as an opaque rejection, which the editor could only show as a generic "save didn't go through".
+// Next.js control flow (redirect/notFound) is rethrown untouched.
+async function guardSection<T>(name: string, run: () => Promise<T>): Promise<T | { error: string }> {
+  try {
+    return await run();
+  } catch (err) {
+    unstable_rethrow(err);
+    console.error(`CV section action ${name} threw:`, err);
+    const reason = err instanceof Error ? err.message : String(err);
+    return { error: `Couldn't save — ${reason.slice(0, 160)}` };
+  }
+}
+
+export async function savePersonal(...args: Parameters<typeof savePersonalImpl>) {
+  return guardSection("savePersonal", () => savePersonalImpl(...args));
+}
+
+export async function saveSummary(...args: Parameters<typeof saveSummaryImpl>) {
+  return guardSection("saveSummary", () => saveSummaryImpl(...args));
+}
+
+export async function saveExperience(...args: Parameters<typeof saveExperienceImpl>) {
+  return guardSection("saveExperience", () => saveExperienceImpl(...args));
+}
+
+export async function deleteExperience(...args: Parameters<typeof deleteExperienceImpl>) {
+  return guardSection("deleteExperience", () => deleteExperienceImpl(...args));
+}
+
+export async function reorderExperience(...args: Parameters<typeof reorderExperienceImpl>) {
+  return guardSection("reorderExperience", () => reorderExperienceImpl(...args));
+}
+
+export async function saveEducation(...args: Parameters<typeof saveEducationImpl>) {
+  return guardSection("saveEducation", () => saveEducationImpl(...args));
+}
+
+export async function deleteEducation(...args: Parameters<typeof deleteEducationImpl>) {
+  return guardSection("deleteEducation", () => deleteEducationImpl(...args));
+}
+
+export async function reorderEducation(...args: Parameters<typeof reorderEducationImpl>) {
+  return guardSection("reorderEducation", () => reorderEducationImpl(...args));
+}
+
+export async function saveSkill(...args: Parameters<typeof saveSkillImpl>) {
+  return guardSection("saveSkill", () => saveSkillImpl(...args));
+}
+
+export async function deleteSkill(...args: Parameters<typeof deleteSkillImpl>) {
+  return guardSection("deleteSkill", () => deleteSkillImpl(...args));
+}
+
+export async function reorderSkills(...args: Parameters<typeof reorderSkillsImpl>) {
+  return guardSection("reorderSkills", () => reorderSkillsImpl(...args));
+}
+
+export async function saveProject(...args: Parameters<typeof saveProjectImpl>) {
+  return guardSection("saveProject", () => saveProjectImpl(...args));
+}
+
+export async function deleteProject(...args: Parameters<typeof deleteProjectImpl>) {
+  return guardSection("deleteProject", () => deleteProjectImpl(...args));
+}
+
+export async function reorderProjects(...args: Parameters<typeof reorderProjectsImpl>) {
+  return guardSection("reorderProjects", () => reorderProjectsImpl(...args));
+}
+
+export async function saveCertification(...args: Parameters<typeof saveCertificationImpl>) {
+  return guardSection("saveCertification", () => saveCertificationImpl(...args));
+}
+
+export async function deleteCertification(...args: Parameters<typeof deleteCertificationImpl>) {
+  return guardSection("deleteCertification", () => deleteCertificationImpl(...args));
+}
+
+export async function reorderCertifications(...args: Parameters<typeof reorderCertificationsImpl>) {
+  return guardSection("reorderCertifications", () => reorderCertificationsImpl(...args));
+}
+
+export async function saveLanguage(...args: Parameters<typeof saveLanguageImpl>) {
+  return guardSection("saveLanguage", () => saveLanguageImpl(...args));
+}
+
+export async function deleteLanguage(...args: Parameters<typeof deleteLanguageImpl>) {
+  return guardSection("deleteLanguage", () => deleteLanguageImpl(...args));
+}
+
+export async function reorderLanguages(...args: Parameters<typeof reorderLanguagesImpl>) {
+  return guardSection("reorderLanguages", () => reorderLanguagesImpl(...args));
+}
+
+export async function saveCustomSection(...args: Parameters<typeof saveCustomSectionImpl>) {
+  return guardSection("saveCustomSection", () => saveCustomSectionImpl(...args));
+}
+
+export async function deleteCustomSection(...args: Parameters<typeof deleteCustomSectionImpl>) {
+  return guardSection("deleteCustomSection", () => deleteCustomSectionImpl(...args));
+}
+
+export async function reorderCustomSections(...args: Parameters<typeof reorderCustomSectionsImpl>) {
+  return guardSection("reorderCustomSections", () => reorderCustomSectionsImpl(...args));
+}
+
+export async function toggleSkillVisibility(...args: Parameters<typeof toggleSkillVisibilityImpl>) {
+  return guardSection("toggleSkillVisibility", () => toggleSkillVisibilityImpl(...args));
+}
+
+export async function toggleProjectVisibility(...args: Parameters<typeof toggleProjectVisibilityImpl>) {
+  return guardSection("toggleProjectVisibility", () => toggleProjectVisibilityImpl(...args));
+}
+
+export async function toggleCertificationVisibility(...args: Parameters<typeof toggleCertificationVisibilityImpl>) {
+  return guardSection("toggleCertificationVisibility", () => toggleCertificationVisibilityImpl(...args));
+}
+
+export async function toggleLanguageVisibility(...args: Parameters<typeof toggleLanguageVisibilityImpl>) {
+  return guardSection("toggleLanguageVisibility", () => toggleLanguageVisibilityImpl(...args));
+}
+
+export async function toggleCustomSectionVisibility(...args: Parameters<typeof toggleCustomSectionVisibilityImpl>) {
+  return guardSection("toggleCustomSectionVisibility", () => toggleCustomSectionVisibilityImpl(...args));
 }
