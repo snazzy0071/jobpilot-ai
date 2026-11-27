@@ -16,6 +16,7 @@ import {
 } from "@/lib/ai/config";
 import { logAIUsage } from "@/lib/ai/logging";
 import { AIServiceError } from "@/lib/ai/errors";
+import { GROQ_DEFAULT_MODEL, GroqHTTPError, GroqTimeoutError, getGroqApiKey, groqChat } from "@/lib/ai/groq";
 
 /**
  * THE server-only AI service — every future AI-powered feature (cover
@@ -84,6 +85,18 @@ function classifyError(err: unknown): ErrorClassification {
       logMessage: err.message,
     };
   }
+  if (err instanceof GroqTimeoutError) {
+    return { safeMessage: "That took too long — try again in a moment.", code: "timeout", logMessage: err.message };
+  }
+  if (err instanceof GroqHTTPError) {
+    if (err.status === 401 || err.status === 403) {
+      return { safeMessage: "AI features aren't available right now.", code: "not_configured", logMessage: err.message };
+    }
+    if (err.status === 429) {
+      return { safeMessage: "AI features are busy right now — try again shortly.", code: "provider_error", logMessage: err.message };
+    }
+    return { safeMessage: GENERIC_SAFE_MESSAGE, code: "provider_error", logMessage: err.message };
+  }
   if (err instanceof APIError) {
     return { safeMessage: GENERIC_SAFE_MESSAGE, code: "provider_error", logMessage: `[${err.status}] ${err.message}` };
   }
@@ -91,6 +104,17 @@ function classifyError(err: unknown): ErrorClassification {
     return { safeMessage: GENERIC_SAFE_MESSAGE, code: "provider_error", logMessage: err.message };
   }
   return { safeMessage: GENERIC_SAFE_MESSAGE, code: "provider_error", logMessage: String(err) };
+}
+
+/**
+ * Claude when ANTHROPIC_API_KEY is set (the real provider). Otherwise Groq's
+ * hosted Llama models when GROQ_API_KEY is set — a free/cheap stand-in so
+ * every AI feature can be tested before a Claude key exists.
+ */
+function getAIProvider(): "anthropic" | "groq" {
+  if (!process.env.ANTHROPIC_API_KEY?.trim() && getGroqApiKey()) return "groq";
+  // Without either key, the Anthropic path's own lazy config check throws the safe "not_configured" error.
+  return "anthropic";
 }
 
 function getClientOrThrowConfigError(): Anthropic {
@@ -126,6 +150,39 @@ export async function generateText(options: GenerateTextOptions): Promise<string
     maxTokens = DEFAULT_MAX_TOKENS,
   } = options;
   const startedAt = Date.now();
+
+  if (getAIProvider() === "groq") {
+    try {
+      const result = await groqChat({ system, prompt, maxTokens });
+      await logAIUsage({
+        userId,
+        operation,
+        promptVersion,
+        model: GROQ_DEFAULT_MODEL,
+        inputTokens: result.inputTokens,
+        outputTokens: result.outputTokens,
+        success: true,
+        durationMs: Date.now() - startedAt,
+      });
+      return result.text;
+    } catch (err) {
+      const { safeMessage, code, logMessage } = classifyError(err);
+      await logAIUsage({
+        userId,
+        operation,
+        promptVersion,
+        model: GROQ_DEFAULT_MODEL,
+        inputTokens: 0,
+        outputTokens: 0,
+        success: false,
+        errorMessage: truncateForLog(logMessage),
+        durationMs: Date.now() - startedAt,
+      });
+      console.error(`AI operation "${operation}" failed (Groq):`, err);
+      throw new AIServiceError(safeMessage, code);
+    }
+  }
+
   const client = getClientOrThrowConfigError();
 
   try {
@@ -203,7 +260,9 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
     maxTokens = DEFAULT_MAX_TOKENS,
   } = options;
   const startedAt = Date.now();
-  const client = getClientOrThrowConfigError();
+  const provider = getAIProvider();
+  const client = provider === "anthropic" ? getClientOrThrowConfigError() : null;
+  const loggedModel = provider === "groq" ? GROQ_DEFAULT_MODEL : model;
 
   const toolName = "respond";
   const inputSchema = z.toJSONSchema(schema) as Anthropic.Tool.InputSchema;
@@ -214,6 +273,39 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
 
   for (let attempt = 0; attempt <= STRUCTURED_OUTPUT_RETRY_ATTEMPTS; attempt++) {
     try {
+      if (!client) {
+        const { $schema: _ignored, ...parameters } = inputSchema as Record<string, unknown>;
+        void _ignored;
+        const result = await groqChat({
+          system,
+          prompt,
+          maxTokens,
+          tool: { name: toolName, description: "Provide the structured response for this request.", parameters },
+        });
+        totalInputTokens += result.inputTokens;
+        totalOutputTokens += result.outputTokens;
+        if (result.toolInput === undefined) {
+          lastError = new Error("Model did not return the expected structured tool call.");
+          continue;
+        }
+        const parsedGroq = schema.safeParse(result.toolInput);
+        if (!parsedGroq.success) {
+          lastError = parsedGroq.error;
+          continue;
+        }
+        await logAIUsage({
+          userId,
+          operation,
+          promptVersion,
+          model: loggedModel,
+          inputTokens: totalInputTokens,
+          outputTokens: totalOutputTokens,
+          success: true,
+          durationMs: Date.now() - startedAt,
+        });
+        return parsedGroq.data;
+      }
+
       const response = await client.messages.create({
         model,
         max_tokens: maxTokens,
@@ -267,6 +359,9 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
       if (err instanceof APIError && !(err instanceof RateLimitError)) {
         break;
       }
+      if (err instanceof GroqHTTPError && err.status !== 429) {
+        break;
+      }
     }
   }
 
@@ -275,7 +370,7 @@ export async function generateStructured<T>(options: GenerateStructuredOptions<T
     userId,
     operation,
     promptVersion,
-    model,
+    model: loggedModel,
     inputTokens: totalInputTokens,
     outputTokens: totalOutputTokens,
     success: false,

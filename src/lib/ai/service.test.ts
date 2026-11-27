@@ -130,3 +130,42 @@ describe("generateStructured", () => {
     expect(logAIUsage).toHaveBeenCalledWith(expect.objectContaining({ userId: "user-1", operation: "test_op", success: true }));
   });
 });
+
+describe("Groq (Llama) test fallback", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("GROQ_API_KEY", "test-groq-key");
+  });
+
+  it("uses Groq for structured output when only GROQ_API_KEY is set", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [{ message: { content: null, tool_calls: [{ function: { name: "respond", arguments: JSON.stringify({ overall: 70, summary: "Fine." }) } }] } }],
+        usage: { prompt_tokens: 12, completion_tokens: 6 },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const { getAIClient } = await import("@/lib/ai/client");
+
+    const { generateStructured } = await import("@/lib/ai/service");
+    const result = await generateStructured({ operation: "test_op", prompt: "score this", schema });
+
+    expect(result).toEqual({ overall: 70, summary: "Fine." });
+    expect(getAIClient).not.toHaveBeenCalled();
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.tool_choice).toEqual({ type: "function", function: { name: "respond" } });
+    expect(body.tools[0].function.parameters.$schema).toBeUndefined();
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+
+  it("maps a Groq 401 to the safe not-configured error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 401, text: async () => "invalid key" }));
+    const { generateText } = await import("@/lib/ai/service");
+    await expect(generateText({ operation: "test_op", prompt: "hi" })).rejects.toMatchObject({ code: "not_configured" });
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
+});

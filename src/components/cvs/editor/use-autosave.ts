@@ -37,6 +37,20 @@ const UNREACHABLE_MESSAGE = "This change isn't saved yet — the save didn't go 
  * - One save loop at a time: edits made during a save are sent right
  *   after it, in order, never concurrently.
  */
+/**
+ * The user-facing message for a save request that failed outright, with the
+ * browser's own error reason appended (e.g. "Failed to fetch", "Server
+ * Action … was not found on the server", "An unexpected response was
+ * received from the server") so a screenshot of a failure says what actually
+ * went wrong. Also logged to the console in full.
+ */
+export function describeSaveFailure(err: unknown): string {
+  console.error("CV autosave request failed:", err);
+  const reason = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  const short = reason.replace(/\s+/g, " ").trim().slice(0, 160);
+  return short ? `${UNREACHABLE_MESSAGE} (Details: ${short})` : UNREACHABLE_MESSAGE;
+}
+
 export function useAutosave(
   save: (prevState: SaveResult, formData: FormData) => Promise<SaveResult>,
   options?: { delayMs?: number; onSaved?: (id: string | undefined) => void },
@@ -87,7 +101,7 @@ export function useAutosave(
       // this route's data — these calls bypass a <form action>, which would wrap it automatically.
       result = await new Promise<SaveResult>((resolve) => {
         startTransition(() => {
-          saveRef.current(undefined, formData).then(resolve, () => resolve({ error: UNREACHABLE_MESSAGE }));
+          saveRef.current(undefined, formData).then(resolve, (err: unknown) => resolve({ error: describeSaveFailure(err) }));
         });
       });
 
